@@ -3,6 +3,9 @@ uuid = "0f089cde-a4e5-430d-9c37-7e1e6f8286ff"
 authors = ["Beatrice Bisighini\" \"Baptiste Pierrat", "Miquel Aguirre"]
 version = "0.1.0"
 
+[deps]
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
 [compat]
 julia = "1.5"
 
