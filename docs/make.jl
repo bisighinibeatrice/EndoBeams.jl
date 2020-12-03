@@ -3,7 +3,7 @@ using Documenter
 
 makedocs(;
     modules=[EndoBeams],
-    authors="Beatrice Bisighini" "Baptiste Pierrat, Miquel Aguirre",
+    authors=["Beatrice Bisighini", "Baptiste Pierrat, Miquel Aguirre"],
     repo="https://gitlab.emse.fr/pierrat/EndoBeams.jl/blob/{commit}{path}#L{line}",
     sitename="EndoBeams.jl",
     format=Documenter.HTML(;
