@@ -1,0 +1,13 @@
+name = "EndoBeams"
+uuid = "0f089cde-a4e5-430d-9c37-7e1e6f8286ff"
+authors = ["Beatrice Bisighini\" \"Baptiste Pierrat", "Miquel Aguirre"]
+version = "0.1.0"
+
+[compat]
+julia = "1.5"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
