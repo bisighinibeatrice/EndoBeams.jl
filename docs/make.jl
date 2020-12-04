@@ -10,6 +10,7 @@ makedocs(;
         prettyurls=get(ENV, "CI", "false") == "true",
         canonical="http://pierrat.gitlab.emse.fr/EndoBeams.jl",
         assets=String[],
+        disable_git=true
     ),
     pages=[
         "Home" => "index.md",
