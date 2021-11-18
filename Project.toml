@@ -4,7 +4,19 @@ authors = ["Beatrice Bisighini\" \"Baptiste Pierrat", "Miquel Aguirre"]
 version = "0.1.0"
 
 [deps]
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+Dierckx = "39dd38d3-220a-591b-8e3c-4c3a8c710a94"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+NLsolve = "2774e3e8-f4cf-5e23-947b-6d7e65073b56"
+Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
+SignedDistanceField = "9a18c034-6024-4f9e-89ee-87be330f4587"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
+TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
 [compat]
 julia = "1.5"
