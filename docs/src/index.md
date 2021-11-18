@@ -1,12 +1,3 @@
-```@meta
-CurrentModule = EndoBeams
-```
+# EndoBeams.jl
 
-# EndoBeams
-
-```@index
-```
-
-```@autodocs
-Modules = [EndoBeams]
-```
+Documentation for EndoBeams.jl

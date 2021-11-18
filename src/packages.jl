@@ -10,4 +10,4 @@ using Parameters
 using NLsolve
 using QuadGK
 using Dierckx
-using SignedDistanceField
+# using SignedDistanceField
