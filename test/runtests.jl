@@ -1,10 +1,13 @@
 using EndoBeams
 using Test
 
-# Note: these tests are executed eveytime a new version is pushed to the repo
-
 @testset "EndoBeams.jl" begin
-    # Write your tests here.
-	# Write a mix of simple tests (ex: simple matrix assembly, simple rotation and back...
-	# Ex: @test a==b
+
+    include("test_angle.jl")
+    include("test_beam_contact_sphere.jl")
+	include("test1_ring_contact_plane.jl")
+    include("test2_ring_contact_plane.jl")
+    include("test_ring_crimping.jl")
+
 end
+
