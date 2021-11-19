@@ -1,7 +1,7 @@
 using EndoBeams
 using Documenter
 
-DocMeta.setdocmeta!(SignedDistanceField, :DocTestSetup, :(using EndoBeams); recursive=true)
+DocMeta.setdocmeta!(EndoBeams, :DocTestSetup, :(using EndoBeams); recursive=true)
 
 makedocs(;
     modules=[EndoBeams],
