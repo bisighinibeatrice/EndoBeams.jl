@@ -11,10 +11,10 @@
 ## Basic usage
 First, add the Endobeams.jl package with `using Pkg, Pkg.add(url="https://gitlab.emse.fr/pierrat/EndoBeams.jl")`.
 Run one of the examples present in the "examples" folder:
-- "angle.jl": Right-angle cantilever beam subject to out-of-plane loading;
-- "ring.jl": Impact of a ring against a rigid surface;
-- "net.jl": Dropping a net on a rigid sphere;
-- "stent.jl": Deployment of braided stent.
+- `angle.jl`: Right-angle cantilever beam subject to out-of-plane loading;
+- `ring.jl`: Impact of a ring against a rigid surface;
+- `net.jl`: Dropping a net on a rigid sphere;
+- `stent.jl`: Deployment of braided stent.
 
 ## References
 Aguirre M, Avril S. 2020. An implicit 3D corotational formulation for frictional contact dynamics of beams against rigid surfaces using discrete signed distance fields. Comput Methods Appl Mech Eng. 371:113275.
