@@ -10,7 +10,7 @@ makedocs(;
     sitename="EndoBeams.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="http://pierrat.gitlab.emse.fr/EndoBeams.jl",
+        canonical="https://pierrat.gitlab.emse.fr/EndoBeams.jl",
         assets=String[],
         disable_git=true
     ),
