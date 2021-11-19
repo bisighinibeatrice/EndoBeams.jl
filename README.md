@@ -9,10 +9,7 @@
 -----------------------------
 
 ## Basic usage
-First, add the Endobeams.jl package with
-'''
-using Pkg, Pkg.add(url="https://gitlab.emse.fr/pierrat/EndoBeams.jl")
-''' 
+First, add the Endobeams.jl package with `using Pkg, Pkg.add(url="https://gitlab.emse.fr/pierrat/EndoBeams.jl")`.
 Run one of the examples present in the "examples" folder:
 - "angle.jl": Right-angle cantilever beam subject to out-of-plane loading;
 - "ring.jl": Impact of a ring against a rigid surface;
