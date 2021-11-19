@@ -1,6 +1,6 @@
 name = "EndoBeams"
 uuid = "0f089cde-a4e5-430d-9c37-7e1e6f8286ff"
-authors = ["Beatrice Bisighini\" \"Baptiste Pierrat", "Miquel Aguirre"]
+authors = ["Beatrice Bisighini", "Baptiste Pierrat", "Miquel Aguirre"]
 version = "0.1.0"
 
 [deps]
@@ -18,7 +18,7 @@ StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
 [compat]
-julia = "1.5"
+julia = "1.6"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
