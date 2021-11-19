@@ -1,15 +1,20 @@
-using Documenter
 using EndoBeams
+using Documenter
 
-makedocs(
-    sitename = "EndoBeams",
-    format = Documenter.HTML(),
-    modules = [EndoBeams]
+DocMeta.setdocmeta!(SignedDistanceField, :DocTestSetup, :(using EndoBeams); recursive=true)
+
+makedocs(;
+    modules=[EndoBeams],
+    authors="Baptiste Pierrat",
+    repo="https://gitlab.emse.fr/pierrat/EndoBeams.jl/blob/{commit}{path}#{line}",
+    sitename="EndoBeams.jl",
+    format=Documenter.HTML(;
+        prettyurls=get(ENV, "CI", "false") == "true",
+        canonical="http://pierrat.gitlab.emse.fr/EndoBeams.jl",
+        assets=String[],
+        disable_git=true
+    ),
+    pages=[
+        "Home" => "index.md",
+    ],
 )
-
-# Documenter can also automatically deploy documentation to gh-pages.
-# See "Hosting Documentation" and deploydocs() in the Documenter manual
-# for more information.
-#=deploydocs(
-    repo = "<repository url>"
-)=#
