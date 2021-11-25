@@ -1,3 +1,14 @@
-# EndoBeams.jl
+```@meta
+CurrentModule = EndoBeams
+```
 
-Documentation for EndoBeams.jl
+# EndoBeams
+
+Documentation for [EndoBeams](https://gitlab.emse.fr/pierrat/EndoBeams.jl).
+
+```@index
+```
+
+```@autodocs
+Modules = [EndoBeams]
+```

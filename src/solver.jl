@@ -21,7 +21,7 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params)
         plot_C_energy = Vector{T}()
         
         # initialization of time loop variables
-        t::Float64 = 0
+        t = 0.
         start = time()
         i = 1
         dt = comp.dt
@@ -269,11 +269,11 @@ function predictor!(allnodes, allbeams, pencons, matrices, energy, sol_n1, sol_n
         # eq119 in [3]: compute the residual
         nodes_sol.r .=  (1+alpha) .* (sol_n1.fext .- matrices.Tint .- matrices.Tk .- matrices.Tct) .- alpha .* (sol_n.fext)
         
-        nodes_sol.aux1 .= (gamma/beta) .* nodes_sol.Ddt .- (0.5*dt*(2*beta-gamma)/beta) .* nodes_sol.Ddtdt
+        nodes_sol.aux1 .= (gamma/beta) .* nodes_sol.Ddt .- (dt/2*(2*beta-gamma)/beta) .* nodes_sol.Ddtdt
         mul!(nodes_sol.aux2, matrices.Ck, nodes_sol.aux1)
         nodes_sol.r .= nodes_sol.r .+  nodes_sol.aux2 
         
-        nodes_sol.aux1 .= dt .* nodes_sol.Ddt .+ 0.5*(dt^2) .* nodes_sol.Ddtdt
+        nodes_sol.aux1 .= dt .* nodes_sol.Ddt .+ (dt^2)/2 .* nodes_sol.Ddtdt
         mul!(nodes_sol.aux2, matrices.M, nodes_sol.aux1)
         nodes_sol.aux2 .= 1/(beta*dt^2) .* nodes_sol.aux2
          
