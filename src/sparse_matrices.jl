@@ -160,7 +160,7 @@ function compute_sparsity_pattern_tan!(ndofs_per_node, nnodes, connected_nodes)
 end 
 
 # Compute the sparsity pattern for the free total matrix
-function compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs_all, nnodes)
+function compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs_all, nnodes, T=Float64)
     
     mat = zeros(ntot,ntot)
 
@@ -239,7 +239,7 @@ function compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs_all, nn
 end 
 
 # Compute the sparsity pattern which allows to preallocate the sparse matrices and the sparsity map of the beams and constraints (for the assemby)
-function compute_sparsity!(allbeams, allnodes, pncons, conf)
+function compute_sparsity!(allbeams, allnodes, pncons, conf, T=Float64)
     
     # initialization
     free_dofs = conf.bc.free_dofs
@@ -258,7 +258,7 @@ function compute_sparsity!(allbeams, allnodes, pncons, conf)
     n_tan = length(rows_tan) 
     
     # free total matrix
-    (rows_free, cols_free, zvals_free), spmap_free = compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs, nnodes)
+    (rows_free, cols_free, zvals_free), spmap_free = compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs, nnodes, T)
 
     # compute beam sparsity map 
     compute_beams_sparsity_map!(allbeams, allnodes, n_tan, cols_tan, rows_tan)

@@ -221,7 +221,7 @@ constructor_material_properties(E, nu, rho, rWireSection)
 Returns a Material structure.
 
 """
-function constructor_material_properties(E, nu, rho, rWireSection)
+function constructor_material_properties(E, nu, rho, rWireSection, T=Float64)
 
     G = E/(2*(1+nu))
     A = pi*rWireSection^2
@@ -246,7 +246,7 @@ constructor_geometry_properties(rWireSection)
 Returns a Geometry structure.
 
 """
-function constructor_geometry_properties(rWireSection)
+function constructor_geometry_properties(rWireSection, T=Float64)
 
     A = pi*rWireSection^2
     I22 = 0.25*pi*rWireSection^4
@@ -627,13 +627,13 @@ end
 # Constructor of the sparse matrices
 function constructor_sparse_matrices!(allbeams, allnodes, pncons, conf, T=Float64)
 
-    dofs_tan, dofs_free, spmap_free = compute_sparsity!(allbeams, allnodes, pncons, conf)
+    dofs_tan, dofs_free, spmap_free = compute_sparsity!(allbeams, allnodes, pncons, conf, T)
     
     ndofs = length(allnodes)*6
     nfreedofs = length(setdiff(1:ndofs, conf.bc.fixed_dofs))
 
-    matrices = constructor_global_matrices(allnodes, dofs_tan)
-    nodes_sol = constructor_nodal_solution(ndofs, nfreedofs, dofs_tan, dofs_free, spmap_free)
+    matrices = constructor_global_matrices(allnodes, dofs_tan, T)
+    nodes_sol = constructor_nodal_solution(ndofs, nfreedofs, dofs_tan, dofs_free, spmap_free, T)
 
     return matrices, nodes_sol
 

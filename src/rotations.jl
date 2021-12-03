@@ -1,14 +1,14 @@
 # Get skew symmetric matrix from angle
 function get_skew_skymmetric_matrix_from_vector(vec)
 
-    return Mat33{T}(0, vec[3], -vec[2], -vec[3], 0, vec[1], vec[2], -vec[1], 0)
+    return Mat33(0, vec[3], -vec[2], -vec[3], 0, vec[1], vec[2], -vec[1], 0)
 
 end
 
 # Get angle from skew symmetric matrix
-function get_angle_from_skew_skymmetric_matrix(Stheta)
+function get_angle_from_skew_skymmetric_matrix(Stheta, T=Float64)
 
-    return Vec3{T}(-Stheta[2,3], Stheta[1,3], -Stheta[1,2])
+    return Vec3(-Stheta[2,3], Stheta[1,3], -Stheta[1,2])
 
 end
 
@@ -63,7 +63,7 @@ function get_angle_from_rotation_matrix(R)
         norm_v = 1e-20
     end
 
-    n_v = (1/(2*sin(norm_v))) * Vec3{T}(R[3,2]-R[2,3], R[1,3]-R[3,1], R[2,1]-R[1,2])
+    n_v = (1/(2*sin(norm_v))) * Vec3(R[3,2]-R[2,3], R[1,3]-R[3,1], R[2,1]-R[1,2])
 
     return norm_v.*n_v
 

@@ -40,13 +40,13 @@ end
 #----------------------------------
 
 "Constructor of the nodes StructArray"
-function constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R0=Vector{Mat33{T}}(), Delt0=Vector{Mat33{T}}(), T=Float64) 
+function constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R0=Vector{Mat33{T}}(), T=Float64) 
   
-    if R0 == Vector{Mat33{T}}() && Delt0 == Vector{Mat33{T}}() 
+    if R0 == Vector{Mat33{T}}() 
             nodes = StructArray(MyNode{T}(
             i, 
             X[i], 
-            Vec6{Int64}(6*(i-1).+(1,2,3,4,5,6)), # Note: use tuples instead of vectors when possible (doesn't allocate)
+            Vec6{Int64}(6*(i-1).+(1,2,3,4,5,6)), 
             Vec3{Int64}(6*(i-1).+(1,2,3)), 
             Vec3{Int64}(6*(i-1).+(4,5,6)), 
             Vec3{T}(u_0[3*(i-1)+1], u_0[3*(i-1)+2], u_0[3*(i-1)+3]), 
@@ -65,13 +65,12 @@ function constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R
             Vec3{T}(wdtdt_0[3*(i-1)+1], wdtdt_0[3*(i-1)+2], wdtdt_0[3*(i-1)+3]), 
             Mat33{T}(1, 0, 0, 0, 1, 0, 0, 0, 1), 
             Mat33{T}(1, 0, 0, 0, 1, 0, 0, 0, 1),
-            compute_local_to_global_matrix(i, X, plane[i]))
-        for i in 1:size(X,1))
-    elseif  R0 != Vector{Mat33{T}}() && Delt0 == Vector{Mat33{T}}() 
+            compute_local_to_global_matrix(i, X, plane[i], T)) for i in 1:size(X,1))
+    elseif  R0 != Vector{Mat33{T}}()
             nodes = StructArray(MyNode{T}(
             i, 
             X[i], 
-            Vec6{Int64}(6*(i-1).+(1,2,3,4,5,6)), # Note: use tuples instead of vectors when possible (doesn't allocate)
+            Vec6{Int64}(6*(i-1).+(1,2,3,4,5,6)),
             Vec3{Int64}(6*(i-1).+(1,2,3)), 
             Vec3{Int64}(6*(i-1).+(4,5,6)), 
             Vec3{T}(u_0[3*(i-1)+1], u_0[3*(i-1)+2], u_0[3*(i-1)+3]), 
@@ -90,32 +89,7 @@ function constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R
             Vec3{T}(wdtdt_0[3*(i-1)+1], wdtdt_0[3*(i-1)+2], wdtdt_0[3*(i-1)+3]), 
             R0[i], 
             Mat33{T}(1, 0, 0, 0, 1, 0, 0, 0, 1),
-            compute_local_to_global_matrix(i, X, plane[i]))
-        for i in 1:size(X,1))
-    else
-            nodes = StructArray(MyNode{T}(
-            i, 
-            X[i], 
-            Vec6{Int64}(6*(i-1).+(1,2,3,4,5,6)), # Note: use tuples instead of vectors when possible (doesn't allocate)
-            Vec3{Int64}(6*(i-1).+(1,2,3)), 
-            Vec3{Int64}(6*(i-1).+(4,5,6)), 
-            Vec3{T}(u_0[3*(i-1)+1], u_0[3*(i-1)+2], u_0[3*(i-1)+3]), 
-            Vec3{T}(udt_0[3*(i-1)+1], udt_0[3*(i-1)+2], udt_0[3*(i-1)+3]), 
-            Vec3{T}(udtdt_0[3*(i-1)+1], udtdt_0[3*(i-1)+2], udtdt_0[3*(i-1)+3]), 
-            Vec3{T}(w_0[3*(i-1)+1], w_0[3*(i-1)+2], w_0[3*(i-1)+3]), 
-            Vec3{T}(wdt_0[3*(i-1)+1], wdt_0[3*(i-1)+2], wdt_0[3*(i-1)+3]), 
-            Vec3{T}(wdtdt_0[3*(i-1)+1], wdtdt_0[3*(i-1)+2], wdtdt_0[3*(i-1)+3]), 
-            R0[i], 
-            Delt0[i],
-            Vec3{T}(u_0[3*(i-1)+1], u_0[3*(i-1)+2], u_0[3*(i-1)+3]), 
-            Vec3{T}(udt_0[3*(i-1)+1], udt_0[3*(i-1)+2], udt_0[3*(i-1)+3]), 
-            Vec3{T}(udtdt_0[3*(i-1)+1], udtdt_0[3*(i-1)+2], udtdt_0[3*(i-1)+3]), 
-            Vec3{T}(w_0[3*(i-1)+1], w_0[3*(i-1)+2], w_0[3*(i-1)+3]), 
-            Vec3{T}(wdt_0[3*(i-1)+1], wdt_0[3*(i-1)+2], wdt_0[3*(i-1)+3]), 
-            Vec3{T}(wdtdt_0[3*(i-1)+1], wdtdt_0[3*(i-1)+2], wdtdt_0[3*(i-1)+3]), 
-            R0[i], 
-            Delt0[i],
-            compute_local_to_global_matrix(i, X, plane[i]))
+            compute_local_to_global_matrix(i, X, plane[i], T))
         for i in 1:size(X,1))
     end
 
@@ -128,7 +102,7 @@ end
 #----------------------------------
 
 #  Compute rotation matrix from cylindrical to carthesian coordinates
-function compute_local_to_global_matrix(i, X, plane)
+function compute_local_to_global_matrix(i, X, plane, T=Float64)
 
     if plane == "xy"
 

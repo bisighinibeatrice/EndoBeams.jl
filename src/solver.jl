@@ -1,5 +1,5 @@
 "Preallocates and initialises all the variables and starts the temporal loop"
-function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params)
+function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params, T=Float64)
     
     # -------------------------------------------------------------------------------------------
     # INITIALISATION
@@ -35,7 +35,7 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params)
         int_conn = zeros(allbeams.numberInterpolationPoints[1]+1, length(allbeams))
         
         # preallocation of the vectors and matrices used in the computaion
-        sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp = solver_initialisation(conf, allnodes, allbeams, int_pos, int_conn, comp, pn_constrains, thisDirOutputPath, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, SAVE_NODES_VTK)
+        sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp = solver_initialisation(conf, allnodes, allbeams, int_pos, int_conn, comp, pn_constrains, thisDirOutputPath, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, SAVE_NODES_VTK, T)
         
     end 
     
@@ -61,7 +61,7 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params)
                 end 
                 
                 # solve system @t_n
-                flag_conv = solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, SHOW_COMP_TIME)
+                flag_conv = solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, SHOW_COMP_TIME, T)
                 
                 # if not converged, halve the time step and re-solve the system until it converges
                 while (flag_conv == 0 && fact_div < 1E20)
@@ -84,7 +84,7 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params)
                     sol_n1 = deepcopy(sol_n)
                     update_nodes_not_converged!(allnodes)
                     
-                    flag_conv = solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, SHOW_COMP_TIME)
+                    flag_conv = solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, SHOW_COMP_TIME), T
                     k_count_OKit = 0
                     
                 end
@@ -120,7 +120,7 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params)
                 
                 # save VTK with frequency 1/dt_plot: 
                 if  abs(t_n1-i*dt_plot)<1e-9 || t_n1>i*dt_plot
-                    save_VTK(i, allnodes, allbeams, sol_GP, int_pos, int_conn, thisDirOutputPath, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, SAVE_NODES_VTK)
+                    save_VTK(i, allnodes, allbeams, sol_GP, int_pos, int_conn, thisDirOutputPath, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, SAVE_NODES_VTK,)
                     i = i+1
                 end
 
@@ -164,7 +164,7 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params)
 end
 
 #  Solves the current step
-function solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, SHOW_COMP_TIME) 
+function solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, SHOW_COMP_TIME, T=Float64) 
 
     # -------------------------------------------------------------------------------------------
     # INITIALIZATION
@@ -198,7 +198,7 @@ function solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n
     @timeit to "Predictor" begin
         
         # predict the solution @n+1
-        predictor!(allnodes, allbeams, pn_constrains, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to) 
+        predictor!(allnodes, allbeams, pn_constrains, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to, T) 
         
     end
     
@@ -209,7 +209,7 @@ function solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n
     @timeit to "Corrector" begin
         
         # corrector loop: output = number of iterations
-        k = corrector_loop!(allnodes, allbeams, pn_constrains, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to, SHOW_COMP_TIME)
+        k = corrector_loop!(allnodes, allbeams, pn_constrains, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to, SHOW_COMP_TIME, T)
         
     end
     
@@ -218,7 +218,7 @@ function solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n
 end 
 
 # Predicts the solution at the current step
-function predictor!(allnodes, allbeams, pencons, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to)
+function predictor!(allnodes, allbeams, pencons, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to, T=Float64)
     
     # -------------------------------------------------------------------------------------------
     # INITIALISATION
@@ -247,7 +247,7 @@ function predictor!(allnodes, allbeams, pencons, matrices, energy, sol_n1, sol_n
     @timeit to "Compute matrices" begin
         
         # compute the matrices    
-        compute_K_T!(allnodes, allbeams, matrices, energy, conf, sdf, fixed_matrices, comp, sol_GP, to)
+        compute_K_T!(allnodes, allbeams, matrices, energy, conf, sdf, fixed_matrices, comp, sol_GP, to, T)
         
     end
     
@@ -279,6 +279,7 @@ function predictor!(allnodes, allbeams, pencons, matrices, energy, sol_n1, sol_n
          
         nodes_sol.r .= nodes_sol.r .+ nodes_sol.aux2 
 
+
     end
     
     @timeit to "Impose BCs" begin
@@ -301,7 +302,7 @@ function predictor!(allnodes, allbeams, pencons, matrices, energy, sol_n1, sol_n
     end 
     
     @timeit to "Linear solve" begin 
-        
+
         nodes_sol.ΔD_free .=  nodes_sol.Ktan_free\nodes_sol.r_free
 
     end
@@ -326,13 +327,13 @@ function predictor!(allnodes, allbeams, pencons, matrices, energy, sol_n1, sol_n
 end 
 
 # Corrects the solution at the current step
-function corrector_loop!(allnodes, allbeams, pncons, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to, SHOW_COMP_TIME) 
+function corrector_loop!(allnodes, allbeams, pncons, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to, SHOW_COMP_TIME, T=Float64) 
     
     # -------------------------------------------------------------------------------------------
     # INITIALISATION
     # -------------------------------------------------------------------------------------------
     
-    # @timeit to "Initialization" begin
+    @timeit to "Initialization" begin
         
         # tollerances
         tol_res = comp.tol_res
@@ -360,13 +361,13 @@ function corrector_loop!(allnodes, allbeams, pncons, matrices, energy, sol_n1, s
         nodes_sol.ΔD  .= 5 
         aux_tol = 1.0e10
         
-    # end
+    end
     
     # -------------------------------------------------------------------------------------------
     # CORRECTOR LOOP
     # -------------------------------------------------------------------------------------------
     
-    # @timeit to "Newton solver" begin
+    @timeit to "Newton solver" begin
         
         while ((aux_tol>tol_res) || (((norm(nodes_sol.ΔD[free_dofs])))>tol_ΔD_k)) && (k<max_it)         
             
@@ -375,7 +376,7 @@ function corrector_loop!(allnodes, allbeams, pncons, matrices, energy, sol_n1, s
             @timeit to "Compute matrices" begin
                 
                 # compute the contributions for each beam and assemble into the Matrix structure
-                compute_K_T!(allnodes, allbeams, matrices, energy, conf, sdf, fixed_matrices, comp, sol_GP, to)  
+                compute_K_T!(allnodes, allbeams, matrices, energy, conf, sdf, fixed_matrices, comp, sol_GP, to, T)  
                 
             end
             
@@ -456,7 +457,7 @@ function corrector_loop!(allnodes, allbeams, pncons, matrices, energy, sol_n1, s
                 
             end 
 
-        # end
+        end
         
         
     end 

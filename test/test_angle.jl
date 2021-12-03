@@ -30,7 +30,7 @@ function test_angle()
     plane = fill("xy", length(pos))
 
     # nodes StructArray
-    allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane)
+    allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, Vector{Mat33{T}}(), T)
 
     # -------------------------------------------------------------------------------------------
     # Building the beams
@@ -67,7 +67,7 @@ function test_angle()
     mat = Material{T}(E, G, Arho, Jrho)
 
     # beams vector
-    allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints)
+    allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints,  Vector{Mat33{T}}(), T)
 
     #-----------------------------------------------------------------------------------
     # Simulation parameters
@@ -99,7 +99,7 @@ function test_angle()
     mu_T = 0
     eps_tol_fric = 0.1
 
-    comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric)
+    comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T)
 
     # -------------------------------------------------------------------------------------------
     # External forces
@@ -111,7 +111,7 @@ function test_angle()
     dofs_load = Vector{Int}()
     push!(dofs_load, 6*size((0:dx:L),1)-3)
 
-    ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load)
+    ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load, T)
 
     # -------------------------------------------------------------------------------------------
     # Boundary conditions
@@ -133,7 +133,7 @@ function test_angle()
     udisp = []
 
     # boundary conditions strucutre 
-    bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp)
+    bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
 
     # -------------------------------------------------------------------------------------------
     # SDF
@@ -147,14 +147,14 @@ function test_angle()
     # -------------------------------------------------------------------------------------------
 
     # configuration: mesh, external forces and boundary conditions
-    conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bc)
+    conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bc, T)
 
     # -------------------------------------------------------------------------------------------
     # Solve
     # -------------------------------------------------------------------------------------------
 
     params = ParamsTest()
-    solver!(allnodes, allbeams, conf, comp, sdf, cons, params)       
+    solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)       
 
     # -------------------------------------------------------------------------------------------
     # Test

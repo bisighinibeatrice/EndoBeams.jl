@@ -69,7 +69,7 @@ end
 """
 Constructor of the discrete SDF from a vtk file.
 """
-function constructor_discrete_sdf(filename, rWireSection, inside)
+function constructor_discrete_sdf(filename, rWireSection, inside,  T=Float64)
     
     # Read sdf from file
     npx, npy, npz, dx, dy, dz, dom, sdf = read_VTK_sdf(filename)
@@ -112,7 +112,7 @@ end
 #----------------------------------
 
 # Get gap, gradient and hession of z-normal plane analytical SDF at P 
-function get_SDF_at_P_analitycal_plane_z(P, sdf)
+function get_SDF_at_P_analitycal_plane_z(P, sdf,  T=Float64)
     
     g_G = P[3] - sdf.z0 - sdf.r
     dg_G = Vec3{T}(0, 0, 1)
@@ -123,7 +123,7 @@ function get_SDF_at_P_analitycal_plane_z(P, sdf)
 end 
 
 # Get gap, gradient and hession of y-normal plane analytical SDF at P 
-function get_SDF_at_P_analitycal_plane_y(P, sdf)
+function get_SDF_at_P_analitycal_plane_y(P, sdf,  T=Float64)
     
     g_G = P[2] - sdf.y0 - sdf.r
     dg_G = Vec3{T}(0, 1, 0)
@@ -134,7 +134,7 @@ function get_SDF_at_P_analitycal_plane_y(P, sdf)
 end
 
 # Get gap, gradient and hession of sphere analytical SDF at P 
-function get_SDF_at_P_analitycal_sphere(P, sdf)
+function get_SDF_at_P_analitycal_sphere(P, sdf,  T=Float64)
     
     aux = Vec3{T}(P[1] .- sdf.x0, P[2] .- sdf.y0, P[3] .- sdf.z0)
     
@@ -150,7 +150,7 @@ function get_SDF_at_P_analitycal_sphere(P, sdf)
 end
 
 # Get gap, gradient and hession of cylinder analytical SDF at P 
-function get_SDF_at_P_analitycal_cylinder(P, sdf)
+function get_SDF_at_P_analitycal_cylinder(P, sdf,  T=Float64)
     
     aux = Vec3{T}(P[1], P[2], 0)
     
@@ -169,7 +169,7 @@ end
 # INTERPOLATE DISCRETE SDF 
 #----------------------------------
 
-function get_SDF_at_P_discrete(xP, sdf)
+function get_SDF_at_P_discrete(xP, sdf,  T=Float64)
     
     dom = sdf.dom
     sitp = sdf.sitp
@@ -207,37 +207,36 @@ end
 #----------------------------------
 
 # Get contact at point GP
-function get_contact_GP(GP, epsC, sdf)
+function get_contact_GP(GP, epsC, sdf, T=Float64)
     
     if typeof(sdf) == SDF_Plane_z{T}
         
-        g_G, dg_G, ddg_G = get_SDF_at_P_analitycal_plane_z(GP, sdf)
+        g_G, dg_G, ddg_G = get_SDF_at_P_analitycal_plane_z(GP, sdf, T)
         
     elseif typeof(sdf) == SDF_Sphere{T}
         
-        g_G, dg_G, ddg_G = get_SDF_at_P_analitycal_sphere(GP, sdf)
+        g_G, dg_G, ddg_G = get_SDF_at_P_analitycal_sphere(GP, sdf, T)
         
     elseif typeof(sdf) == SDF_Cylinder{T}
         
-        g_G, dg_G, ddg_G = get_SDF_at_P_analitycal_cylinder(GP, sdf)
+        g_G, dg_G, ddg_G = get_SDF_at_P_analitycal_cylinder(GP, sdf, T)
         
     elseif typeof(sdf) == SDF_Plane_y{T}
         
-        g_G, dg_G, ddg_G = get_SDF_at_P_analitycal_plane_y(GP, sdf)
+        g_G, dg_G, ddg_G = get_SDF_at_P_analitycal_plane_y(GP, sdf, T)
         
     else
-        g_G, dg_G, ddg_G = get_SDF_at_P_discrete(GP, sdf)
-        
+        g_G, dg_G, ddg_G = get_SDF_at_P_discrete(GP, sdf, T)
     end 
     
-    fc_eps, dfc_eps, Pic_eps = quadratically_regularized_penalty(g_G, epsC, sdf.r)
+    fc_eps, dfc_eps, Pic_eps = quadratically_regularized_penalty(g_G, epsC, sdf.r, T)
     
     return fc_eps, dfc_eps, Pic_eps, g_G, dg_G, ddg_G
     
 end 
 
 # Quadratically regulise penalty
-function quadratically_regularized_penalty(g, epsC, r)
+function quadratically_regularized_penalty(g, epsC, r,  T=Float64)
     
     gbar = 0.1*r
     fbar = epsC*gbar/2

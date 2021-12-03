@@ -1,5 +1,3 @@
-const T = Float64
-
 const Mat33{T} = SMatrix{3,3,T,9}
 const Mat44{T} = SMatrix{4,4,T,16} 
 const Mat66{T} = SMatrix{6,6,T,36} 

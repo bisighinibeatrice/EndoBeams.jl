@@ -32,17 +32,17 @@ function save_VTK(i, allnodes, allbeams, sol_GP, int_pos, int_conn, dirOutput, S
 end 
 
 # Cleans folders, pre-allocate and initialise the variables used during the simulation and save the VTKs of the initial configuration
-function solver_initialisation(conf, allnodes, allbeams, int_pos, int_conn, comp, cons, thisDirOutputPath, SAVE_INTERPOLATION_VTK::Bool = false, SAVE_GP_VTK::Bool = false, SAVE_NODES_VTK::Bool = false)
+function solver_initialisation(conf, allnodes, allbeams, int_pos, int_conn, comp, cons, thisDirOutputPath, SAVE_INTERPOLATION_VTK::Bool = false, SAVE_GP_VTK::Bool = false, SAVE_NODES_VTK::Bool = false, T=Float64)
 
     clean_folders(thisDirOutputPath)
 
-    sol_n = constructor_solution(conf)
-    sol_n1 = constructor_solution(conf)
-    sol_GP = constructor_solution_GP(length(allbeams))
-    energy = constructor_energy() 
-    fixed_matrices = constructor_preallocated_matrices_fixed(allbeams, comp)
+    sol_n = constructor_solution(conf, T)
+    sol_n1 = constructor_solution(conf, T)
+    sol_GP = constructor_solution_GP(length(allbeams), T)
+    energy = constructor_energy(T) 
+    fixed_matrices = constructor_preallocated_matrices_fixed(allbeams, comp, T)
     uimp = zeros(length(conf.bc.fixed_dofs))
-    matrices, nodes_sol = constructor_sparse_matrices!(allbeams, allnodes, cons, conf)
+    matrices, nodes_sol = constructor_sparse_matrices!(allbeams, allnodes, cons, conf, T)
 
     save_VTK(0, allnodes, allbeams, sol_GP, int_pos, int_conn, thisDirOutputPath, SAVE_INTERPOLATION_VTK,  SAVE_GP_VTK, SAVE_NODES_VTK)
 
@@ -68,7 +68,7 @@ function save_energy(plot_Phi_energy, plot_K_energy, plot_C_energy, outputDir)
 end
 
 # Update nodes values @n if converged
-function  update_nodes_converged!(allnodes::StructArray{MyNode{T}})
+function  update_nodes_converged!(allnodes)
 
     @inbounds for i in 1:length(allnodes)      
 
@@ -86,7 +86,7 @@ function  update_nodes_converged!(allnodes::StructArray{MyNode{T}})
 end
 
 # Update nodes values @n+1 if NOT converged
-function update_nodes_not_converged!(allnodes::StructArray{MyNode{T}})
+function update_nodes_not_converged!(allnodes)
 
     @inbounds for i in 1:length(allnodes)
 
@@ -277,7 +277,7 @@ end
 #------------------------------------------------
 
 # At the beginning of the corrector, updates the NodalSolution global vectors with the current Configuration local vectors
-function update_global_corrector!(nodes_sol::NodalSolution, allnodes::StructArray{MyNode{T}}, disp_dof)
+function update_global_corrector!(nodes_sol, allnodes, disp_dof)
     
     @inbounds for n in allnodes
 
@@ -293,7 +293,7 @@ function update_global_corrector!(nodes_sol::NodalSolution, allnodes::StructArra
 end 
 
 # At the beginning of the predictor, updates the NodalSolution global vectors with the current Configuration local vectors(not updating angles)
-function update_global_predictor!(nodes_sol::NodalSolution, allnodes::StructArray{MyNode{T}})
+function update_global_predictor!(nodes_sol, allnodes)
         
     @inbounds for n in allnodes
 
@@ -317,7 +317,7 @@ function update_global_predictor!(nodes_sol::NodalSolution, allnodes::StructArra
 end 
 
 # At the end of the corrector, updates the Configuration local vectors with the NodalSolution global vectors computed during the current iteration
-function update_local_corrector!(allnodes::StructArray{MyNode{T}}, ΔD_k, dt, nodes_sol::NodalSolution, comp::SimulationParameters)
+function update_local_corrector!(allnodes, ΔD_k, dt, nodes_sol, comp)
     
     beta = comp.beta
     gamma = comp.gamma
@@ -344,7 +344,7 @@ function update_local_corrector!(allnodes::StructArray{MyNode{T}}, ΔD_k, dt, no
 end 
 
 # At the end of the predictor, updates the Configuration local vectors with the NodalSolution global vectors predicted for the current time step
-function update_local_predictor!(allnodes::StructArray{MyNode{T}}, nodes_sol::NodalSolution)
+function update_local_predictor!(allnodes, nodes_sol)
     
     @inbounds for i in 1:length(allnodes)
 
@@ -365,7 +365,7 @@ function update_local_predictor!(allnodes::StructArray{MyNode{T}}, nodes_sol::No
 end 
 
 # Update the displacement vectors with the solution of the linear system in the corrector
-function update_nodal_solutions_corrector!(nodes_sol::NodalSolution, disp_dof, gamma, beta, dt)
+function update_nodal_solutions_corrector!(nodes_sol, disp_dof, gamma, beta, dt)
     
     @inbounds for i in disp_dof
         nodes_sol.D[i]  =  nodes_sol.D[i]  + nodes_sol.ΔD[i]
@@ -376,7 +376,7 @@ function update_nodal_solutions_corrector!(nodes_sol::NodalSolution, disp_dof, g
 end 
 
 # Update the displacement vectors with the solution of the linear system in the predictor
-function update_nodal_solutions_predictor!(nodes_sol::NodalSolution, beta, gamma, dt)
+function update_nodal_solutions_predictor!(nodes_sol, beta, gamma, dt)
 
     @inbounds for i in 1:length(nodes_sol.D)
 
@@ -469,7 +469,7 @@ function update_nodal_solution_corrector_loop!(nodes_sol, disp_dof)
 end
 
 # Fill the free dofs residual vector (preallocated) to be used to solve the linear system
-function fill_r_free!(nodes_sol::NodalSolution, free_dof)
+function fill_r_free!(nodes_sol, free_dof)
     
     @inbounds for (index, value) in enumerate(free_dof)
         nodes_sol.r_free[index] = nodes_sol.r[value] 
@@ -478,7 +478,7 @@ function fill_r_free!(nodes_sol::NodalSolution, free_dof)
 end 
 
 # Fill the free dofs tangent matrix (preallocated) to be used to solve the linear system
-function fill_Ktan_free!(nodes_sol::NodalSolution)
+function fill_Ktan_free!(nodes_sol)
      
     @inbounds for (index, value) in enumerate(nodes_sol.sparsity_map_free)
         nodes_sol.Ktan_free.nzval[index] = nodes_sol.Ktan.nzval[value]
@@ -487,7 +487,7 @@ function fill_Ktan_free!(nodes_sol::NodalSolution)
 end
 
 # Fill the free dofs of the whole displacements vector (preallocated) with the solution of the linear sysyem
-function fill_ΔD_free_dofs!(nodes_sol::NodalSolution, free_dof)
+function fill_ΔD_free_dofs!(nodes_sol, free_dof)
     
     @inbounds for (index,value) in enumerate(free_dof)
         nodes_sol.ΔD[value] = nodes_sol.ΔD_free[index]

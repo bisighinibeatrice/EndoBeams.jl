@@ -1,11 +1,11 @@
 # Compute beam contact contribution
-function compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, ddt, l0, EG, ln, fixed_matrices, rT, P, Tct, Kct, Cc, C_energy_e, iGP, e, sol_GP, to)
+function compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, ddt, l0, EG, ln, fixed_matrices, rT, P, Tct, Kct, Cc, C_energy_e, iGP, e, sol_GP, to, T=Float64)
     
     @timeit to "Get contact at the gaussian point" begin
 
         N1, N2, utG, H1G, wG, N7, P1G = contact_vals 
         xGv = N1*x1 + N2*x2 + Re*utG
-        fc_eps, dfc_eps, Pic_eps, g_G, dg_G, ddg_G =  get_contact_GP(xGv, comp.epsC, sdf)
+        fc_eps, dfc_eps, Pic_eps, g_G, dg_G, ddg_G =  get_contact_GP(xGv, comp.epsC, sdf, T)
 
         sol_GP.xGP[e.indGP[iGP]] = xGv
         sol_GP.gGP[e.indGP[iGP]] = (g_G)/sdf.r
@@ -296,7 +296,7 @@ function compute_internal_energy(conf, D_italic_bar, l0)
 end
 
 # Compute beam contributions
-function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, sol_GP, to) 
+function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, sol_GP, to, T=Float64) 
     
     @timeit to "Move to local reference system" begin
         
@@ -511,7 +511,7 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
             @timeit to "Contact contributions" begin
 
                 if sdf != []
-                    Tct, Kct, Cc, C_energy_e =  compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, ddt, l0, EG, ln, fixed_matrices, rT, P, Tct, Kct, Cc, C_energy_e, iG, e, sol_GP, to)
+                    Tct, Kct, Cc, C_energy_e =  compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, ddt, l0, EG, ln, fixed_matrices, rT, P, Tct, Kct, Cc, C_energy_e, iG, e, sol_GP, to, T)
                 end     
 
             end 
@@ -550,7 +550,7 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
 end 
 
 # Compute elemental contributions and assembly
-function compute_K_T!(allnodes, allbeams, matrices, energy, conf, sdf, fixed_matrices, comp, sol_GP, to) 
+function compute_K_T!(allnodes, allbeams, matrices, energy, conf, sdf, fixed_matrices, comp, sol_GP, to, T=Float64) 
     
     @timeit to "Initialization" begin
         
@@ -580,7 +580,7 @@ function compute_K_T!(allnodes, allbeams, matrices, energy, conf, sdf, fixed_mat
 
                 #----------------------------------------
                 # Compute the contibution from the e beam
-                (Kint, Tint, Tk, Tdamp, Ck, M, Tct, Kct), (Phi_energy, K_energy, C_energy)  = get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, sol_GP, to) 
+                (Kint, Tint, Tk, Tdamp, Ck, M, Tct, Kct), (Phi_energy, K_energy, C_energy)  = get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, sol_GP, to, T) 
             
             end 
 

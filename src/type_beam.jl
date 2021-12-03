@@ -21,12 +21,12 @@ end
 #----------------------------------
 
 "Constructor of the beams StructArray"
-function constructor_beams(allnodes, connectivity, mat, geom, numberInterpolationPoints, Re0=Vector{Mat33{T}}())
+function constructor_beams(allnodes, connectivity, mat, geom, numberInterpolationPoints, Re0=Vector{Mat33{T}}(), T=Float64)
     
     if Re0 == Vector{Mat33{T}}() 
-        beams = StructArray(constructor_beam(i, (i-1)*3 .+ [1,2,3], allnodes[connectivity[i][1]], allnodes[connectivity[i][2]], mat, geom, numberInterpolationPoints) for i in 1:size(connectivity,1))
+        beams = StructArray(constructor_beam(i, (i-1)*3 .+ [1,2,3], allnodes[connectivity[i][1]], allnodes[connectivity[i][2]], mat, geom, numberInterpolationPoints, T) for i in 1:size(connectivity,1))
     else 
-        beams = StructArray(constructor_beam_Re0(i, (i-1)*3 .+ [1,2,3], allnodes[connectivity[i][1]], allnodes[connectivity[i][2]], mat, geom, numberInterpolationPoints, Re0[i]) for i in 1:size(connectivity,1))
+        beams = StructArray(constructor_beam_Re0(i, (i-1)*3 .+ [1,2,3], allnodes[connectivity[i][1]], allnodes[connectivity[i][2]], mat, geom, numberInterpolationPoints, Re0[i], T) for i in 1:size(connectivity,1))
     end 
 
     return beams
@@ -38,22 +38,22 @@ function constructor_beam(ind, indGP, node1, node2, mat, geom, numberInterpolati
     
     i1 = node1.i
     i2 = node2.i
-    R0 = get_R0_beam(node1, node2)
+    R0 = get_R0_beam(node1, node2, T)
     l0 = norm(node1.pos - node2.pos)
-    Kint = get_Kint_beam(mat, geom, l0)
+    Kint = get_Kint_beam(mat, geom, l0, T)
     
     return MyBeam{T}(ind, indGP, i1, i2, l0, R0, Kint, numberInterpolationPoints, zeros(Int, 144))
     
 end 
 
 # Constructor of the one beam (MyBeam) given initial rotation
-function constructor_beam_Re0(ind, indGP, node1, node2, mat, geom, numberInterpolationPoints, Re0,T=Float64)
+function constructor_beam_Re0(ind, indGP, node1, node2, mat, geom, numberInterpolationPoints, Re0, T=Float64)
     
     i1 = node1.i   
     i2 = node2.i  
     R0 = Re0
     l0 = norm(node1.pos - node2.pos)   
-    Kint = get_Kint_beam(mat, geom, l0)
+    Kint = get_Kint_beam(mat, geom, l0, T)
     
     return MyBeam{T}(ind, indGP, i1, i2, l0, R0, Kint, numberInterpolationPoints, zeros(Int, 144))
     
@@ -64,7 +64,7 @@ end
 #----------------------------------
 
 # Compute R0 matrix
-function get_R0_beam(node1, node2)
+function get_R0_beam(node1, node2, T=Float64)
     
     tol =  1e-7
     
@@ -95,7 +95,7 @@ function get_R0_beam(node1, node2)
     else 
         
         Sv = get_skew_skymmetric_matrix_from_vector(v)
-        R0 = Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1) + Sv + ((1-c)/s^2)*Sv*Sv
+        R0 = Mat33{T}(1, 0, 0, 0, 1, 0, 0, 0, 1) + Sv + ((1-c)/s^2)*Sv*Sv
     end 
     
     return R0
@@ -103,9 +103,9 @@ function get_R0_beam(node1, node2)
 end 
 
 #  Compute Kint matrix
-function get_Kint_beam(mat, geom, l0)
+function get_Kint_beam(mat, geom, l0, T=Float64)
     
-    Kint_bar = Mat77(geom.A*mat.E/l0, 0, 0, 0, 0, 0, 0,
+    Kint_bar = Mat77{T}(geom.A*mat.E/l0, 0, 0, 0, 0, 0, 0,
     0, mat.G*geom.J/l0, 0, 0, -mat.G*geom.J/l0, 0, 0,
     0, 0, 4*mat.E*geom.I33/l0, 0, 0, 2*mat.E*geom.I33/l0, 0,
     0, 0, 0, 4*mat.E*geom.I22/l0, 0, 0, 2*mat.E*geom.I22/l0,

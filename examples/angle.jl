@@ -1,4 +1,5 @@
 using EndoBeams
+T = Float64
 
 #-------------------------------------------------------------------------------------------
 # Building the nodes
@@ -30,7 +31,7 @@ wdtdt_0 = zeros(nnodes*3)
 plane = fill("xy", length(pos))
 
 # nodes StructArray
-allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane)
+allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -63,11 +64,11 @@ Io = 0
 Irr = 0
 J = 1e-3
 
-geom = Geometry{T}(A, I22, I33, Io, Irr, J)
-mat = Material{T}(E, G, Arho, Jrho)
+geom = Geometry{T}(A, I22, I33, Io, Irr, J, T)
+mat = Material{T}(E, G, Arho, Jrho, T)
 
 # beams vector
-allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints)
+allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints, T)
 
 #-----------------------------------------------------------------------------------
 # Simulation parameters
@@ -99,7 +100,7 @@ eps_C = 5000
 mu_T = 0
 eps_tol_fric = 0.1
 
-comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric)
+comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -111,7 +112,7 @@ Fext(t) = 1*(t.<=1).*(50*t) .+1*((t.>1) .& (t.<=2)).*(-50*t.+100).+(t.>2).*0
 dofs_load = Vector{Int}()
 push!(dofs_load, 6*size((0:dx:L),1)-3)
 
-ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load)
+ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load, T)
 
 # -------------------------------------------------------------------------------------------
 # Boundary conditions
@@ -133,7 +134,7 @@ flag_disp_vector = false
 udisp = []
 
 # boundary conditions strucutre 
-bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp)
+bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
 
 # -------------------------------------------------------------------------------------------
 # SDF
@@ -147,7 +148,7 @@ sdf = []
 # -------------------------------------------------------------------------------------------
 
 # configuration: mesh, external forces and boundary conditions
-conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bc)
+conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bc, T)
 
 # -------------------------------------------------------------------------------------------
 # Solve
