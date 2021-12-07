@@ -7,7 +7,7 @@ function compute_connected_nodes!(connected_nodes, allconstraints, allbeams, nno
     
     for n in 1:nnodes 
         
-        connected_nodes_i = Vector{Int}()
+        connected_nodes_i = Int[]
         
         push!(connected_nodes_i, n)
         
@@ -142,8 +142,8 @@ function compute_sparsity_pattern_tan!(ndofs_per_node, nnodes, connected_nodes)
     
     nrows = size(mat,1)
     ncols = size(mat,2)
-    rows = Vector{Int}()
-    cols = Vector{Int}()
+    rows = Int[]
+    cols = Int[]
     
     for i in 1:nrows 
         for j in 1:ncols
@@ -180,9 +180,9 @@ function compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs_all, nn
 
     nrows = size(mat,1)
     ncols = size(mat,2)
-    rows = Vector{Int}()
-    cols = Vector{Int}()
-    zvals = Vector{T}()
+    rows = Int[]
+    cols = Int[]
+    zvals = T[]
 
     for i in 1:nrows 
         for j in 1:ncols
@@ -200,9 +200,9 @@ function compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs_all, nn
 
     nrows_free = size(mat_free,1)
     ncols_free = size(mat_free,2)
-    rows_free = Vector{Int}()
-    cols_free = Vector{Int}()
-    zvals_free  = Vector{T}()
+    rows_free = Int[]
+    cols_free = Int[]
+    zvals_free  = T[]
 
     cnt = 0
     for i in 1:nrows_free 
@@ -223,7 +223,7 @@ function compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs_all, nn
 
     #-------------------------------------------------
     
-    spmap_free = Vector{Int}()
+    spmap_free = Int[]
     cnt = 0 
     for n in 1:length(rows)
         i = rows[n]

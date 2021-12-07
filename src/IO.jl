@@ -98,7 +98,7 @@ function write_VTK_beams(step, allnodes, allbeams, positions, connectivity, dirO
         write(fid,"\n")
 
         for j in 1:numberElementsPerLine
-            node::Int64 = connectivity[j,i] -1
+            node = connectivity[j,i] - 1
             write(fid, string.(node)) 
             write(fid,"\n")
         end
@@ -111,7 +111,7 @@ end
 
 function get_connectivity_centerline(pos_cl)
 
-    conn = Vector{Vec2{Int}}()
+    conn = Vec2{Int}[]
     aux1 = 1:size(pos_cl,1)-1
     aux2 = 2:size(pos_cl,1)
     for i in 1:size(pos_cl,1)-1
@@ -155,10 +155,10 @@ function write_VTK_GP(step, sol_GP, dirOutput)
 
         write(fid, string.(numberElementsPerLine))
         write(fid,"\n")
-        node1::Int64 = conn[i][1] - 1
+        node1 = conn[i][1] - 1
         write(fid, string.(node1)) 
         write(fid,"\n")
-        node2::Int64 = conn[i][2] - 1
+        node2 = conn[i][2] - 1
         write(fid, string.(node2)) 
         write(fid,"\n")
     end
@@ -256,15 +256,15 @@ end
 
 """
 pos = read_TXT_file_pos(filename)
-Read a .txt file as a Vector{Vec3{T}}() for position and displacement. 
+Read a .txt file as a Vec3{T}[] for position and displacement. 
 """
 function read_TXT_file_pos(filename)
 
-    Xpc = Vector{Vec3{T}}()
+    Xpc = Vector{Vec3{Float64}}()
     xpc = readdlm(filename)
 
     for i in 1:size(xpc,1)
-        push!(Xpc, Vec3{T}(xpc[i,1], xpc[i,2], xpc[i,3]))
+        push!(Xpc, Vec3{Float64}(xpc[i,1], xpc[i,2], xpc[i,3]))
     end
 
     return Xpc
@@ -277,7 +277,7 @@ Read a .txt file as a Vector{Vec2{T}}() for connectivity.
 """
 function read_TXT_file_conn(filename)
 
-    Xpc = Vector{Vec2{Int}}()
+    Xpc = Vec2{Int}[]
     xpc = readdlm(filename)
 
     for i in 1:size(xpc,1)
@@ -294,7 +294,7 @@ end
 
 """
 Ics_vec = read_TXT_file_ICs_array(filename)
-Read a .txt file as a Vector{T}() for displacement, velocity and acceleration initial conditions. 
+Read a .txt file as a T[] for displacement, velocity and acceleration initial conditions. 
 """
 function read_TXT_file_ICs_array(filename)
 
@@ -316,16 +316,16 @@ end
 
 """
 Ics_mat = read_TXT_file_ICs_matrix(filename)
-Read a .txt file as a Vector{T}() for rotation matrix (nodes and edges) initial conditions. 
+Read a .txt file as a T[] for rotation matrix (nodes and edges) initial conditions. 
 """
 function read_TXT_file_ICs_matrix(filename)
 
     X = readdlm(filename)
     nnodes = size(X,1)
-    x = Vector{Mat33{T}}()
+    x = Vector{Mat33{Float64}}()
 
     for i in 1:nnodes
-       push!(x, Mat33{T}(X[i,:]))
+       push!(x, Mat33{Float64}(X[i,:]))
     end
 
     return x

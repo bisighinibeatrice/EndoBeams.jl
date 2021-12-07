@@ -7,7 +7,8 @@ using DelimitedFiles
 using SparseArrays
 using TimerOutputs
 using Parameters
-using NLsolve
-using QuadGK
-using Dierckx
 # using SignedDistanceField
+using Infiltrator
+# using MKL
+using Pardiso
+using Cthulhu

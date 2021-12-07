@@ -12,7 +12,7 @@ function test_ring_crimping()
     alpha_div = 2*pi/(nelem)
     
     # positions
-    pos =  Vector{Vec3{T}}()
+    pos =  Vec3{T}[]
     
     push!(pos, Vec3(Rmid, 0, 0))
     
@@ -48,7 +48,7 @@ function test_ring_crimping()
     nbeams = nnodes # the ring is closed
     
     # conn
-    conn = Vector{Vec2{Int}}()
+    conn = Vec2{Int}[]
     aux1 = 1:nbeams-1
     aux2 = 2:nbeams
     
@@ -73,7 +73,7 @@ function test_ring_crimping()
     Io = I22+I33
     Irr = Io
     J = Io
-    Jrho = Mat33{T}(rho*Io, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
+    Jrho = Mat33(rho*Io, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
     Arho = rho*A
     
     geom = Geometry{T}(A, I22, I33, Io, Irr, J)
@@ -121,7 +121,7 @@ function test_ring_crimping()
     # external force and applied dof
     flag_crimping = false
     Fext(t) = 0
-    dofs_load = []
+    dofs_load = T[]
     
     ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load)
     
@@ -130,7 +130,7 @@ function test_ring_crimping()
     # -------------------------------------------------------------------------------------------
     
     # multifreedom constrains
-    cons = []
+    cons = T[]
     
     # number of dof (6 per node)
     ndofs = nnodes*6
@@ -151,7 +151,7 @@ function test_ring_crimping()
     k = dispA/tA
     Fdisp(t) = (k*t).*(t<=tA)
     flag_disp_vector = false
-    udisp = []
+    udisp = T[]
     
     # boundary conditions strucutre 
     bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp)
@@ -161,7 +161,7 @@ function test_ring_crimping()
     # -------------------------------------------------------------------------------------------
     
     #there is no contact
-    sdf = []
+    sdf = nothing
     # -------------------------------------------------------------------------------------------
     # Configuration
     # -------------------------------------------------------------------------------------------

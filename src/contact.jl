@@ -115,7 +115,7 @@ end
 function get_SDF_at_P_analitycal_plane_z(P, sdf,  T=Float64)
     
     g_G = P[3] - sdf.z0 - sdf.r
-    dg_G = Vec3{T}(0, 0, 1)
+    dg_G = Vec3(0, 0, 1)
     ddg_G = zeros(Mat33{T})
     
     return g_G, dg_G, ddg_G
@@ -126,7 +126,7 @@ end
 function get_SDF_at_P_analitycal_plane_y(P, sdf,  T=Float64)
     
     g_G = P[2] - sdf.y0 - sdf.r
-    dg_G = Vec3{T}(0, 1, 0)
+    dg_G = Vec3(0, 1, 0)
     ddg_G = zeros(Mat33{T})
     
     return -g_G, dg_G, ddg_G
@@ -136,14 +136,14 @@ end
 # Get gap, gradient and hession of sphere analytical SDF at P 
 function get_SDF_at_P_analitycal_sphere(P, sdf,  T=Float64)
     
-    aux = Vec3{T}(P[1] .- sdf.x0, P[2] .- sdf.y0, P[3] .- sdf.z0)
+    aux = Vec3(P[1] - sdf.x0, P[2] - sdf.y0, P[3] - sdf.z0)
     
     norm_aux = norm(aux)
     invnorm = 1/norm_aux
     
     g_G = norm_aux - sdf.R - sdf.r
     dg_G = invnorm * aux
-    ddg_G = invnorm*Mat33{T}(1, 0, 0, 0, 1, 0, 0, 0, 1) + (invnorm^3)*(aux*aux')
+    ddg_G = invnorm*Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1) + (invnorm^3)*(aux*aux')
     
     return g_G, dg_G, ddg_G
     
@@ -152,7 +152,7 @@ end
 # Get gap, gradient and hession of cylinder analytical SDF at P 
 function get_SDF_at_P_analitycal_cylinder(P, sdf,  T=Float64)
     
-    aux = Vec3{T}(P[1], P[2], 0)
+    aux = Vec3(P[1], P[2], 0)
     
     norm_aux = norm(aux)
     invnorm = 1/norm_aux

@@ -105,7 +105,7 @@ comp = constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plo
 # external force and applied dof
 flag_crimping = false
 Fext(t) = 0*t
-dofs_load = []
+dofs_load = T[]
 
 ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load)
 
@@ -121,15 +121,15 @@ nodespairs = read_TXT_file_conn("examples/input_stent/constr_stent.txt")
 cons = constructor_constraints(nodespairs, 1E6, 1E3)
 
 # Dirichlet boundary conditions: blocked positions
-fixed_dofs = Vector{T}()
+fixed_dofs = T[]
 free_dofs = setdiff(1:ndofs, fixed_dofs)
 
 # Dirichlet dof (x6)
 flag_cylindrical = false
-dofs_disp = Vector{T}()
+dofs_disp = T[]
 Fdisp(t) = 0
 flag_disp_vector = false
-udisp = []
+udisp = T[]
 
 # boundary conditions strucutre
 bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp)

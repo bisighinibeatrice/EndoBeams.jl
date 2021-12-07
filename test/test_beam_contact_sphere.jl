@@ -7,7 +7,7 @@ function test_sphere()
     # positions
     L = 10/100; dx = L/10
     
-    pos =  Vector{Vec3{T}}()
+    pos =  Vec3{T}[]
     
     for x in 0:dx:L
         push!(pos, Vec3(0, 0, x))
@@ -28,7 +28,7 @@ function test_sphere()
     plane = fill("xy", length(pos))
     
     # nodes StructArray
-    allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, Vector{Mat33{T}}(), T)
+    allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, nothing, T)
     
     # -------------------------------------------------------------------------------------------
     # Building the beams
@@ -38,7 +38,7 @@ function test_sphere()
     nbeams = nnodes #!!!
     
     # conn
-    conn = Vector{Vec2{Int}}()
+    conn = Vec2{Int}[]
     aux1 = 1:nbeams-1
     aux2 = 2:nbeams
     
@@ -62,14 +62,14 @@ function test_sphere()
     Io = I22+I33
     Irr = Io
     J = Io
-    Jrho = Mat33{T}(rho*Io, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
+    Jrho = Mat33(rho*Io, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
     Arho = rho*A
     
     geom = Geometry{T}(A, I22, I33, Io, Irr, J)
     mat = Material{T}(E, G, Arho, Jrho)
     
     # beams vector
-    allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints, Vector{Mat33{T}}(), T)
+    allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints, nothing, T)
     
     #-----------------------------------------------------------------------------------
     # Simulation parameters
@@ -110,7 +110,7 @@ function test_sphere()
     # external force and applied dof
     flag_crimping = false
     Fext(t) = 0
-    dofs_load = []
+    dofs_load = T[]
     
     ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load, T)
     
@@ -119,7 +119,7 @@ function test_sphere()
     # -------------------------------------------------------------------------------------------
     
     # multifreedom constrains
-    cons = []
+    cons = T[]
     
     # number of dof (6 per node)
     ndofs = nnodes*6
@@ -136,7 +136,7 @@ function test_sphere()
     k = dispA/tA
     Fdisp(t) = (k*t).*(t.<=tA) .+ (-k*t .+ 2*dispA).*((t.>tA) .& (t.<=2*tA)) .+ (k*(t.-2*tA)).*((t.>2*tA) .& (t.<=3*tA)) .+ (-k*t .+ 4*dispA).*((t.>3*tA) .& (t.<=4*tA))
     flag_disp_vector = false
-    udisp = []
+    udisp = T[]
     
     # boundary conditions strucutre 
     bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)

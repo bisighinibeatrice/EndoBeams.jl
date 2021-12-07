@@ -51,7 +51,7 @@ I33 = 0.25*pi*r^4
 Io = I22+I33
 Irr = I22+I33
 J = I22+I33
-Jrho = Mat33{T}(rho*J, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
+Jrho = Mat33(rho*J, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
 Arho = rho*A
 
 geom = Geometry{T}(A, I22, I33, Io, Irr, J)
@@ -82,8 +82,8 @@ max_it = 10
 
 # Gaussian points
 nG = 3
-wG = Vec3{T}(5/9, 8/9, 5/9)
-zG = Vec3{T}(-sqrt(3/5), 0, sqrt(3/5))
+wG = Vec3(5/9, 8/9, 5/9)
+zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 
 # penalty parameters
 eps_C = 0.01
@@ -99,7 +99,7 @@ comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_pl
 # external force and applied dof
 flag_crimping = false
 Fext(t) = 0*t
-dofs_load = Vector{Int}()
+dofs_load = Int[]
 
 ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load)
 
@@ -108,19 +108,19 @@ ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load)
 # -------------------------------------------------------------------------------------------
 
 # multifreedom constrains
-cons = []
+cons = T[]
 
 # Dirichlet boundary conditions: fixed positions
 ndofs = nnodes*6
-fixed_dofs = []
+fixed_dofs = T[]
 free_dofs = setdiff(1:ndofs, fixed_dofs)
 
 # Dirichlet boundary conditions: moving positions
 flag_cylindrical = false
 Fdisp(t) = 0
-dofs_disp = Vector{Int}()
+dofs_disp = Int[]
 flag_disp_vector = false
-udisp = []
+udisp = T[]
 
 # boundary conditions strucutre
 bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp)

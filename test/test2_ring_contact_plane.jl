@@ -12,7 +12,7 @@ function test2_ring_plane()
     alpha_div = 2*pi/(nelem)
     
     # positions
-    pos =  Vector{Vec3{T}}()
+    pos =  Vec3{T}[]
     
     push!(pos, Vec3(Rmid, 0, 0))
     
@@ -54,7 +54,7 @@ function test2_ring_plane()
     nbeams = nnodes # the ring is closed
     
     # conn
-    conn = Vector{Vec2{Int}}()
+    conn = Vec2{Int}[]
     aux1 = 1:nbeams-1
     aux2 = 2:nbeams
     
@@ -79,7 +79,7 @@ function test2_ring_plane()
     Io = I22+I33
     Irr = Io
     J = Io
-    Jrho = Mat33{T}(rho*Io, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
+    Jrho = Mat33(rho*Io, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
     Arho = rho*A
     
     geom = Geometry{T}(A, I22, I33, Io, Irr, J)
@@ -127,7 +127,7 @@ function test2_ring_plane()
     # external force and applied dof
     flag_crimping = false
     Fext(t) = 0
-    dofs_load = []
+    dofs_load = T[]
     
     ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load)
     
@@ -142,15 +142,15 @@ function test2_ring_plane()
     ndofs = nnodes*6
     
     # Dirichlet boundary conditions: fixed positions
-    fixed_dofs = []
+    fixed_dofs = T[]
     free_dofs = setdiff(1:ndofs, fixed_dofs) 
     
     # Dirichlet boundary conditions: moving positions
     flag_cylindrical = false
-    dofs_disp = []
+    dofs_disp = T[]
     Fdisp(t) = 0
     flag_disp_vector = false
-    udisp = []
+    udisp = T[]
     
     # boundary conditions strucutre 
     bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp)

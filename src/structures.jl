@@ -146,9 +146,9 @@ struct NodalSolution{T}
     asol::Vector{T}
     f_aux::Vector{T}
 
-    r_free::Vector{T}
-    Ktan_free::SparseMatrixCSC{T,Int}
-    ΔD_free::Vector{T}
+    r_free::Vector{Float64}
+    Ktan_free::SparseMatrixCSC{Float64,Int}
+    ΔD_free::Vector{Float64}
     sparsity_map_free::Vector{Int}  
     
 end 
@@ -225,10 +225,10 @@ function constructor_material_properties(E, nu, rho, rWireSection, T=Float64)
 
     G = E/(2*(1+nu))
     A = pi*rWireSection^2
-    I22 = 0.25*pi*rWireSection^4
-    I33 = 0.25*pi*rWireSection^4
+    I22 = pi*rWireSection^4/4
+    I33 = pi*rWireSection^4/4
     Io = I22+I33
-    Jrho = Mat33{T}(rho*Io, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
+    Jrho = Mat33(rho*Io, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
     Arho = rho*A
  
     mat = Material{T}(E, G, Arho, Jrho)
@@ -249,8 +249,8 @@ Returns a Geometry structure.
 function constructor_geometry_properties(rWireSection, T=Float64)
 
     A = pi*rWireSection^2
-    I22 = 0.25*pi*rWireSection^4
-    I33 = 0.25*pi*rWireSection^4
+    I22 = pi*rWireSection^4/4
+    I33 = pi*rWireSection^4/4
     Io = I22+I33
     Irr = Io
     J = Io
@@ -643,9 +643,9 @@ end
 function constructor_solution_GP(nbeams, T=Float64)
     
     nGP = nbeams*3
-    xGP = Vector{Vec3{T}}()
-    fGP_N = Vector{Vec3{T}}()
-    tGP_T = Vector{Vec3{T}}()
+    xGP = Vec3{T}[]
+    fGP_N = Vec3{T}[]
+    tGP_T = Vec3{T}[]
     for i in 1:nGP
         push!(xGP, zeros(Vec3{T}))
         push!(fGP_N, zeros(Vec3{T}))

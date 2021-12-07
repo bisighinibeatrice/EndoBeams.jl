@@ -21,9 +21,9 @@ end
 #----------------------------------
 
 "Constructor of the beams StructArray"
-function constructor_beams(allnodes, connectivity, mat, geom, numberInterpolationPoints, Re0=Vector{Mat33{T}}(), T=Float64)
+function constructor_beams(allnodes, connectivity, mat, geom, numberInterpolationPoints, Re0=nothing, T=Float64)
     
-    if Re0 == Vector{Mat33{T}}() 
+    if isnothing(Re0)
         beams = StructArray(constructor_beam(i, (i-1)*3 .+ [1,2,3], allnodes[connectivity[i][1]], allnodes[connectivity[i][2]], mat, geom, numberInterpolationPoints, T) for i in 1:size(connectivity,1))
     else 
         beams = StructArray(constructor_beam_Re0(i, (i-1)*3 .+ [1,2,3], allnodes[connectivity[i][1]], allnodes[connectivity[i][2]], mat, geom, numberInterpolationPoints, Re0[i], T) for i in 1:size(connectivity,1))
@@ -66,7 +66,7 @@ end
 # Compute R0 matrix
 function get_R0_beam(node1, node2, T=Float64)
     
-    tol =  1e-7
+    tol =  2*eps(T)
     
     X1 = node1.pos
     X2 = node2.pos
@@ -74,8 +74,6 @@ function get_R0_beam(node1, node2, T=Float64)
     l0 = norm(X2-X1)
     
     E1 = Vec3(1, 0, 0)
-    E2 = Vec3(0, 1, 0)
-    E3 = Vec3(0, 0, 1)
     
     E1_0 = (X2-X1)/l0
     
@@ -95,7 +93,7 @@ function get_R0_beam(node1, node2, T=Float64)
     else 
         
         Sv = get_skew_skymmetric_matrix_from_vector(v)
-        R0 = Mat33{T}(1, 0, 0, 0, 1, 0, 0, 0, 1) + Sv + ((1-c)/s^2)*Sv*Sv
+        R0 = Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1) + Sv + ((1-c)/s^2)*Sv*Sv
     end 
     
     return R0
@@ -149,8 +147,8 @@ function get_centreline!(positions, connectivity, allnodes, allbeams)
         
         v1 = (x2 - x1) / ln
         
-        t2_1 = R1 * Re0 * Vec3{T}(0, 1, 0)
-        t2_2 = R2 * Re0 * Vec3{T}(0, 1, 0)  
+        t2_1 = R1 * Re0 * Vec3(0, 1, 0)
+        t2_2 = R2 * Re0 * Vec3(0, 1, 0)  
         p = (t2_1 + t2_2)/2
         
         v3 = cross(v1, p)
@@ -185,7 +183,7 @@ function get_centreline!(positions, connectivity, allnodes, allbeams)
             N3_i = N3(x_i)
             N4_i = N4(x_i)
 
-            P1 = Mat36{T}(
+            P1 = Mat36(
                 0, 0, 0, 
                 0, 0, -N3_i, 
                 0, N3_i, 0, 
@@ -193,7 +191,7 @@ function get_centreline!(positions, connectivity, allnodes, allbeams)
                 0, 0, -N4_i,
                 0, N4_i, 0)
             
-            ul = P1* Vec6{T}(psil1[1], psil1[2], psil1[3],  psil2[1], psil2[2], psil2[3]) # local cross section displacement, eq[38] Le 2014
+            ul = P1* Vec6(psil1[1], psil1[2], psil1[3],  psil2[1], psil2[2], psil2[3]) # local cross section displacement, eq[38] Le 2014
 
             xOG_j = N1_i*x1 + N2_i*x2 + Re*ul
 

@@ -13,11 +13,11 @@ function get_angle_from_skew_skymmetric_matrix(Stheta, T=Float64)
 end
 
 # Get the inverse of skew symmetric matrix from angle
-function get_inverse_skew_skymmetric_matrix_from_angle(theta)
+function get_inverse_skew_skymmetric_matrix_from_angle(theta::AbstractVector{T}) where T
 
     theta_norm = norm(theta)
 
-    if theta_norm < 1e-15
+    if theta_norm < 10*eps(T)
 
         Tsinv = Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1)
 
@@ -36,11 +36,11 @@ function get_inverse_skew_skymmetric_matrix_from_angle(theta)
 end
 
 # Get Ts from angle
-function get_Ts_from_angle(theta)
+function get_Ts_from_angle(theta::AbstractVector{T}) where T
 
     theta_norm = norm(theta)
 
-    if theta_norm < 1e-15
+    if theta_norm < 10*eps(T)
 
         Tsinv = Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1)
 
@@ -55,17 +55,17 @@ function get_Ts_from_angle(theta)
 end
 
 # Get angle from rotaion matrix (not computing the log)
-function get_angle_from_rotation_matrix(R)
+function get_angle_from_rotation_matrix(R::AbstractMatrix{T}) where T
 
     if abs((tr(R)-1)/2) < 1
-        norm_v = max(acos((tr(R)-1)/2), 1e-20)
+        norm_v = max(acos((tr(R)-1)/2), 10*eps(T))
     else
-        norm_v = 1e-20
+        return zero(Vec3{T})
     end
 
     n_v = (1/(2*sin(norm_v))) * Vec3(R[3,2]-R[2,3], R[1,3]-R[3,1], R[2,1]-R[1,2])
 
-    return norm_v.*n_v
+    return norm_v*n_v
 
 end
 

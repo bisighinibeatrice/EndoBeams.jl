@@ -102,21 +102,21 @@ end
 
 function reshapeA1!(M, v)
     
-    M[2,1] = M[2,1] .- (v[8].-v[2])
-    M[3,1] = M[3,1] .- (v[9].-v[3])
+    M[2,1] = M[2,1] - (v[8]-v[2])
+    M[3,1] = M[3,1] - (v[9]-v[3])
     
-    M[2,7] = M[2,7] .+ (v[8].-v[2])
-    M[3,7] = M[3,7] .+ (v[9].-v[3])
+    M[2,7] = M[2,7] + (v[8]-v[2])
+    M[3,7] = M[3,7] + (v[9]-v[3])
     
 end
 
 function reshapeA2!(M, v)
     
-    M[2,1] = M[2,1] .- (v[3].-v[9])
-    M[3,1] = M[3,1] .- (v[8].-v[2])
+    M[2,1] = M[2,1] - (v[3]-v[9])
+    M[3,1] = M[3,1] - (v[8]-v[2])
     
-    M[2,7] = M[2,7] .+ (v[3].-v[9])
-    M[3,7] = M[3,7] .+ (v[8].-v[2])
+    M[2,7] = M[2,7] + (v[3]-v[9])
+    M[3,7] = M[3,7] + (v[8]-v[2])
     
 end
 
@@ -334,7 +334,7 @@ function compute_Bt(Tsinv_th1g, Tsinv_th2g)
     return Bt
 end
 
-function get_eta_mu(theta)
+function get_eta_mu(theta::AbstractVector{T}) where T
     
     eta_1 = 1/12
     mu_1 = 1/360
@@ -349,9 +349,7 @@ function get_eta_mu(theta)
     
     mu_2 = (theta*(theta+sin_theta)-8*(sin_theta2)^2)/(4*(theta^4)*(sin_theta2)^2)
     
-    flag_tol = theta<1e-12
-    
-    ind_choose = flag_tol*1 + (1-flag_tol)*2
+    ind_choose = theta<10*eps(T) ? 1 : 2
     
     aux_eta = (eta_1, eta_2)
     aux_mu = (mu_1, mu_2)

@@ -15,7 +15,7 @@ function clean_folders(thisDirOutputPath)
 end 
 
 # Calls the functions saving the VTKs related to the nodes and beams positions i-snapshot
-function save_VTK(i, allnodes, allbeams, sol_GP, int_pos, int_conn, dirOutput, SAVE_INTERPOLATION_VTK::Bool = false, SAVE_GP_VTK::Bool = false, SAVE_NODES_VTK::Bool = false)
+function save_VTK(i, allnodes, allbeams, sol_GP, int_pos, int_conn, dirOutput, SAVE_INTERPOLATION_VTK = false, SAVE_GP_VTK = false, SAVE_NODES_VTK = false)
     
     if SAVE_INTERPOLATION_VTK    
         write_VTK_beams(i, allnodes, allbeams, int_pos, int_conn, dirOutput)
@@ -32,7 +32,7 @@ function save_VTK(i, allnodes, allbeams, sol_GP, int_pos, int_conn, dirOutput, S
 end 
 
 # Cleans folders, pre-allocate and initialise the variables used during the simulation and save the VTKs of the initial configuration
-function solver_initialisation(conf, allnodes, allbeams, int_pos, int_conn, comp, cons, thisDirOutputPath, SAVE_INTERPOLATION_VTK::Bool = false, SAVE_GP_VTK::Bool = false, SAVE_NODES_VTK::Bool = false, T=Float64)
+function solver_initialisation(conf, allnodes, allbeams, int_pos, int_conn, comp, cons, thisDirOutputPath, SAVE_INTERPOLATION_VTK = false, SAVE_GP_VTK = false, SAVE_NODES_VTK = false, T=Float64)
 
     clean_folders(thisDirOutputPath)
 
@@ -158,16 +158,16 @@ function dirichlet_global_to_local!(nodes_sol, allnodes)
         Ra = allnodes.R_global_to_local[a]    
         RaT = Ra'
         
-        adof = 6*(a-1) .+ Vec3{Int}(1,2,3)
+        adof = 6*(a-1) .+ Vec3(1,2,3)
 
         nodes_sol.r[adof] .= Ra*nodes_sol.r[adof]
         nodes_sol.asol[adof] .= Ra*nodes_sol.asol[adof]
         
         @inbounds for b = 1:length(allnodes)
             
-            bdof = 6*(b-1) .+ Vec3{Int}(1,2,3)
+            bdof = 6*(b-1) .+ Vec3(1,2,3)
 
-            Kab_loc = Mat33{T}( 
+            Kab_loc = Mat33( 
             nodes_sol.Ktan[adof[1], bdof[1]], nodes_sol.Ktan[adof[2], bdof[1]], nodes_sol.Ktan[adof[3], bdof[1]],
             nodes_sol.Ktan[adof[1], bdof[2]], nodes_sol.Ktan[adof[2], bdof[2]], nodes_sol.Ktan[adof[3], bdof[2]],
             nodes_sol.Ktan[adof[1], bdof[3]], nodes_sol.Ktan[adof[2], bdof[3]], nodes_sol.Ktan[adof[3], bdof[3]])
@@ -200,7 +200,7 @@ function dirichlet_local_to_global!(nodes_sol, allnodes)
         Ra = allnodes.R_global_to_local[a]       
         RaT = Ra'
         
-        adof = 6*(a-1) .+ Vec3{Int}(1,2,3) 
+        adof = 6*(a-1) .+ Vec3(1,2,3) 
         nodes_sol.ΔD[adof] .= RaT*nodes_sol.ΔD[adof]
         
     end
@@ -266,7 +266,7 @@ function update_local_to_global_matrix!(allnodes)
         
         x = allnodes.pos[i]+ allnodes.u[i]
         theta = atan(x[2], x[1])
-        allnodes.R_global_to_local[i] = Mat33{T}(cos(theta), -sin(theta), 0,  sin(theta), cos(theta), 0, 0, 0, 1)
+        allnodes.R_global_to_local[i] = Mat33(cos(theta), -sin(theta), 0,  sin(theta), cos(theta), 0, 0, 0, 1)
         
     end 
     
@@ -404,7 +404,7 @@ function update_current_solution_corrector!(sol_n1, ndofs, matrices)
 end 
 
 # Compute residual and increment vector residual in the corrector loop
-function compute_norms_corrector(k, aux_tol, sol_n1, nodes_sol, matrices, SHOW_COMP_TIME::Bool = false)
+function compute_norms_corrector(k, aux_tol, sol_n1, nodes_sol, matrices, SHOW_COMP_TIME = false)
 
     aux_tol_old = aux_tol
     nodes_sol.f_aux .= sol_n1.fext .+ sol_n1.Tct .+ matrices.Tconstr .- matrices.Tdamp
