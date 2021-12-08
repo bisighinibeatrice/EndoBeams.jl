@@ -1,6 +1,6 @@
 function test1_ring_plane()
     
-    # -------------------------------------------------------------------------------------------
+       # -------------------------------------------------------------------------------------------
     # Building the nodes
     # -------------------------------------------------------------------------------------------
     
@@ -13,6 +13,7 @@ function test1_ring_plane()
     
     # positions
     pos =  Vec3{T}[]
+    
     push!(pos, Vec3(Rmid, 0, 0))
     
     for idiv = 1:nelem-1
@@ -43,7 +44,7 @@ function test1_ring_plane()
     plane = fill("xy", length(pos))
     
     # nodes StructArray
-    allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane)
+    allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, nothing, T)    
     
     # -------------------------------------------------------------------------------------------
     # Building the beams
@@ -85,7 +86,7 @@ function test1_ring_plane()
     mat = Material{T}(E, G, Arho, Jrho)
     
     # beams vector
-    allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints)
+    allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints, nothing, T)
     
     #-----------------------------------------------------------------------------------
     # Simulation parameters
@@ -107,7 +108,7 @@ function test1_ring_plane()
     tol_ddk = 1e-5
     max_it = 10
     
-    # Gaussian points
+    # Gauss points
     nG = 3
     wG = Vec3(5/9, 8/9, 5/9)
     zG = Vec3(-sqrt(3/5), 0, sqrt(3/5)) 
@@ -117,7 +118,7 @@ function test1_ring_plane()
     mu_T = 0
     eps_tol_fric = 0.1
     
-    comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric)
+    comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T)
     
     # -------------------------------------------------------------------------------------------
     # External forces
@@ -128,14 +129,14 @@ function test1_ring_plane()
     Fext(t) = 0
     dofs_load = T[]
     
-    ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load)
+    ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load, T)
     
     # -------------------------------------------------------------------------------------------
     # Boundary conditions
     # -------------------------------------------------------------------------------------------
     
     # multifreedom constrains
-    cons = T[]
+    cons =  T[]
     
     # number of dof (6 per node)
     ndofs = nnodes*6
@@ -152,7 +153,7 @@ function test1_ring_plane()
     udisp = T[]
     
     # boundary conditions strucutre 
-    bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp)
+    bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
     
     # -------------------------------------------------------------------------------------------
     # SDF
@@ -167,14 +168,14 @@ function test1_ring_plane()
     # -------------------------------------------------------------------------------------------
     
     # configuration: mesh, external forces and boundary conditions
-    conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bc)
+    conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
     
     # -------------------------------------------------------------------------------------------
     # Solve
     # -------------------------------------------------------------------------------------------
     
     params = ParamsTest()
-    solver!(allnodes, allbeams, conf, comp, sdf, cons, params)       
+    solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)       
     
     # -------------------------------------------------------------------------------------------
     # Test 

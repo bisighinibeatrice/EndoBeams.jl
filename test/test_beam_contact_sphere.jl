@@ -91,7 +91,7 @@ function test_sphere()
     tol_ddk = 1e-5
     max_it = 10
     
-    # Gaussian points
+    # Gauss points
     nG = 3
     wG = Vec3(5/9, 8/9, 5/9)
     zG = Vec3(-sqrt(3/5), 0, sqrt(3/5)) 
@@ -139,7 +139,7 @@ function test_sphere()
     udisp = T[]
     
     # boundary conditions strucutre 
-    bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
+    bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
     
     # -------------------------------------------------------------------------------------------
     # SDF
@@ -160,7 +160,7 @@ function test_sphere()
     # -------------------------------------------------------------------------------------------
     
     # configuration: mesh, external forces and boundary conditions
-    conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bc, T)
+    conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
     
     # -------------------------------------------------------------------------------------------
     # Solve
@@ -175,13 +175,13 @@ function test_sphere()
     
     rtol = 1e-2
     
-    # pos_matlab = Vec3(0.107853165032904, 0.0132224390067658, 0.0360871249073232)
-    # t1 = isapprox(allnodes.pos[5] + allnodes.u[5], pos_matlab; rtol)
-    # @test t1
+    pos_matlab = Vec3(0.107853165032904, 0.0132224390067658, 0.0360871249073232)
+    t1 = isapprox(allnodes.pos[5] + allnodes.u[5], pos_matlab; rtol)
+    @test t1
     
-    # pos_matlab = Vec3(0.129725721716302, 0.0548254754528272, 0.0730574700480992)
-    # t2 = isapprox(allnodes.pos[end] + allnodes.u[end], pos_matlab; rtol)
-    # @test t2
+    pos_matlab = Vec3(0.129725721716302, 0.0548254754528272, 0.0730574700480992)
+    t2 = isapprox(allnodes.pos[end] + allnodes.u[end], pos_matlab; rtol)
+    @test t2
     
 end 
 

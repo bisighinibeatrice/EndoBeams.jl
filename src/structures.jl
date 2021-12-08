@@ -23,7 +23,7 @@ struct SimulationParameters{T}
     tol_ΔDk::T
     max_it::T
     
-    # Gaussian points
+    # Gauss points
     nG::Int
     wG::Vec3{T}
     zG::Vec3{T}
@@ -197,7 +197,7 @@ struct PreAllocatedMatricesFixed{T}
     
 end 
 
-# Information related to the contact at the Gaussian points
+# Information related to the contact at the Gauss points
 mutable struct GPSolution{T}  
     
     status::Vector{Int}
@@ -213,13 +213,15 @@ end
 #----------------------------------
 
 """
-Constructor of the structure containing the material properties
+    mat = constructor_material_properties(E, nu, rho, rWireSection)
 
-Material{T}(E, G, Arho, Jrho) =
-constructor_material_properties(E, nu, rho, rWireSection)
+Constructor of the structure containing the material properties:
+- `E`: Young modulus;
+- `nu`: Poisson coefficient;
+- `rho`: density;
+- `rWireSection`: beam radius.
 
 Returns a Material structure.
-
 """
 function constructor_material_properties(E, nu, rho, rWireSection, T=Float64)
 
@@ -238,13 +240,12 @@ function constructor_material_properties(E, nu, rho, rWireSection, T=Float64)
 end
 
 """
-Constructor of the structure containing the geometrical properties.
+    geom = constructor_geometry_properties(rWireSection)
 
-Geometry{T}(A, I22, I33, Io, Irr, J) = 
-constructor_geometry_properties(rWireSection)
+Constructor of the structure containing the geometrical properties:
+- `rWireSection`: beam radius.
 
 Returns a Geometry structure.
-
 """
 function constructor_geometry_properties(rWireSection, T=Float64)
 
@@ -262,15 +263,28 @@ function constructor_geometry_properties(rWireSection, T=Float64)
 end 
 
 """
-Constructor of the structure containing the simulation parameters
+    comp = constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T=Float64)    
 
-SimulationParameters{T}(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric) = 
-constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T=Float64)    
+Constructor of the structure containing the simulation parameters:
+    - `alpha`: integration parameter;
+    - `beta`: integration parameter;
+    - `gamma`: integration parameter;
+    - `damping`: damping coefficient;
+    - `dt`: time step;
+    - `dt_plot`: time step for the saving of output files;
+    - `tend`: total time of the simulation;
+    - `tol_res`: residual tolerance for the Newton-Raphson algorithm;
+    - `tol_ddk`: solution vector tolerance for the Newton-Raphson algorithm;
+    - `max_it`: maximum number of iterations for the Newton-Raphson algorithm;
+    - `nG`: number of Gauss points;
+    - `wG`: Gauss points weights;
+    - `zG`: Gauss points positions along centreline;
+    - `eps_C`: penalty coefficient for the contact normal contributions;
+    - `mu_T`: friction coefficient;
+    - `eps_tol_fric`: regularisation coefficient for the contact tangential contributions.
 
 Returns a SimulationParameters structure.
-
 """
-
 function constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T=Float64)
     
     return SimulationParameters{T}(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric)
@@ -278,13 +292,14 @@ function constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_p
 end 
 
 """
-Constructor of the structure containing the information about the external load, if present
+    fext = constructor_ext_force(flag_crimping, Fext, dof_load, T=Float64)
 
-ExternalForces{T, typeof(Fext)}(flag_crimping, Fext, dof_load) = 
-constructor_ext_force(flag_crimping, Fext, dof_load, T=Float64)
+Constructor of the structure containing the information about the external load, if present:
+- `flag_crimping`: true if the force is defined in cylindral coordinates;
+- `Fext`: external load amplitude;
+- `dof_load`: DOFs interested by the external load.
 
 Returns a ExternalForces structure.
-
 """
 function constructor_ext_force(flag_crimping, Fext, dof_load, T=Float64)
         
@@ -293,13 +308,18 @@ function constructor_ext_force(flag_crimping, Fext, dof_load, T=Float64)
 end 
 
 """
-Constructor of the structure containing the information about the boundary conditions, if present
+    bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T=Float64)
 
-BoundaryConditions{T, F1}(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp) = 
-constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T=Float64)
+Constructor of the structure containing the information about the Dirichlet boundary conditions (BCs), if present:
+- `fixed_dofs`: fixed DOFs;
+- `free_dofs`: free DOFs;
+- `flag_cylindrical`: true if the BCs are defined in cylindral coordinates;
+- `flag_disp_vector`: true if the BCs are defined as a vector;
+- `Fdisp`: imposed dispacement amplitude;
+- `udisp`: vector; containing the imposed dispacements;
+- `dofs_disp`: DOFs interested by the Dirichlet BCs.
 
 Returns a BoundaryConditions structure.
-
 """
 function constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T=Float64)
     
@@ -310,13 +330,18 @@ function constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical
 end 
 
 """
-Configuration{T, typeof(ext_forces.Fext), typeof(bc.Fdisp)}(mat, geom, ndofs, disp_dof, ang_dof, ext_forces, bc) = 
-constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bc, T=Float64)
+    conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T=Float64)
+
+Constructor of the structure collecting the information for the simulation:
+- `mat`: material properties (Material{T});
+- `geom`: geoltrical properties (Geometry{T});
+- `nnodes`: number of nodes in the system;
+- `ndofs`: number of DOFs in the system;
+- `bcs`: Dirichlet BCs.
 
 Returns a Configuration structure.
-
 """
-function constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bc, T=Float64)
+function constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T=Float64)
     
     # displacement dofs
     disp_dofs = zeros(3*nnodes)
@@ -327,7 +352,7 @@ function constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bc, T=F
     # rotation dofs
     ang_dofs = setdiff(1:ndofs,disp_dofs)
 
-    return Configuration{T, typeof(ext_forces.Fext), typeof(bc.Fdisp)}(mat,geom,ndofs, disp_dofs, ang_dofs, ext_forces,  bc)
+    return Configuration{T, typeof(ext_forces.Fext), typeof(bcs.Fdisp)}(mat,geom,ndofs, disp_dofs, ang_dofs, ext_forces, bcs)
     
 end 
 
@@ -618,7 +643,7 @@ function constructor_global_matrices(allnodes, dofs_tan, T=Float64)
     Tk_0 =  zeros(ndofs)
     Tdamp_0 = zeros(ndofs)
     Tct_0 = zeros(ndofs)
-    Tconstr_0  = spzeros(ndofs)
+    Tconstr_0 = zeros(ndofs)
 
     return Matrices{T}(Kint_0, Ck_0, M_0, Kct_0, Kconstr_0, Ccosntr_0,Tint_0, Tk_0, Tdamp_0, Tct_0, Tconstr_0)
     

@@ -122,7 +122,7 @@ function get_connectivity_centerline(pos_cl)
 
 end 
 
-# Write Gaussian points info as vtk file
+# Write Gauss points info as vtk file
 function write_VTK_GP(step, sol_GP, dirOutput) 
     
     filename = string(dirOutput * "/GP$step.vtk");
@@ -255,16 +255,17 @@ end
 #----------------------------------
 
 """
-pos = read_TXT_file_pos(filename)
-Read a .txt file as a Vec3{T}[] for position and displacement. 
-"""
-function read_TXT_file_pos(filename)
+    pos = read_TXT_file_pos(filename)
 
-    Xpc = Vector{Vec3{Float64}}()
+Read a .txt file as a Vec3{T}[], used for positions and displacements. 
+"""
+function read_TXT_file_pos(filename, T=Float64)
+
+    Xpc = Vec3{T}[]
     xpc = readdlm(filename)
 
     for i in 1:size(xpc,1)
-        push!(Xpc, Vec3{Float64}(xpc[i,1], xpc[i,2], xpc[i,3]))
+        push!(Xpc, Vec3(xpc[i,1], xpc[i,2], xpc[i,3]))
     end
 
     return Xpc
@@ -272,8 +273,9 @@ function read_TXT_file_pos(filename)
 end 
 
 """
-conn = read_TXT_file_pos(filename)
-Read a .txt file as a Vector{Vec2{T}}() for connectivity. 
+    conn = read_TXT_file_pos(filename)
+
+Read a .txt file as a Vector{Vec2{T}}, used for connectivity. 
 """
 function read_TXT_file_conn(filename)
 
@@ -293,14 +295,15 @@ function read_TXT_file_conn(filename)
 end 
 
 """
-Ics_vec = read_TXT_file_ICs_array(filename)
-Read a .txt file as a T[] for displacement, velocity and acceleration initial conditions. 
+    Ics_vec = read_TXT_file_ICs_array(filename)
+
+Read a .txt file as a T[], used for displacement, velocity and acceleration initial conditions. 
 """
-function read_TXT_file_ICs_array(filename)
+function read_TXT_file_ICs_array(filename, T=Float64)
 
     X = readdlm(filename)
     nnodes3 = size(X,1)*size(X,2)
-    x = zeros(nnodes3)
+    x = zeros(T, nnodes3)
 
     j = 1
     for i in 1:3:nnodes3
@@ -315,17 +318,18 @@ function read_TXT_file_ICs_array(filename)
 end
 
 """
-Ics_mat = read_TXT_file_ICs_matrix(filename)
-Read a .txt file as a T[] for rotation matrix (nodes and edges) initial conditions. 
+    Ics_mat = read_TXT_file_ICs_matrix(filename)
+
+Read a .txt file as a Mat33{T}[], used for the rotation matrix (nodes and beam elements) initial conditions.
 """
-function read_TXT_file_ICs_matrix(filename)
+function read_TXT_file_ICs_matrix(filename, T=Float64)
 
     X = readdlm(filename)
     nnodes = size(X,1)
-    x = Vector{Mat33{Float64}}()
+    x = Mat33{T}[]
 
     for i in 1:nnodes
-       push!(x, Mat33{Float64}(X[i,:]))
+       push!(x, Mat33(X[i,:]))
     end
 
     return x

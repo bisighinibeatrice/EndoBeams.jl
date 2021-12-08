@@ -38,7 +38,7 @@ function test_ring_crimping()
     plane = fill("xz", length(pos))
     
     # nodes StructArray
-    allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane)
+    allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, nothing, T)
     
     # -------------------------------------------------------------------------------------------
     # Building the beams
@@ -80,7 +80,7 @@ function test_ring_crimping()
     mat = Material{T}(E, G, Arho, Jrho)
     
     # beams vector
-    allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints)
+    allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints, nothing, T)
     
     #-----------------------------------------------------------------------------------
     # Simulation parameters
@@ -102,7 +102,7 @@ function test_ring_crimping()
     tol_ddk = 1e-5
     max_it = 10
     
-    # Gaussian points
+    # Gauss points
     nG = 3
     wG = Vec3(5/9, 8/9, 5/9)
     zG = Vec3(-sqrt(3/5), 0, sqrt(3/5)) 
@@ -112,7 +112,7 @@ function test_ring_crimping()
     mu_T = 0
     eps_tol_fric = 0.1
     
-    comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric)
+    comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T)
     
     # -------------------------------------------------------------------------------------------
     # External forces
@@ -123,7 +123,7 @@ function test_ring_crimping()
     Fext(t) = 0
     dofs_load = T[]
     
-    ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load)
+    ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load, T)
     
     # -------------------------------------------------------------------------------------------
     # Boundary conditions
@@ -139,7 +139,7 @@ function test_ring_crimping()
     aux1 = 1:6:ndofs-5
     aux2 = 3:6:ndofs-3
     
-    # Fixed dof (x6): I am fixing the r (changes according to the bc) and z coordinates (blocked)
+    # Fixed dof (x6): I am fixing the r (changes according to the bcs) and z coordinates (blocked)
     fixed_dofs = sort(unique([aux1; aux2])) 
     free_dofs = setdiff(1:ndofs, fixed_dofs) 
     
@@ -154,7 +154,7 @@ function test_ring_crimping()
     udisp = T[]
     
     # boundary conditions strucutre 
-    bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp)
+    bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
     
     # -------------------------------------------------------------------------------------------
     # SDF
@@ -167,14 +167,14 @@ function test_ring_crimping()
     # -------------------------------------------------------------------------------------------
     
     # configuration: mesh, external forces and boundary conditions
-    conf = constructor_configuration(mat, geom, nnodes, ndofs,  ext_forces, bc)
+    conf = constructor_configuration(mat, geom, nnodes, ndofs,  ext_forces, bcs, T)
     
     # -------------------------------------------------------------------------------------------
     # Solve
     # -------------------------------------------------------------------------------------------
     
     params = ParamsTest()
-    solver!(allnodes, allbeams, conf, comp, sdf, cons, params)       
+    solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)       
     
     # -------------------------------------------------------------------------------------------
     # Test

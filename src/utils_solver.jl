@@ -404,7 +404,7 @@ function update_current_solution_corrector!(sol_n1, ndofs, matrices)
 end 
 
 # Compute residual and increment vector residual in the corrector loop
-function compute_norms_corrector(k, aux_tol, sol_n1, nodes_sol, matrices, SHOW_COMP_TIME = false)
+function compute_norms_corrector(k, aux_tol, sol_n1, nodes_sol, matrices, SHOW_COMP_TIME::Bool = false)
 
     aux_tol_old = aux_tol
     nodes_sol.f_aux .= sol_n1.fext .+ sol_n1.Tct .+ matrices.Tconstr .- matrices.Tdamp

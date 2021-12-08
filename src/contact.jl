@@ -4,7 +4,13 @@
 #----------------------------------
 
 """
-Constructor of the structure containing the properties  of the analytical SDF of a z-normal plane.
+    sdf = struct SDF_Plane_z{T}
+
+Constructor of the structure containing the properties of the analytical SDF of a z-normal plane:
+- `r`: beam radius;
+- `z0`: plane position along z.
+
+Returns a structure containing the information of the created sdf. 
 """
 struct SDF_Plane_z{T}
     
@@ -14,7 +20,13 @@ struct SDF_Plane_z{T}
 end 
 
 """
+    sdf = struct SDF_Plane_y{T}
+
 Constructor of the structure containing the properties  of the analytical SDF of a y-normal plane.
+- `r`: beam radius;
+- `y0`: plane position along y.
+
+Returns a structure containing the information of the created sdf.  
 """
 struct SDF_Plane_y{T}
     
@@ -24,7 +36,16 @@ struct SDF_Plane_y{T}
 end 
 
 """
+    sdf = struct SDF_Sphere{T}
+
 Constructor of the structure containing the properties  of the analytical SDF of a sphere.
+- `r`: beam radius;
+- `R`: sphere radius;
+- `x0`: sphere centre position along x;
+- `y0`: sphere centre position along y;
+- `z0`: sphere centre position along z.
+    
+Returns a structure containing the information of the created sdf. 
 """
 struct SDF_Sphere{T}
     
@@ -37,7 +58,13 @@ struct SDF_Sphere{T}
 end 
 
 """
-Constructor of the structure containing the properties  of the analytical SDF of a z-oriented cylinder.
+    sdf = struct SDF_Cylinder{T}
+
+Constructor of the structure containing the properties of the analytical SDF of an infinite cylinder oriented along z.
+- `r`: beam radius;
+- `R`: cylinder radius.
+    
+Returns a structure containing the information of the created sdf. 
 """
 struct SDF_Cylinder{T}
     
@@ -65,9 +92,15 @@ end
 #----------------------------------
 # CONSTRUCTOR DISCRETE SDF
 #----------------------------------
-
 """
+    sdf = constructor_discrete_sdf(filename, rWireSection, inside,  T=Float64)
+
 Constructor of the discrete SDF from a vtk file.
+- `filename`: sdf file (all files with extensions .vtk are accepted);
+- `rWireSection`: cylinder radius;
+- `inside`: true if the sdf is negative inside.
+
+Returns a structure containing the information of the created sdf. 
 """
 function constructor_discrete_sdf(filename, rWireSection, inside,  T=Float64)
     

@@ -1,12 +1,14 @@
 using EndoBeams
 
+T = Float64
+
 # -------------------------------------------------------------------------------------------
 # Building the nodes
 # -------------------------------------------------------------------------------------------
 
 # external and internal raidus of the ring
 Rmid = 10
-nelem = 64
+nelem = 32
 alpha_div = 2*pi/(nelem)
 
 # positions
@@ -42,7 +44,7 @@ wdtdt_0 = zeros(size(pos,1)*3)
 plane = fill("xy", length(pos))
 
 # nodes StructArray
-allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane)
+allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, nothing, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -84,7 +86,7 @@ geom = Geometry{T}(A, I22, I33, Io, Irr, J)
 mat = Material{T}(E, G, Arho, Jrho)
 
 # beams vector
-allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints)
+allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints, nothing, T)
 
 #-----------------------------------------------------------------------------------
 # Simulation parameters
@@ -106,7 +108,7 @@ tol_res = 1e-5
 tol_ddk = 1e-5
 max_it = 10
 
-# Gaussian points
+# Gauss points
 nG = 3
 wG = Vec3(5/9, 8/9, 5/9)
 zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
@@ -116,7 +118,7 @@ eps_C = 1E6
 mu_T = 0.3
 eps_tol_fric = 0.5
 
-comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric)
+comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -127,31 +129,31 @@ flag_crimping = false
 Fext(t) = 0
 dofs_load = T[]
 
-ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load)
+ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load, T)
 
 # -------------------------------------------------------------------------------------------
 # Boundary conditions
 # -------------------------------------------------------------------------------------------
 
 # multifreedom constrains
-cons = T[]
+cons = Int[]
 
 # number of dof (6 per node)
 ndofs = nnodes*6
 
 # Dirichlet boundary conditions: fixed positions
-fixed_dofs = T[]
+fixed_dofs = Int[]
 free_dofs = setdiff(1:ndofs, fixed_dofs) 
 
 # Dirichlet boundary conditions: moving positions
 flag_cylindrical = false
-dofs_disp = T[]
+dofs_disp = Int[]
 Fdisp(t) = 0
 flag_disp_vector = false
 udisp = T[]
 
 # boundary conditions strucutre 
-bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp)
+bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
 
 # -------------------------------------------------------------------------------------------
 # SDF
@@ -168,11 +170,11 @@ sdf = SDF_Plane_z{T}(r, z0)
 
 
 # configuration: mesh, external forces and boundary conditions
-conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bc)
+conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 
 # -------------------------------------------------------------------------------------------
 # Solve
 # -------------------------------------------------------------------------------------------
 
-params = Params(thisDirOutputPath = "examples/output3D")
-solver!(allnodes, allbeams, conf, comp, sdf, cons, params)       
+params = Params(scale = 2, thisDirOutputPath = "examples/output3D")
+solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)                                        

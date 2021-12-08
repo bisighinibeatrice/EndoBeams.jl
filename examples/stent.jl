@@ -1,5 +1,7 @@
 using EndoBeams
 
+T = Float64
+
 # -------------------------------------------------------------------------------------------
 # Read stent information
 # -------------------------------------------------------------------------------------------
@@ -40,7 +42,7 @@ R_0 = read_TXT_file_ICs_matrix("examples/input_stent/R_positioning.txt")
 plane = fill("xy", length(posStentExp))
 
 # nodes StructArray
-allnodes = constructor_nodes(posStentExp, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R_0)
+allnodes = constructor_nodes(posStentExp, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R_0, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -57,14 +59,14 @@ E = 225*1e3
 ν = 0.33
 ρ = 9.13*1e-6
 rWireSection = 0.065
-geom =  constructor_geometry_properties(rWireSection)
-mat = constructor_material_properties(E, ν, ρ, rWireSection)
+geom =  constructor_geometry_properties(rWireSection, T)
+mat = constructor_material_properties(E, ν, ρ, rWireSection, T)
 
 # read initial rotations for the beams
 Re_0 = read_TXT_file_ICs_matrix("examples/input_stent/Re0_positioning.txt")
 
 # beams vector
-allbeams = constructor_beams(allnodes, connStent, mat, geom, nbInterpolationPoints, Re_0)
+allbeams = constructor_beams(allnodes, connStent, mat, geom, nbInterpolationPoints, Re_0, T)
 
 # -------------------------------------------------------------------------------------------
 # Simulation parameters
@@ -74,11 +76,11 @@ allbeams = constructor_beams(allnodes, connStent, mat, geom, nbInterpolationPoin
 alpha = -0.05
 beta = 0.25*(1-alpha)^2
 gamma = 0.5*(1-2*alpha)
-damping = 1E4*5
+damping = 1E5
 
 # time step and total time
-dt = 0.1
-dt_plot =  0.1
+dt = 0.01
+dt_plot =  0.01
 tend = 1E10
 
 # tolerance and maximum number of iterations
@@ -86,7 +88,7 @@ tol_res = 1e-5
 tol_ddk = 1e-5
 max_it = 10
 
-# Gaussian points
+# Gauss points
 nG = 3
 wG = Vec3(5/9, 8/9, 5/9)
 zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
@@ -94,9 +96,9 @@ zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 # contact parameters
 eps_C = 500 #penalty parameter
 mu_T = 0.01
-eps_tol_fric = 0.1 #regularized parameter for friction cont act
+eps_tol_fric = 0.1 #regularized parameter for friction contact
 
-comp = constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric)
+comp = constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -107,7 +109,7 @@ flag_crimping = false
 Fext(t) = 0*t
 dofs_load = T[]
 
-ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load)
+ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load, T)
 
 # -------------------------------------------------------------------------------------------
 # Boundary conditions
@@ -132,7 +134,7 @@ flag_disp_vector = false
 udisp = T[]
 
 # boundary conditions strucutre
-bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp)
+bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
 
 # -------------------------------------------------------------------------------------------
 # SDF
@@ -145,11 +147,11 @@ sdf = constructor_discrete_sdf("examples/input_stent/arcStretchObj.vtk", rWireSe
 # -------------------------------------------------------------------------------------------
 
 # configuration: mesh, external forces and boundary conditions
-conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bc)
+conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 
 # -------------------------------------------------------------------------------------------
 # Start simulation
 # -------------------------------------------------------------------------------------------
 
 params = Params(thisDirOutputPath = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true)
-solver!(allnodes, allbeams, conf, comp, sdf, cons, params)
+solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)

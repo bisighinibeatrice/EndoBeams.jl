@@ -1,5 +1,7 @@
 using EndoBeams
 
+T = Float64
+
 #-------------------------------------------------------------------------------------------
 # Read the mesh
 # -------------------------------------------------------------------------------------------
@@ -30,7 +32,7 @@ wdtdt_0 = zeros(nnodes*3)
 plane = fill("xy", length(pos))
 
 # nodes StructArray
-allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane)
+allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, nothing, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -58,7 +60,7 @@ geom = Geometry{T}(A, I22, I33, Io, Irr, J)
 mat = Material{T}(E, G, Arho, Jrho)
 
 # beams vector
-allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints)
+allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints, nothing, T)
     
 #-----------------------------------------------------------------------------------
 # Simulation parameters
@@ -80,7 +82,7 @@ tol_res = 1e-5
 tol_ddk = 1e-5
 max_it = 10
 
-# Gaussian points
+# Gauss points
 nG = 3
 wG = Vec3(5/9, 8/9, 5/9)
 zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
@@ -90,7 +92,7 @@ eps_C = 0.01
 mu_T = 0.01
 eps_tol_fric = 0.5
 
-comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric)
+comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -123,29 +125,29 @@ flag_disp_vector = false
 udisp = T[]
 
 # boundary conditions strucutre
-bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp)
+bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
 
 # -------------------------------------------------------------------------------------------
 # SDF
 # -------------------------------------------------------------------------------------------
 
 # analytical SDF
-# sdf = SDF_Sphere{T}(r, 0.05, 0, 0, 0)
+sdf = SDF_Sphere{T}(r, 0.05, 0, 0, 0)
 
 # discrete SDF
-inside = true
-sdf = constructor_discrete_sdf("examples/input_net/sdf_sphere_20.vtk", r, inside)
+# inside = true
+# sdf = constructor_discrete_sdf("examples/input_net/sdf_sphere_20.vtk", r, inside)
 
 # -------------------------------------------------------------------------------------------
 # Configuration
 # -------------------------------------------------------------------------------------------
 
 # configuration: mesh, external forces and boundary conditions
-conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bc)
+conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 
 # -------------------------------------------------------------------------------------------
 # Solve
 # -------------------------------------------------------------------------------------------
 
-params = Params(thisDirOutputPath = "examples/output3D")
-solver!(allnodes, allbeams, conf, comp, sdf, cons, params)
+params = Params(scale =2,thisDirOutputPath = "examples/output3D")
+solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)

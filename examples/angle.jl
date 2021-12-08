@@ -1,4 +1,5 @@
 using EndoBeams
+
 T = Float64
 
 #-------------------------------------------------------------------------------------------
@@ -31,7 +32,7 @@ wdtdt_0 = zeros(nnodes*3)
 plane = fill("xy", length(pos))
 
 # nodes StructArray
-allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, T)
+allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, nothing, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -64,11 +65,11 @@ Io = 0
 Irr = 0
 J = 1e-3
 
-geom = Geometry{T}(A, I22, I33, Io, Irr, J, T)
-mat = Material{T}(E, G, Arho, Jrho, T)
+geom = Geometry{T}(A, I22, I33, Io, Irr, J)
+mat = Material{T}(E, G, Arho, Jrho)
 
 # beams vector
-allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints, T)
+allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints, nothing, T)
 
 #-----------------------------------------------------------------------------------
 # Simulation parameters
@@ -90,7 +91,7 @@ tol_res = 1e-5
 tol_ddk = 1e-5
 max_it = 10
 
-# Gaussian points
+# Gauss points
 nG = 3
 wG = Vec3(5/9, 8/9, 5/9)
 zG = Vec3(-sqrt(3/5), 0, sqrt(3/5)) 
@@ -134,7 +135,7 @@ flag_disp_vector = false
 udisp = T[]
 
 # boundary conditions strucutre 
-bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
+bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
 
 # -------------------------------------------------------------------------------------------
 # SDF
@@ -148,11 +149,11 @@ sdf = nothing
 # -------------------------------------------------------------------------------------------
 
 # configuration: mesh, external forces and boundary conditions
-conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bc, T)
+conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 
 # -------------------------------------------------------------------------------------------
 # Solve
 # -------------------------------------------------------------------------------------------
 
 params = Params(thisDirOutputPath = "examples/output3D")
-solver!(allnodes, allbeams, conf, comp, sdf, cons, params)       
+solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)       

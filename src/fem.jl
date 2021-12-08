@@ -1,7 +1,7 @@
 # Compute beam contact contribution
 function compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, ddt, l0, EG, ln, fixed_matrices, rT, P, Tct, Kct, Cc, C_energy_e, iGP, e, sol_GP, to, T=Float64)
     
-    @timeit_debug to "Get contact at the gaussian point" begin
+    @timeit_debug to "Get contact at the Gauss point" begin
 
         N1, N2, utG, H1G, wG, N7, P1G = contact_vals 
         xGv = N1*x1 + N2*x2 + Re*utG
@@ -465,7 +465,7 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
     @timeit_debug to "Dynamic and contact contributions" begin
 
         
-        # Gaussian quadrature
+        # Gauss quadrature
         nG = comp.nG
         wG_v = comp.wG
         zG_v = comp.zG
@@ -489,7 +489,7 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
         # reference?? Et=E appendix D in [2]
         Et = compute_E_or_Et(SWdt_e)
         
-        # initialise the local matrices used in the gaussian loop
+        # initialise the local matrices used in the Gauss loop
         K_energy_e = zero(T)
         C_energy_e = zero(T)
         
@@ -501,7 +501,7 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
         Kct = zeros(Mat1212{T}) 
         Cc = zeros(Mat1212{T}) 
 
-        # cycle among the gaussian positions
+        # cycle among the Gauss positions
         for iG in 1:nG
 
             @timeit_debug to "Dynamic contributions" begin

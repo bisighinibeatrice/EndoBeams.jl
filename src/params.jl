@@ -14,7 +14,7 @@ end
 
 @with_kw struct ParamsTest
 
-    scale::Int = 10;  @assert scale == 2 || scale == 10
+    scale::Int = 2;  @assert scale == 2 || scale == 10
     ENERGY_STOP::Bool = false 
     SHOW_COMP_TIME::Bool = false
     SHOW_TIME_SECTIONS::Bool = false

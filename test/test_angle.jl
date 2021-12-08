@@ -89,7 +89,7 @@ function test_angle()
     tol_ddk = 1e-5
     max_it = 10
 
-    # Gaussian points
+    # Gauss points
     nG = 3
     wG = Vec3(5/9, 8/9, 5/9)
     zG = Vec3(-sqrt(3/5), 0, sqrt(3/5)) 
@@ -133,7 +133,7 @@ function test_angle()
     udisp = T[]
 
     # boundary conditions strucutre 
-    bc = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
+    bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
 
     # -------------------------------------------------------------------------------------------
     # SDF
@@ -147,7 +147,7 @@ function test_angle()
     # -------------------------------------------------------------------------------------------
 
     # configuration: mesh, external forces and boundary conditions
-    conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bc, T)
+    conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 
     # -------------------------------------------------------------------------------------------
     # Solve
@@ -159,7 +159,7 @@ function test_angle()
     # -------------------------------------------------------------------------------------------
     # Test
     # -------------------------------------------------------------------------------------------
-
+  
     pos_matlab = Vec3(-10.6867358894953, 6.61144877793072, -6.2584504990589)
     @test isapprox(allnodes.pos[end] + allnodes.u[end], pos_matlab)
 

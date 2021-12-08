@@ -32,7 +32,7 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params, T=F
 
         # preallocated vectors for beam interpolation
         int_pos = zeros((allbeams.numberInterpolationPoints[1]+1)*length(allbeams), 3)
-        int_conn = zeros(allbeams.numberInterpolationPoints[1]+1, length(allbeams))
+        int_conn = zeros(Int, allbeams.numberInterpolationPoints[1]+1, length(allbeams))
         
         # preallocation of the vectors and matrices used in the computaion
         sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp = solver_initialisation(conf, allnodes, allbeams, int_pos, int_conn, comp, pn_constrains, thisDirOutputPath, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, SAVE_NODES_VTK, T)
@@ -306,8 +306,8 @@ function predictor!(allnodes, allbeams, pencons, matrices, energy, sol_n1, sol_n
     
     @timeit_debug to "Linear solve" begin 
 
-        solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
-        # nodes_sol.ΔD_free .=  nodes_sol.Ktan_free\nodes_sol.r_free
+        # solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
+        nodes_sol.ΔD_free .=  nodes_sol.Ktan_free\nodes_sol.r_free
 
     end
     
@@ -362,7 +362,7 @@ function corrector_loop!(allnodes, allbeams, pncons, matrices, energy, sol_n1, s
         k = 0
         
         # randomly initialised the variables for the while cycle 
-        nodes_sol.ΔD  .= 5 
+        nodes_sol.ΔD .= 5 
         aux_tol = 1.0e10
         
     end
@@ -374,7 +374,7 @@ function corrector_loop!(allnodes, allbeams, pncons, matrices, energy, sol_n1, s
     @timeit_debug to "Newton solver" begin
         
         while ((aux_tol>tol_res) || (((norm(nodes_sol.ΔD[free_dofs])))>tol_ΔD_k)) && (k<max_it)         
-            
+
             k += 1
             
             @timeit_debug to "Compute matrices" begin
@@ -384,12 +384,12 @@ function corrector_loop!(allnodes, allbeams, pncons, matrices, energy, sol_n1, s
                 
             end
             
-            # @timeit_debug to "Compute multi freedom constrains contributions" begin
+            @timeit_debug to "Compute multi freedom constrains contributions" begin
                 
                 # impose multi freedom constrains
                 compute_multifreedom_constraints!(matrices, allnodes, pncons, t_n1)             
                 
-            # end 
+            end 
             
             @timeit_debug to "Compute tangent matrix and residual" begin
                 
@@ -401,12 +401,12 @@ function corrector_loop!(allnodes, allbeams, pncons, matrices, energy, sol_n1, s
 
             end
             
-            # @timeit_debug to "Update nodal solutions" begin
+            @timeit_debug to "Update nodal solutions" begin
                 
                 # update global nodal solution at each iteration
                 update_nodal_solution_corrector_loop!(nodes_sol, disp_dofs)
                 
-            # end 
+            end 
             
             @timeit_debug to "Impose BCs" begin
                 
@@ -430,8 +430,8 @@ function corrector_loop!(allnodes, allbeams, pncons, matrices, energy, sol_n1, s
             
             @timeit_debug to "Linear solve" begin
                 
-                solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
-                # nodes_sol.ΔD_free .=  nodes_sol.Ktan_free\nodes_sol.r_free
+                # solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
+                nodes_sol.ΔD_free .=  nodes_sol.Ktan_free\nodes_sol.r_free
 
             end 
             
