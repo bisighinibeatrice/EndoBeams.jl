@@ -1,7 +1,9 @@
 *.jl.*.cov
 *.jl.cov
 *.jl.mem
-/Manifest.toml
-/docs/build/
+
 /examples/output3D/
-/.vscode/
+
+docs/build/
+Manifest.toml
+.vscode
