@@ -1,3 +1,6 @@
+test_sym(m) = maximum(abs.(Symmetric(m)-m))
+
+
 # Compute beam contact contribution
 function compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, ddt, l0, EG, ln, fixed_matrices, rT, P, Tct, Kct, Cc, C_energy_e, iGP, e, sol_GP, to, T=Float64)
     
@@ -613,6 +616,11 @@ function compute_K_T!(allnodes, allbeams, matrices, energy, conf, sdf, fixed_mat
             end
                                
         end
+
+        println("Kint: $(test_sym(matrices.Kint))")
+        println("Ck: $(test_sym(matrices.Ck))")
+        println("M: $(test_sym(matrices.M))")
+        println("Kct: $(test_sym(matrices.Kct))")
 
 
 
