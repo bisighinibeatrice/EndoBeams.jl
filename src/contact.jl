@@ -192,7 +192,7 @@ function get_SDF_at_P_analitycal_cylinder(P, sdf,  T=Float64)
     
     g_G = norm_aux - sdf.R + sdf.r
     dg_G = invnorm * aux
-    ddg_G = invnorm*I + (invnorm^3)*(aux*aux')
+    ddg_G = invnorm*ID3 + (invnorm^3)*(aux*aux')
     
     return -g_G, -dg_G, -ddg_G
     

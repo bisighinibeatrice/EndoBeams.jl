@@ -275,7 +275,7 @@ end
 # Update nzval of a global sparse matrix given a local matrix (sum)
 function update_spmat_sum(sp, sparsity_map, newz) 
     
-    for (k, i) in enumerate(sparsity_map)
+    @inbounds for (k, i) in enumerate(sparsity_map)
         sp.nzval[i] += newz[k]
     end
     
@@ -284,7 +284,7 @@ end
 # Update nzval of a global sparse matrix given a local matrix 
 function update_spmat(sp, sparsity_map, newz) 
     
-    for (k, i) in enumerate(sparsity_map)
+    @inbounds for (k, i) in enumerate(sparsity_map)
         sp.nzval[i] = newz[k]
     end
     
@@ -307,3 +307,5 @@ function update_vec(sp, idof, newK)
     end 
     
 end 
+
+

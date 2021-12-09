@@ -368,7 +368,7 @@ function get_Kah_bar(theta, M, Tsinvtheta)
     
     aux = theta*M'
     
-    aux1 = eta * (aux - 2*aux'+ (theta'*M)*I) 
+    aux1 = eta * (aux - 2*aux'+ (theta'*M)*ID3) 
     aux2 = mu * (Stheta * Stheta * aux') 
     aux3 = - SM/2
     
