@@ -3,56 +3,56 @@
 #-------------------------------------------------------------------
 
 # Gets the position of the two nodes forming the given beam element
-function get_local_pos(e, allnodes)
+@inline function get_local_pos(e, allnodes)
     
     return allnodes.pos[e.node1], allnodes.pos[e.node2]
     
 end 
 
 # Gets the displacement of the two nodes forming the given beam element
-function get_local_displ(e, allnodes)
+@inline function get_local_displ(e, allnodes)
     
     return allnodes.u[e.node1], allnodes.u[e.node2]
     
 end 
 
 # Gets the velocity of the two nodes forming the given beam element
-function get_local_vel(e, allnodes)
+@inline function get_local_vel(e, allnodes)
     
     return allnodes.udt[e.node1], allnodes.udt[e.node2]
     
 end 
 
 # Gets the acceleration of the two nodes forming the given beam element
-function get_local_acc(e, allnodes)
+@inline function get_local_acc(e, allnodes)
     
     return allnodes.udtdt[e.node1], allnodes.udtdt[e.node2]
     
 end 
 
 # Gets the angular velocity of the two nodes forming the given beam element
-function get_local_ang_vel(e, allnodes)
+@inline function get_local_ang_vel(e, allnodes)
     
     return allnodes.wdt[e.node1], allnodes.wdt[e.node2]
     
 end 
 
 # Gets the angular acceleration of the two nodes forming the given beam element
-function get_local_ang_acc(e, allnodes)
+@inline function get_local_ang_acc(e, allnodes)
     
     return allnodes.wdtdt[e.node1], allnodes.wdtdt[e.node2]
     
 end 
 
 # Gets the rotation matrix of the two nodes forming the given beam element
-function get_local_rot(e, allnodes)
+@inline function get_local_rot(e, allnodes)
     
     return allnodes.R[e.node1], allnodes.R[e.node2]
     
 end 
 
 # Gets the rotation matrix displacement of the two nodes forming the given beam element
-function get_local_rot_delt(e, allnodes)
+@inline function get_local_rot_delt(e, allnodes)
     
     return allnodes.Delt[e.node1], allnodes.Delt[e.node2]
     
@@ -158,7 +158,7 @@ function compute_E_or_Et(Re)
     0, 0, 0, 0, 0, 0, 0, 0, 0, Re12, Re22, Re32,
     0, 0, 0, 0, 0, 0, 0, 0, 0, Re13, Re23, Re33)
     
-    return Symmetric(E)
+    return E
 end
 
 function compute_r(v)

@@ -1,10 +1,8 @@
-test_sym(m) = maximum(abs.(Symmetric(m)-m))
-
 
 # Compute beam contact contribution
-function compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, ddt, l0, EG, ln, fixed_matrices, rT, P, Tct, Kct, Cc, C_energy_e, iGP, e, sol_GP, to, T=Float64)
+@fastmath function compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, ddt, l0, EG, ln, fixed_matrices, rT, P, Tct, Kct, Cc, C_energy_e, iGP, e, sol_GP, T=Float64)
     
-    @timeit_debug to "Get contact at the Gauss point" begin
+    # @timeit_debug to "Get contact at the Gauss point" begin
 
         N1, N2, utG, H1G, wG, N7, P1G = contact_vals 
         xGv = N1*x1 + N2*x2 + Re*utG
@@ -16,14 +14,14 @@ function compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, dd
         sol_GP.fGP_N[e.indGP[iGP]] = zeros(Vec3{T})
         sol_GP.fGP_T[e.indGP[iGP]] = zeros(Vec3{T})
 
-    end
+    # end
     
-    @timeit_debug to "Compute contact matrix and force" begin
+    # @timeit_debug to "Compute contact matrix and force" begin
 
         if fc_eps != 0
 
             # eq110 in [2]
-            Inn = I - dg_G*dg_G'
+            Inn = ID3 - dg_G*dg_G'
             dgT = Inn*Re*H1G*E'*ddt
             dgTdgT = dot(dgT,dgT)
             
@@ -101,7 +99,7 @@ function compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, dd
             
             term42_A = term42_A1 + term42_A2 + term42_A3 + term42_A4 # eqE13 in [2]
             
-            aux1 = (I - (1/(dgTdgT+comp.eps_tol_fric))*(dgT*dgT'))*term42_A
+            aux1 = (ID3 - (1/(dgTdgT+comp.eps_tol_fric))*(dgT*dgT'))*term42_A
             aux2 = ddg_G*Re*H1G*E'- comp.mu_T/(sqrt(dgTdgT+comp.eps_tol_fric))*aux1
             term42 = fc_eps*E*H1G'*Re'*aux2 # eqE16 in [2]
             
@@ -115,7 +113,7 @@ function compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, dd
             
             B = Inn*Re*H1G*E' # eqE14e in [2]
             aux1 = comp.mu_T/(sqrt(dgTdgT+comp.eps_tol_fric))
-            aux = - fc_eps*aux1*E*H1G'*Re'*(I  - (1/(dgTdgT+comp.eps_tol_fric))*(dgT*dgT'))*B # eqE17 in [2]
+            aux = - fc_eps*aux1*E*H1G'*Re'*(ID3  - (1/(dgTdgT+comp.eps_tol_fric))*(dgT*dgT'))*B # eqE17 in [2]
             Cc += Cc + (l0/2)*wG*aux
             
             # energy
@@ -123,14 +121,14 @@ function compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, dd
             
         end
 
-    end
+    # end
     
     return Tct, Kct, Cc, C_energy_e
     
 end
 
 # Compute beam dynamic contribution
-function compute_dynamic_contribution(zG, l0, wG, P1G, P2G, NG, Θ1_bar, Θ2_bar, P, E, ddt, GT, ln, rT, Ddt_e, SWdt_e, Et, F1, ddtdt, Re, Tk, Tdamp, M, Ck, K_energy_e, fixed_matrices, conf, comp)
+@fastmath function compute_dynamic_contribution(zG, l0, wG, P1G, P2G, NG, Θ1_bar, Θ2_bar, P, E, ddt, GT, ln, rT, Ddt_e, SWdt_e, Et, F1, ddtdt, Re, Tk, Tdamp, M, Ck, K_energy_e, fixed_matrices, conf, comp)
     
     xG = l0*(zG+1)/2
     
@@ -266,7 +264,7 @@ function compute_dynamic_contribution(zG, l0, wG, P1G, P2G, NG, Θ1_bar, Θ2_bar
 end 
 
 # Compute beam internal energy
-function compute_internal_energy(conf, D_italic_bar, l0)
+@fastmath function compute_internal_energy(conf, D_italic_bar, l0)
     
     mat = conf.mat
     geom = conf.geom
@@ -296,9 +294,9 @@ function compute_internal_energy(conf, D_italic_bar, l0)
 end
 
 # Compute beam contributions
-function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, sol_GP, to, T=Float64) 
+@fastmath function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, sol_GP, T=Float64) 
     
-    @timeit_debug to "Move to local reference system" begin
+    # @timeit_debug to "Move to local reference system" begin
         
         # retrieve the matrix Re_0 of the beam
         Re0 = e.R0
@@ -375,9 +373,9 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
         # eq78 in [2]: D_italic_bar
         D_italic_bar = Vec7(u_bar, Θ1_bar[1], Θ1_bar[2], Θ1_bar[3], Θ2_bar[1], Θ2_bar[2], Θ2_bar[3])
         
-    end 
+    # end 
     
-    @timeit_debug to "Compute internal forces vector, stiffness matrix" begin
+    # @timeit_debug to "Compute internal forces vector, stiffness matrix" begin
         
         # -------------------------------------------------------------------------------------------
         # -------------------------------------------------------------------------------------------
@@ -458,9 +456,9 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
         # -------------------
         
         Kint = B_star_bar'*( B_bar'*Kint_bar*B_bar + Kh_bar)*B_star_bar + Km 
-    end
+    # end
 
-    @timeit_debug to "Dynamic and contact contributions" begin
+    # @timeit_debug to "Dynamic and contact contributions" begin
 
         
         # Gauss quadrature
@@ -502,24 +500,24 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
         # cycle among the Gauss positions
         for iG in 1:nG
 
-            @timeit_debug to "Dynamic contributions" begin
+            # @timeit_debug to "Dynamic contributions" begin
 
                 Tk, Tdamp, M, Ck, K_energy_e, contact_vals = compute_dynamic_contribution(zG_v[iG], l0,  wG_v[iG], fixed_matrices.P1G_v[iG], fixed_matrices.P2G_v[iG], fixed_matrices.NG_v[iG], Θ1_bar, Θ2_bar, P, E, ddt, GT, ln, rT, Ddt_e, SWdt_e, Et, F1, ddtdt, Re, Tk, Tdamp, M, Ck, K_energy_e, fixed_matrices, conf, comp)
-            end 
+            # end 
 
-            @timeit_debug to "Contact contributions" begin
+            # @timeit_debug to "Contact contributions" begin
 
                 if !isnothing(sdf)
-                    Tct, Kct, Cc, C_energy_e =  compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, ddt, l0, EG, ln, fixed_matrices, rT, P, Tct, Kct, Cc, C_energy_e, iG, e, sol_GP, to, T)
+                    Tct, Kct, Cc, C_energy_e =  compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, ddt, l0, EG, ln, fixed_matrices, rT, P, Tct, Kct, Cc, C_energy_e, iG, e, sol_GP, T)
                 end     
 
-            end 
+            # end 
             
         end 
 
-    end 
+    # end 
          
-    @timeit_debug to "Return to global reference system" begin
+    # @timeit_debug to "Return to global reference system" begin
         
         Tk = E * Tk
         Tdamp =  E * Tdamp
@@ -545,10 +543,10 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
         
         Ck += Cc 
         
-    end 
+    # end 
 
     
-    return (Kint, Tint, Tk, Tdamp, Ck, M, Tct, Kct), (Phi_energy_e, K_energy_e, C_energy_e)
+    return Kint, Tint, Tk, Tdamp, Ck, M, Tct, Kct, Phi_energy_e, K_energy_e, C_energy_e
     
 end 
 
@@ -577,17 +575,17 @@ function compute_K_T!(allnodes, allbeams, matrices, energy, conf, sdf, fixed_mat
     # cycle over the beams   
     @timeit_debug to "Compute and assemble elemental contributions" begin
 
-        for e in LazyRows(allbeams)
+        Threads.@threads for e in LazyRows(allbeams)
             
-            @timeit_debug to "Compute elemental contributions" begin
+            # @timeit_debug to "Compute elemental contributions" begin
 
                 #----------------------------------------
                 # Compute the contibution from the e beam
-                (Kint, Tint, Tk, Tdamp, Ck, M, Tct, Kct), (Phi_energy, K_energy, C_energy)  = get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, sol_GP, to, T) 
+                Kint, Tint, Tk, Tdamp, Ck, M, Tct, Kct, Phi_energy, K_energy, C_energy  = get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, sol_GP, T) 
             
-            end 
+            # end 
 
-            @timeit_debug to "Assemble elemental contributions" begin
+            # @timeit_debug to "Assemble elemental contributions" begin
 
                 #-----------------------
                 # Assemble contributions
@@ -613,7 +611,7 @@ function compute_K_T!(allnodes, allbeams, matrices, energy, conf, sdf, fixed_mat
                 update_vec_sum(matrices.Tdamp, idof, Tdamp)
                 update_vec_sum(matrices.Tint, idof, Tint)
                 update_vec_sum(matrices.Tct, idof, Tct)
-            end
+            # end
                                
         end
 

@@ -81,7 +81,7 @@ damping = 1E5
 # time step and total time
 dt = 0.01
 dt_plot =  0.01
-tend = 1E10
+tend = 1
 
 # tolerance and maximum number of iterations
 tol_res = 1e-5
@@ -153,5 +153,5 @@ conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 # Start simulation
 # -------------------------------------------------------------------------------------------
 
-params = Params(thisDirOutputPath = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true, scale=2)
+params = Params(thisDirOutputPath = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true, scale=2, SHOW_TIME_SECTIONS=true)
 solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)

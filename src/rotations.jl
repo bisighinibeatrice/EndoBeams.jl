@@ -1,12 +1,12 @@
 # Get skew symmetric matrix from angle
-function get_skew_skymmetric_matrix_from_vector(vec)
+@inline function get_skew_skymmetric_matrix_from_vector(vec)
 
     return Mat33(0, vec[3], -vec[2], -vec[3], 0, vec[1], vec[2], -vec[1], 0)
 
 end
 
 # Get angle from skew symmetric matrix
-function get_angle_from_skew_skymmetric_matrix(Stheta)
+@inline function get_angle_from_skew_skymmetric_matrix(Stheta)
 
     return Vec3(-Stheta[2,3], Stheta[1,3], -Stheta[1,2])
 
@@ -19,7 +19,7 @@ function get_inverse_skew_skymmetric_matrix_from_angle(theta::AbstractVector{T})
 
     if theta_norm < 10*eps(T)
 
-        Tsinv = Mat33{T}(1, 0, 0, 0, 1, 0, 0, 0, 1)
+        Tsinv = ID3
 
     else
         Stheta = get_skew_skymmetric_matrix_from_vector(theta)
@@ -42,7 +42,7 @@ function get_Ts_from_angle(theta::AbstractVector{T}) where T
 
     if theta_norm < 10*eps(T)
 
-        Tsinv = Mat33{T}(1, 0, 0, 0, 1, 0, 0, 0, 1)
+        Tsinv = ID3
 
     else
         Stheta = get_skew_skymmetric_matrix_from_vector(theta)
