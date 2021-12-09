@@ -154,7 +154,7 @@ function compute_dynamic_contribution(zG, l0, wG, P1G, P2G, NG, Θ1_bar, Θ2_bar
     SuΘG_bar = get_skew_skymmetric_matrix_from_vector(ΘG_bar)
     
     # eq74 in [2]: RG_bar, rotation matrix associated with the local cross-section rotation
-    RG_bar = I + SuΘG_bar
+    RG_bar = ID3 + SuΘG_bar
     
     # eq100 in [2]
     IrhoeG = RG_bar*(conf.mat.Jrho)*RG_bar'
@@ -166,8 +166,6 @@ function compute_dynamic_contribution(zG, l0, wG, P1G, P2G, NG, Θ1_bar, Θ2_bar
     H1G = NG + P1G*P - SutG*GT
     
     # eqD16 in [2], matrix H2
-    P2GP = P2G*P
-    
     H2G = P2G*P + GT
     
     # eqD14 in [2], matrix H1dt
@@ -218,8 +216,6 @@ function compute_dynamic_contribution(zG, l0, wG, P1G, P2G, NG, Θ1_bar, Θ2_bar
     
     # ---------------------------------
     # expression of Tk_e, M_e and Ck_e
-    H1GT =  H1G'
-    H2GT =  H2G'
     
     aux1 = (l0/2)*wG*conf.mat.Arho*H1G'
     wGH2GT = (l0/2)*wG*H2G'
@@ -356,7 +352,6 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
         # eqC4 in [2]: r
         r = compute_r(v1)
         rT = r' #TODO
-        r = transpose(r)
         
         # -------------------------------------------------------------------------------------------
         # D_italic_bar = [u_bar, Θ1_bar, Θ2_bar]
@@ -447,7 +442,7 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
         a = Vec3(0, eta*(m[1]+m[4])/ln - (m[2]+m[5])/ln, (m[3]+m[6])/ln)
         
         # eqC15 in [2]: D3
-        D3 = (I- v1*v1')/ln
+        D3 = (ID3 - v1*v1')/ln
         
         # eqC15 in [2]: D
         D = compute_D(D3)
@@ -459,7 +454,7 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
         # eqC10 in [2]: Kint
         # -------------------
         
-        Kint =  B_star_bar'*( B_bar'*Kint_bar*B_bar + Kh_bar)*B_star_bar + Km 
+        Kint = B_star_bar'*( B_bar'*Kint_bar*B_bar + Kh_bar)*B_star_bar + Km 
     end
 
     @timeit_debug to "Dynamic and contact contributions" begin
@@ -528,19 +523,22 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
         M = E * M * E'
         Ck = E * Ck * E'
         
-        Deltn1_1, Deltn1_2 = get_local_rot_delt(e, allnodes)
+
+        # Note: this has no effect on convergence rate from my tests
         
-        thi_n1_1 = get_angle_from_rotation_matrix(Deltn1_1)
-        thi_n1_2 = get_angle_from_rotation_matrix(Deltn1_2)
+        # Deltn1_1, Deltn1_2 = get_local_rot_delt(e, allnodes)
         
-        Tsinv_th1g = get_inverse_skew_skymmetric_matrix_from_angle(thi_n1_1)
-        Tsinv_th2g = get_inverse_skew_skymmetric_matrix_from_angle(thi_n1_2)
+        # thi_n1_1 = get_angle_from_rotation_matrix(Deltn1_1)
+        # thi_n1_2 = get_angle_from_rotation_matrix(Deltn1_2)
         
-        Bt = compute_Bt(Tsinv_th1g, Tsinv_th2g)
+        # Tsinv_th1g = get_inverse_skew_skymmetric_matrix_from_angle(thi_n1_1)
+        # Tsinv_th2g = get_inverse_skew_skymmetric_matrix_from_angle(thi_n1_2)
         
-        M = M*Bt
-        Ck = Ck*Bt
-        Cc = Cc*Bt
+        # Bt = compute_Bt(Tsinv_th1g, Tsinv_th2g)
+        
+        # M = M*Bt
+        # Ck = Ck*Bt
+        # Cc = Cc*Bt
         
         Ck += Cc 
         
@@ -619,5 +617,7 @@ function compute_K_T!(allnodes, allbeams, matrices, energy, conf, sdf, fixed_mat
 
 
     end 
+
+
     
 end 
