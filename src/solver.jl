@@ -94,7 +94,7 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params, T=F
                 end
                 
                 # if the time step has been halved but the simulation has converged the last 8 times, double it
-                # if fact_div > 1
+                if fact_div > 1
                     
                     k_count_OKit = k_count_OKit + 1
                 
@@ -111,7 +111,7 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params, T=F
                         
                     end
                     
-                # end
+                end
                 
             end
             
