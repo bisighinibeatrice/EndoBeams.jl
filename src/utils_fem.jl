@@ -158,7 +158,7 @@ function compute_E_or_Et(Re)
     0, 0, 0, 0, 0, 0, 0, 0, 0, Re12, Re22, Re32,
     0, 0, 0, 0, 0, 0, 0, 0, 0, Re13, Re23, Re33)
     
-    return E
+    return Symmetric(E)
 end
 
 function compute_r(v)

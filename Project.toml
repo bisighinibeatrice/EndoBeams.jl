@@ -4,6 +4,7 @@ authors = ["Beatrice Bisighini", "Baptiste Pierrat", "Miquel Aguirre"]
 version = "0.1.0"
 
 [deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 Infiltrator = "5903a43b-9cc3-4c30-8d17-598619ec4e9b"

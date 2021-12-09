@@ -1,3 +1,6 @@
+test_sym(m) = maximum(abs.(Symmetric(m)-m))
+
+
 # Compute beam contact contribution
 function compute_contact_contribution(contact_vals, x1, x2, Re, comp, sdf, E, ddt, l0, EG, ln, fixed_matrices, rT, P, Tct, Kct, Cc, C_energy_e, iGP, e, sol_GP, to, T=Float64)
     
@@ -356,7 +359,6 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
         # eqC4 in [2]: r
         r = compute_r(v1)
         rT = r' #TODO
-        r = transpose(r)
         
         # -------------------------------------------------------------------------------------------
         # D_italic_bar = [u_bar, Θ1_bar, Θ2_bar]
@@ -447,7 +449,7 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
         a = Vec3(0, eta*(m[1]+m[4])/ln - (m[2]+m[5])/ln, (m[3]+m[6])/ln)
         
         # eqC15 in [2]: D3
-        D3 = (I- v1*v1')/ln
+        D3 = (ID3 - v1*v1')/ln
         
         # eqC15 in [2]: D
         D = compute_D(D3)
@@ -528,19 +530,19 @@ function get_beam_contributions!(e, allnodes, conf, sdf, fixed_matrices, comp, s
         M = E * M * E'
         Ck = E * Ck * E'
         
-        Deltn1_1, Deltn1_2 = get_local_rot_delt(e, allnodes)
+        # Deltn1_1, Deltn1_2 = get_local_rot_delt(e, allnodes)
         
-        thi_n1_1 = get_angle_from_rotation_matrix(Deltn1_1)
-        thi_n1_2 = get_angle_from_rotation_matrix(Deltn1_2)
+        # thi_n1_1 = get_angle_from_rotation_matrix(Deltn1_1)
+        # thi_n1_2 = get_angle_from_rotation_matrix(Deltn1_2)
         
-        Tsinv_th1g = get_inverse_skew_skymmetric_matrix_from_angle(thi_n1_1)
-        Tsinv_th2g = get_inverse_skew_skymmetric_matrix_from_angle(thi_n1_2)
+        # Tsinv_th1g = get_inverse_skew_skymmetric_matrix_from_angle(thi_n1_1)
+        # Tsinv_th2g = get_inverse_skew_skymmetric_matrix_from_angle(thi_n1_2)
         
-        Bt = compute_Bt(Tsinv_th1g, Tsinv_th2g)
+        # Bt = compute_Bt(Tsinv_th1g, Tsinv_th2g)
         
-        M = M*Bt
-        Ck = Ck*Bt
-        Cc = Cc*Bt
+        # M = M*Bt
+        # Ck = Ck*Bt
+        # Cc = Cc*Bt
         
         Ck += Cc 
         
@@ -616,8 +618,15 @@ function compute_K_T!(allnodes, allbeams, matrices, energy, conf, sdf, fixed_mat
                                
         end
 
+        println("Kint: $(test_sym(matrices.Kint))")
+        println("Ck: $(test_sym(matrices.Ck))")
+        println("M: $(test_sym(matrices.M))")
+        println("Kct: $(test_sym(matrices.Kct))")
+
 
 
     end 
+
+
     
 end 
