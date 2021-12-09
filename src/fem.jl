@@ -617,11 +617,6 @@ function compute_K_T!(allnodes, allbeams, matrices, energy, conf, sdf, fixed_mat
                                
         end
 
-        println("Kint: $(test_sym(matrices.Kint))")
-        println("Ck: $(test_sym(matrices.Ck))")
-        println("M: $(test_sym(matrices.M))")
-        println("Kct: $(test_sym(matrices.Kct))")
-
 
 
     end 
