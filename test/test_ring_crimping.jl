@@ -181,7 +181,7 @@ function test_ring_crimping()
     # -------------------------------------------------------------------------------------------
     
     pos_matlab = Vec3(7.62779550947649, -7.12963656341915e-10, -2.04386164679398)
-    @test isapprox(allnodes.pos[end] + allnodes.u[end], pos_matlab)
+    @test isapprox(allnodes.pos[end] + allnodes.u[end], pos_matlab; atol=1e-6)
     
 end 
 

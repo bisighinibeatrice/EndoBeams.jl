@@ -6,7 +6,7 @@ function get_skew_skymmetric_matrix_from_vector(vec)
 end
 
 # Get angle from skew symmetric matrix
-function get_angle_from_skew_skymmetric_matrix(Stheta, T=Float64)
+function get_angle_from_skew_skymmetric_matrix(Stheta)
 
     return Vec3(-Stheta[2,3], Stheta[1,3], -Stheta[1,2])
 
@@ -19,7 +19,7 @@ function get_inverse_skew_skymmetric_matrix_from_angle(theta::AbstractVector{T})
 
     if theta_norm < 10*eps(T)
 
-        Tsinv = Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1)
+        Tsinv = Mat33{T}(1, 0, 0, 0, 1, 0, 0, 0, 1)
 
     else
         Stheta = get_skew_skymmetric_matrix_from_vector(theta)
@@ -28,7 +28,7 @@ function get_inverse_skew_skymmetric_matrix_from_angle(theta::AbstractVector{T})
 
         aux2 = theta/theta_norm
 
-        Tsinv = aux1*Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1) + (1-aux1)*(aux2*aux2') - Stheta/2 # in [Aguirre]: 15b
+        Tsinv = aux1*ID3 + (1-aux1)*(aux2*aux2') - Stheta/2 # in [Aguirre]: 15b
     end
 
     return Tsinv
@@ -42,12 +42,12 @@ function get_Ts_from_angle(theta::AbstractVector{T}) where T
 
     if theta_norm < 10*eps(T)
 
-        Tsinv = Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1)
+        Tsinv = Mat33{T}(1, 0, 0, 0, 1, 0, 0, 0, 1)
 
     else
         Stheta = get_skew_skymmetric_matrix_from_vector(theta)
 
-        Tsinv = Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1) + (1-cos(theta_norm))/(theta_norm^2)*Stheta + (theta_norm-sin(theta_norm))/(theta_norm^3)*(Stheta*Stheta) # in [Aguirre]: 15a
+        Tsinv = ID3 + (1-cos(theta_norm))/(theta_norm^2)*Stheta + (theta_norm-sin(theta_norm))/(theta_norm^3)*(Stheta*Stheta) # in [Aguirre]: 15a
     end
 
     return Tsinv
@@ -69,3 +69,17 @@ function get_angle_from_rotation_matrix(R::AbstractMatrix{T}) where T
 
 end
 
+
+# Rotate using Rodrigue's formula
+function rotate_rod(a::AbstractVecOrMat{T}, theta) where T
+    
+    theta_norm = norm(theta)
+    if theta_norm > 10*eps(T)
+        K = get_skew_skymmetric_matrix_from_vector(theta/theta_norm)
+        R = ID3 + sin(theta_norm)*K + (1-cos(theta_norm))*K^2
+        return R*a
+    else
+        return a
+    end
+
+end

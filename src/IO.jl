@@ -65,7 +65,7 @@ end
 # Write interpolated beam info as vtk file
 function write_VTK_beams(step, allnodes, allbeams, positions, connectivity, dirOutput) 
 
-    get_centreline!(positions, connectivity, allnodes, allbeams)
+    get_centerline!(positions, connectivity, allnodes, allbeams)
     
     filename=string(dirOutput * "/beams$step.vtk");
      
@@ -404,4 +404,19 @@ function read_VTK_sdf(filename)
     
     return nnodex, nnodey, nnodez, dx, dy, dz, dom, sdf
     
+end 
+
+
+
+function read_ICs(fname, T=Float64)
+
+    Xpc = Vector{Vec3{T}}()
+    xpc = readdlm(fname, '\t', T)
+
+    for i in 1:size(xpc,1)
+        push!(Xpc, Vec3{T}(xpc[i,1], xpc[i,2], xpc[i,3]))
+    end
+
+    return Xpc
+
 end 

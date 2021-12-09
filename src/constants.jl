@@ -15,3 +15,5 @@ const Vec4{T} = SVector{4,T}
 const Vec6{T} = SVector{6,T}
 const Vec7{T} = SVector{7,T}
 const Vec12{T} = SVector{12,T} 
+
+const ID3 = Diagonal(Vec3(1,1,1))

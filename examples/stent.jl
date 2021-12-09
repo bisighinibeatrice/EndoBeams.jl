@@ -1,6 +1,6 @@
 using EndoBeams
 
-T = Float64
+const T = Float64
 
 # -------------------------------------------------------------------------------------------
 # Read stent information
@@ -153,5 +153,5 @@ conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 # Start simulation
 # -------------------------------------------------------------------------------------------
 
-params = Params(thisDirOutputPath = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true)
+params = Params(thisDirOutputPath = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true, scale=2)
 solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)

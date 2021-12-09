@@ -41,7 +41,7 @@ function solver_initialisation(conf, allnodes, allbeams, int_pos, int_conn, comp
     sol_GP = constructor_solution_GP(length(allbeams), T)
     energy = constructor_energy(T) 
     fixed_matrices = constructor_preallocated_matrices_fixed(allbeams, comp, T)
-    uimp = zeros(length(conf.bc.fixed_dofs))
+    uimp = zeros(T, length(conf.bc.fixed_dofs))
     matrices, nodes_sol = constructor_sparse_matrices!(allbeams, allnodes, cons, conf, T)
 
     save_VTK(0, allnodes, allbeams, sol_GP, int_pos, int_conn, thisDirOutputPath, SAVE_INTERPOLATION_VTK,  SAVE_GP_VTK, SAVE_NODES_VTK)
@@ -216,23 +216,18 @@ function update_current_boundary_conditions!(uimp, t, conf)
 
 end 
 
-function update_current_boundary_conditions_vector!(uimp, t, conf)
+function update_current_boundary_conditions_vector!(uimp::AbstractVector{T}, t, conf) where T
     
     Tstar =  convert(Int, round(t, RoundDown))
     Tstar1 = Tstar+1
-    unew3 = read_ICs("outputGeometricalMorphing/u$Tstar1.txt")
+    unew3 = read_ICs("outputGeometricalMorphing/u$Tstar1.txt", T)
 
     nnodesStent = length(unew3)
-    unew = zeros(nnodesStent*3)
     for (j,i) in enumerate(1:3:nnodesStent*3) 
-        unew[i+0] = unew3[j][1]
-        unew[i+1] = unew3[j][2] 
-        unew[i+2] = unew3[j][3]
+        uimp[i+0] = unew3[j][1]
+        uimp[i+1] = unew3[j][2] 
+        uimp[i+2] = unew3[j][3]
     end 
-
-    @inbounds for i in 1:length(uimp)
-        uimp[i] = unew[i] 
-    end  
     
 end 
 
@@ -328,8 +323,7 @@ function update_local_corrector!(allnodes, ΔD_k, dt, nodes_sol, comp)
         allnodes.udt[i] = nodes_sol.Ddt[allnodes.idof_disp[i]]
         allnodes.udtdt[i] = nodes_sol.Ddtdt[allnodes.idof_disp[i]]
 
-        Sw = get_skew_skymmetric_matrix_from_vector(ΔD_k[allnodes.idof_ang[i]])
-        allnodes.Delt[i] = exp(Sw)*allnodes.Delt[i]
+        allnodes.Delt[i] = rotate_rod(allnodes.Delt[i], ΔD_k[allnodes.idof_ang[i]])
 
         wdt_n = allnodes.wdt_n[i]
         wdtdt_n = allnodes.wdtdt_n[i]

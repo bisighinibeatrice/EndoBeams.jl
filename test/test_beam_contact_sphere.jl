@@ -176,12 +176,10 @@ function test_sphere()
     rtol = 1e-2
     
     pos_matlab = Vec3(0.107853165032904, 0.0132224390067658, 0.0360871249073232)
-    t1 = isapprox(allnodes.pos[5] + allnodes.u[5], pos_matlab; rtol)
-    @test t1
+    @test isapprox(allnodes.pos[5] + allnodes.u[5], pos_matlab; rtol)
     
     pos_matlab = Vec3(0.129725721716302, 0.0548254754528272, 0.0730574700480992)
-    t2 = isapprox(allnodes.pos[end] + allnodes.u[end], pos_matlab; rtol)
-    @test t2
+    @test isapprox(allnodes.pos[end] + allnodes.u[end], pos_matlab; rtol)
     
 end 
 

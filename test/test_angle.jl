@@ -161,7 +161,7 @@ function test_angle()
     # -------------------------------------------------------------------------------------------
   
     pos_matlab = Vec3(-10.6867358894953, 6.61144877793072, -6.2584504990589)
-    @test isapprox(allnodes.pos[end] + allnodes.u[end], pos_matlab)
+    @test isapprox(allnodes.pos[end] + allnodes.u[end], pos_matlab; atol=1e-6)
 
 end
 

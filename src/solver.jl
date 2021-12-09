@@ -31,7 +31,7 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params, T=F
         step = 1
 
         # preallocated vectors for beam interpolation
-        int_pos = zeros((allbeams.numberInterpolationPoints[1]+1)*length(allbeams), 3)
+        int_pos = zeros(T, (allbeams.numberInterpolationPoints[1]+1)*length(allbeams), 3)
         int_conn = zeros(Int, allbeams.numberInterpolationPoints[1]+1, length(allbeams))
         
         # preallocation of the vectors and matrices used in the computaion
@@ -69,19 +69,20 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params, T=F
                 # if not converged, halve the time step and re-solve the system until it converges
                 while (flag_conv == 0 && fact_div < 1E20)
                     
-                    if scale == 2
-                        fact_div = fact_div*2
-                        dt = dt/2
-                    elseif scale == 10 
-                        fact_div = fact_div*10
-                        dt = dt/10
-                    end 
+                    fact_div = fact_div*scale
+                    dt = dt/scale
                     
                     t_n1 = t_n + dt
                     
                     if SHOW_COMP_TIME
                         println("-----TIME STEP DECREASED dt = dt0/$fact_div")
                         println("tphys = $t_n1, tcomp = $tcomp  dt = $dt, ratio = $(tcomp/t)")
+                    end
+
+                    if dt<1E-10
+                        @error "dt < 1E-10: stopping simulation" 
+                        STOP_SIMULATION = true
+                        break
                     end
                     
                     sol_n1 = deepcopy(sol_n)
@@ -93,7 +94,7 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params, T=F
                 end
                 
                 # if the time step has been halved but the simulation has converged the last 8 times, double it
-                if fact_div > 1
+                # if fact_div > 1
                     
                     k_count_OKit = k_count_OKit + 1
                 
@@ -102,20 +103,15 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params, T=F
                         if SHOW_COMP_TIME
                             println("-----TIME STEP INCREASED dt=dt0/$fact_div")
                         end 
-                        
-                        if scale == 2
-                            fact_div = fact_div/2
-                            dt = dt*2
-                        elseif scale == 10 
-                            fact_div = fact_div/10
-                            dt = dt*10
-                        end 
+
+                        fact_div = fact_div/scale
+                        dt = dt*scale
                         
                         k_count_OKit = 0
                         
                     end
                     
-                end
+                # end
                 
             end
             
@@ -306,8 +302,7 @@ function predictor!(allnodes, allbeams, pencons, matrices, energy, sol_n1, sol_n
     
     @timeit_debug to "Linear solve" begin 
 
-        # solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
-        nodes_sol.ΔD_free .=  nodes_sol.Ktan_free\nodes_sol.r_free
+        solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
 
     end
     
@@ -430,8 +425,7 @@ function corrector_loop!(allnodes, allbeams, pncons, matrices, energy, sol_n1, s
             
             @timeit_debug to "Linear solve" begin
                 
-                # solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
-                nodes_sol.ΔD_free .=  nodes_sol.Ktan_free\nodes_sol.r_free
+                solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
 
             end 
             

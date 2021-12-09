@@ -79,13 +79,13 @@ struct SDF_Discrete{T, F}
     
     r::T
     sitp::F
-    dom::Array{T,1}
+    dom::Vector{T}
     dx::T
     dy::T
     dz::T
     g::T
-    dg::Array{T,1}
-    ddg::Array{T,2}
+    dg::Vector{T}
+    ddg::Matrix{T}
     
 end 
 
@@ -176,7 +176,7 @@ function get_SDF_at_P_analitycal_sphere(P, sdf,  T=Float64)
     
     g_G = norm_aux - sdf.R - sdf.r
     dg_G = invnorm * aux
-    ddg_G = invnorm*Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1) + (invnorm^3)*(aux*aux')
+    ddg_G = invnorm*ID3 + (invnorm^3)*(aux*aux')
     
     return g_G, dg_G, ddg_G
     
@@ -240,27 +240,15 @@ end
 #----------------------------------
 
 # Get contact at point GP
-function get_contact_GP(GP, epsC, sdf, T=Float64)
+get_contact_GP_specialize(GP, sdf::SDF_Plane_z, T) = get_SDF_at_P_analitycal_plane_z(GP, sdf, T)
+get_contact_GP_specialize(GP, sdf::SDF_Sphere, T) = get_SDF_at_P_analitycal_sphere(GP, sdf, T)
+get_contact_GP_specialize(GP, sdf::SDF_Cylinder, T) = get_SDF_at_P_analitycal_cylinder(GP, sdf, T)
+get_contact_GP_specialize(GP, sdf::SDF_Plane_y, T) = get_SDF_at_P_analitycal_plane_y(GP, sdf, T)
+get_contact_GP_specialize(GP, sdf::SDF_Discrete, T) = get_SDF_at_P_discrete(GP, sdf, T)
     
-    if typeof(sdf) == SDF_Plane_z{T}
+function get_contact_GP(GP, epsC, sdf, T=Float64)
         
-        g_G, dg_G, ddg_G = get_SDF_at_P_analitycal_plane_z(GP, sdf, T)
-        
-    elseif typeof(sdf) == SDF_Sphere{T}
-        
-        g_G, dg_G, ddg_G = get_SDF_at_P_analitycal_sphere(GP, sdf, T)
-        
-    elseif typeof(sdf) == SDF_Cylinder{T}
-        
-        g_G, dg_G, ddg_G = get_SDF_at_P_analitycal_cylinder(GP, sdf, T)
-        
-    elseif typeof(sdf) == SDF_Plane_y{T}
-        
-        g_G, dg_G, ddg_G = get_SDF_at_P_analitycal_plane_y(GP, sdf, T)
-        
-    else
-        g_G, dg_G, ddg_G = get_SDF_at_P_discrete(GP, sdf, T)
-    end 
+    g_G, dg_G, ddg_G = get_contact_GP_specialize(GP, sdf, T)
     
     fc_eps, dfc_eps, Pic_eps = quadratically_regularized_penalty(g_G, epsC, sdf.r, T)
     
@@ -271,7 +259,7 @@ end
 # Quadratically regulise penalty
 function quadratically_regularized_penalty(g, epsC, r,  T=Float64)
     
-    gbar = 0.1*r
+    gbar = r/10
     fbar = epsC*gbar/2
     aux = (epsC*gbar-fbar)/(gbar^2)
      

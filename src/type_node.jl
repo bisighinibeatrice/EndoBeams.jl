@@ -70,16 +70,16 @@ function constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R
             Vec3(w_0[3*(i-1)+1], w_0[3*(i-1)+2], w_0[3*(i-1)+3]), 
             Vec3(wdt_0[3*(i-1)+1], wdt_0[3*(i-1)+2], wdt_0[3*(i-1)+3]), 
             Vec3(wdtdt_0[3*(i-1)+1], wdtdt_0[3*(i-1)+2], wdtdt_0[3*(i-1)+3]), 
-            Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1), 
-            Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1),
+            ID3, 
+            ID3,
             Vec3(u_0[3*(i-1)+1], u_0[3*(i-1)+2], u_0[3*(i-1)+3]), 
             Vec3(udt_0[3*(i-1)+1], udt_0[3*(i-1)+2], udt_0[3*(i-1)+3]), 
             Vec3(udtdt_0[3*(i-1)+1], udtdt_0[3*(i-1)+2], udtdt_0[3*(i-1)+3]), 
             Vec3(w_0[3*(i-1)+1], w_0[3*(i-1)+2], w_0[3*(i-1)+3]), 
             Vec3(wdt_0[3*(i-1)+1], wdt_0[3*(i-1)+2], wdt_0[3*(i-1)+3]), 
             Vec3(wdtdt_0[3*(i-1)+1], wdtdt_0[3*(i-1)+2], wdtdt_0[3*(i-1)+3]), 
-            Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1), 
-            Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1),
+            ID3, 
+            ID3,
             compute_local_to_global_matrix(i, X, plane[i], T)) for i in 1:size(X,1))
     else
             nodes = StructArray(MyNode{T}(
@@ -95,7 +95,7 @@ function constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R
             Vec3(wdt_0[3*(i-1)+1], wdt_0[3*(i-1)+2], wdt_0[3*(i-1)+3]), 
             Vec3(wdtdt_0[3*(i-1)+1], wdtdt_0[3*(i-1)+2], wdtdt_0[3*(i-1)+3]), 
             R0[i], 
-            Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1),
+            ID3,
             Vec3(u_0[3*(i-1)+1], u_0[3*(i-1)+2], u_0[3*(i-1)+3]), 
             Vec3(udt_0[3*(i-1)+1], udt_0[3*(i-1)+2], udt_0[3*(i-1)+3]), 
             Vec3(udtdt_0[3*(i-1)+1], udtdt_0[3*(i-1)+2], udtdt_0[3*(i-1)+3]), 
@@ -103,7 +103,7 @@ function constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R
             Vec3(wdt_0[3*(i-1)+1], wdt_0[3*(i-1)+2], wdt_0[3*(i-1)+3]), 
             Vec3(wdtdt_0[3*(i-1)+1], wdtdt_0[3*(i-1)+2], wdtdt_0[3*(i-1)+3]), 
             R0[i], 
-            Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1),
+            ID3,
             compute_local_to_global_matrix(i, X, plane[i], T))
         for i in 1:size(X,1))
     end

@@ -95,16 +95,16 @@ function get_R0_beam(node1, node2, T=Float64)
     
     if (c<-(1-tol))
         
-        R0 = Mat33(-1, 0, 0, 0, 1, 0, 0, 0, -1)
+        R0 = Mat33{T}(-1, 0, 0, 0, 1, 0, 0, 0, -1)
         
     elseif (c > (1-tol))
         
-        R0 = Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1)
+        R0 = Mat33{T}(1, 0, 0, 0, 1, 0, 0, 0, 1)
         
     else 
         
         Sv = get_skew_skymmetric_matrix_from_vector(v)
-        R0 = Mat33(1, 0, 0, 0, 1, 0, 0, 0, 1) + Sv + ((1-c)/s^2)*Sv*Sv
+        R0 = ID3 + Sv + ((1-c)/s^2)*Sv*Sv
     end 
     
     return R0
@@ -127,7 +127,7 @@ function get_Kint_beam(mat, geom, l0, T=Float64)
 end
 
 # Obtain beam centerline position by interpolation
-function get_centreline!(positions, connectivity, allnodes, allbeams)
+function get_centerline!(positions, connectivity, allnodes, allbeams)
     
     Xcount = 0
     index = 0

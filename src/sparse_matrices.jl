@@ -162,7 +162,7 @@ end
 # Compute the sparsity pattern for the free total matrix
 function compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs_all, nnodes, T=Float64)
     
-    mat = zeros(ntot,ntot)
+    mat = zeros(Int, ntot,ntot)
 
     for n in 1:nnodes
         idof_n = 6*(n-1) .+ [1,2,3,4,5,6]
@@ -218,7 +218,7 @@ function compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs_all, nn
     end 
 
     if size(sparse(rows_free, rows_free, zvals_free)) != size(mat_free)
-        @debug "SparseMatrixError: error in the construction of the free sparse matrix"
+        @error "SparseMatrixError: error in the construction of the free sparse matrix"
     end 
 
     #-------------------------------------------------

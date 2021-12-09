@@ -182,10 +182,10 @@ function test1_ring_plane()
     # -------------------------------------------------------------------------------------------
     
     pos_matlab = Vec3(13.1644678909684, -1.77821401275396e-14, -4.35229071287855)
-    @test isapprox(allnodes.pos[end] + allnodes.u[end], pos_matlab)
+    @test isapprox(allnodes.pos[end] + allnodes.u[end], pos_matlab; atol=1e-6)
     
     pos_matlab = Vec3(-7.30264210560686, -1.74918545324088e-15, 0.536134314694951)
-    @test isapprox(allnodes.pos[12] + allnodes.u[12], pos_matlab)
+    @test isapprox(allnodes.pos[12] + allnodes.u[12], pos_matlab; atol=1e-6)
     
 end 
 
