@@ -266,22 +266,22 @@ end
     comp = constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T=Float64)    
 
 Constructor of the structure containing the simulation parameters:
-    - `alpha`: integration parameter (`::T`);
-    - `beta`: integration parameter (`::T`);
-    - `gamma`: integration parameter (`::T`);
-    - `damping`: damping coefficient (`::T`);
-    - `dt`: time step (`::T`);
-    - `dt_plot`: time step for the saving of output files (`::T`);
-    - `tend`: total time of the simulation (`::T`);
-    - `tol_res`: residual tolerance for the Newton-Raphson algorithm (`::T`);
-    - `tol_ddk`: solution vector tolerance for the Newton-Raphson algorithm (`::T`);
-    - `max_it`: maximum number of iterations for the Newton-Raphson algorithm (`::Vec3`);
-    - `nG`: number of Gauss points (`::Int`);
-    - `wG`: Gauss points weights (`::Vec3`);
-    - `zG`: Gauss points positions along centreline (`::Vec3`);
-    - `eps_C`: penalty coefficient for the contact normal contributions (`::T`);
-    - `mu_T`: friction coefficient (`::T`);
-    - `eps_tol_fric`: regularisation coefficient for the contact tangential contributions (`::T`).
+- `alpha`: integration parameter (`::T`);
+- `beta`: integration parameter (`::T`);
+- `gamma`: integration parameter (`::T`);
+- `damping`: damping coefficient (`::T`);
+- `dt`: time step (`::T`);
+- `dt_plot`: time step for the saving of output files (`::T`);
+- `tend`: total time of the simulation (`::T`);
+- `tol_res`: residual tolerance for the Newton-Raphson algorithm (`::T`);
+- `tol_ddk`: solution vector tolerance for the Newton-Raphson algorithm (`::T`);
+- `max_it`: maximum number of iterations for the Newton-Raphson algorithm (`::Vec3`);
+- `nG`: number of Gauss points (`::Int`);
+- `wG`: Gauss points weights (`::Vec3`);
+- `zG`: Gauss points positions along centreline (`::Vec3`);
+- `eps_C`: penalty coefficient for the contact normal contributions (`::T`);
+- `mu_T`: friction coefficient (`::T`);
+- `eps_tol_fric`: regularisation coefficient for the contact tangential contributions (`::T`).
 
 Returns a SimulationParameters structure.
 """
