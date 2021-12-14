@@ -216,10 +216,10 @@ end
     mat = constructor_material_properties(E, nu, rho, rWireSection)
 
 Constructor of the structure containing the material properties:
-- `E`: Young modulus;
-- `nu`: Poisson coefficient;
-- `rho`: density;
-- `rWireSection`: beam radius.
+- `E`: Young modulus (`::T`);
+- `nu`: Poisson coefficient (`::T`);
+- `rho`: density (`::T`);
+- `rWireSection`: beam radius (`::T`).
 
 Returns a Material structure.
 """
@@ -243,7 +243,7 @@ end
     geom = constructor_geometry_properties(rWireSection)
 
 Constructor of the structure containing the geometrical properties:
-- `rWireSection`: beam radius.
+- `rWireSection`: beam radius (`::T`).
 
 Returns a Geometry structure.
 """
@@ -266,22 +266,22 @@ end
     comp = constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T=Float64)    
 
 Constructor of the structure containing the simulation parameters:
-    - `alpha`: integration parameter;
-    - `beta`: integration parameter;
-    - `gamma`: integration parameter;
-    - `damping`: damping coefficient;
-    - `dt`: time step;
-    - `dt_plot`: time step for the saving of output files;
-    - `tend`: total time of the simulation;
-    - `tol_res`: residual tolerance for the Newton-Raphson algorithm;
-    - `tol_ddk`: solution vector tolerance for the Newton-Raphson algorithm;
-    - `max_it`: maximum number of iterations for the Newton-Raphson algorithm;
-    - `nG`: number of Gauss points;
-    - `wG`: Gauss points weights;
-    - `zG`: Gauss points positions along centreline;
-    - `eps_C`: penalty coefficient for the contact normal contributions;
-    - `mu_T`: friction coefficient;
-    - `eps_tol_fric`: regularisation coefficient for the contact tangential contributions.
+    - `alpha`: integration parameter (`::T`);
+    - `beta`: integration parameter (`::T`);
+    - `gamma`: integration parameter (`::T`);
+    - `damping`: damping coefficient (`::T`);
+    - `dt`: time step (`::T`);
+    - `dt_plot`: time step for the saving of output files (`::T`);
+    - `tend`: total time of the simulation (`::T`);
+    - `tol_res`: residual tolerance for the Newton-Raphson algorithm (`::T`);
+    - `tol_ddk`: solution vector tolerance for the Newton-Raphson algorithm (`::T`);
+    - `max_it`: maximum number of iterations for the Newton-Raphson algorithm (`::Vec3`);
+    - `nG`: number of Gauss points (`::Int`);
+    - `wG`: Gauss points weights (`::Vec3`);
+    - `zG`: Gauss points positions along centreline (`::Vec3`);
+    - `eps_C`: penalty coefficient for the contact normal contributions (`::T`);
+    - `mu_T`: friction coefficient (`::T`);
+    - `eps_tol_fric`: regularisation coefficient for the contact tangential contributions (`::T`).
 
 Returns a SimulationParameters structure.
 """
@@ -295,9 +295,9 @@ end
     fext = constructor_ext_force(flag_crimping, Fext, dof_load, T=Float64)
 
 Constructor of the structure containing the information about the external load, if present:
-- `flag_crimping`: true if the force is defined in cylindral coordinates;
-- `Fext`: external load amplitude;
-- `dof_load`: DOFs interested by the external load.
+- `flag_crimping`: true if the force is defined in cylindral coordinates (`::Bool`);
+- `Fext`: external load amplitude (can be a function of time or a constant value);
+- `dof_load`: DOFs interested by the external load (`::T`).
 
 Returns a ExternalForces structure.
 """
@@ -311,13 +311,13 @@ end
     bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T=Float64)
 
 Constructor of the structure containing the information about the Dirichlet boundary conditions (BCs), if present:
-- `fixed_dofs`: fixed DOFs;
-- `free_dofs`: free DOFs;
-- `flag_cylindrical`: true if the BCs are defined in cylindral coordinates;
-- `flag_disp_vector`: true if the BCs are defined as a vector;
-- `Fdisp`: imposed dispacement amplitude;
-- `udisp`: vector; containing the imposed dispacements;
-- `dofs_disp`: DOFs interested by the Dirichlet BCs.
+- `fixed_dofs`: fixed DOFs (`::T`);
+- `free_dofs`: free DOFs (`::T`);
+- `flag_cylindrical`: true if the BCs are defined in cylindral coordinates (`::Bool`);
+- `flag_disp_vector`: true if the BCs are defined as a vector (`::Bool`);
+- `Fdisp`: imposed dispacement amplitude (can be a function of time or a constant value);
+- `udisp`: vector; containing the imposed dispacements (`::T`);
+- `dofs_disp`: DOFs interested by the Dirichlet BCs (`::T`).
 
 Returns a BoundaryConditions structure.
 """
@@ -333,11 +333,12 @@ end
     conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T=Float64)
 
 Constructor of the structure collecting the information for the simulation:
-- `mat`: material properties (Material{T});
-- `geom`: geoltrical properties (Geometry{T});
-- `nnodes`: number of nodes in the system;
-- `ndofs`: number of DOFs in the system;
-- `bcs`: Dirichlet BCs.
+- `mat`: material properties (`::Material{T}`);
+- `geom`: geoltrical properties (`::Geometry{T}`);
+- `nnodes`: number of nodes in the system (`::Int`);
+- `ndofs`: number of DOFs in the system (`::Int`); 
+- `ext_forces`: external loads (`::ExternalForces{T}`);
+- `bcs`: Dirichlet BCs (`::BoundaryConditions{T}`).
 
 Returns a Configuration structure.
 """

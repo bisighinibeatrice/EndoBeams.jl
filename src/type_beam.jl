@@ -23,14 +23,14 @@ end
     beams = constructor_beams(allnodes, connectivity, mat, geom, numberInterpolationPoints, Re0=nothing, T=Float64)
 
 Constructor of the beams StructArray:
-- `allnodes`: nodes StructArray (created with constructor_nodes);
-- `connectivity`: connectivity of the mesh (Vec2{Int});
-- `mat`: struct containing the material properties of the mesh (Material{T});
-- `geom`: struct containing the geomtrical properties of the mesh (Geometry{T});
-- `numberInterpolationPoints`: pnumber of points used for the interpolation of the beam centreline (Int);
-- `Re0`: (not mandatory) initial rotation of the beam elements.
+- `allnodes`: nodes (`::StructArray{MyNode}` created with 'constructor_nodes');
+- `connectivity`: mesh connectivity (`::Vec2{Int}`);
+- `mat`: mesh material properties (`::Material{T}`);
+- `geom`: mesh geometrical properties (`::Geometry{T}`);
+- `numberInterpolationPoints`: number of points used for the interpolation of the beam centerline (`::Int`);
+- `Re0`: (not mandatory) initial rotation matrix of the beam elements (`::Mat33`).
 
-Returns a StructArray{MyBeam}, structure containing the information of the beam elements. 
+Returns a `StructArray{MyBeam}` containing the information relative to the beam elements. 
 """
 function constructor_beams(allnodes, connectivity, mat, geom, numberInterpolationPoints, Re0=nothing, T=Float64)
     

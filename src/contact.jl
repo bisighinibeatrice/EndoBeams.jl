@@ -4,13 +4,13 @@
 #----------------------------------
 
 """
-    sdf = struct SDF_Plane_z{T}
+    SDF = struct SDF_Plane_z{T}
 
-Constructor of the structure containing the properties of the analytical SDF of a z-normal plane:
-- `r`: beam radius;
-- `z0`: plane position along z.
+Constructor of the structure containing the properties of the analytical SDF of a xy plane:
+- `r`: beam radius (`::T`);
+- `z0`: plane position along z (`::T`).
 
-Returns a structure containing the information of the created sdf. 
+Returns a structure containing the information of the created SDF. 
 """
 struct SDF_Plane_z{T}
     
@@ -20,13 +20,13 @@ struct SDF_Plane_z{T}
 end 
 
 """
-    sdf = struct SDF_Plane_y{T}
+    SDF = struct SDF_Plane_y{T}
 
-Constructor of the structure containing the properties  of the analytical SDF of a y-normal plane.
-- `r`: beam radius;
-- `y0`: plane position along y.
+Constructor of the structure containing the properties  of the analytical SDF of a xz plane:
+- `r`: beam radius (`::T`);
+- `y0`: plane position along y (`::T`).
 
-Returns a structure containing the information of the created sdf.  
+Returns a structure containing the information of the created SDF.  
 """
 struct SDF_Plane_y{T}
     
@@ -36,16 +36,16 @@ struct SDF_Plane_y{T}
 end 
 
 """
-    sdf = struct SDF_Sphere{T}
+    SDF = struct SDF_Sphere{T}
 
-Constructor of the structure containing the properties  of the analytical SDF of a sphere.
-- `r`: beam radius;
-- `R`: sphere radius;
-- `x0`: sphere centre position along x;
-- `y0`: sphere centre position along y;
-- `z0`: sphere centre position along z.
+Constructor of the structure containing the properties  of the analytical SDF of a sphere:
+- `r`: beam radius (`::T`);
+- `R`: sphere radius (`::T`);
+- `x0`: sphere centre position along x (`::T`);
+- `y0`: sphere centre position along y (`::T`);
+- `z0`: sphere centre position along z (`::T`).
     
-Returns a structure containing the information of the created sdf. 
+Returns a structure containing the information of the created SDF. 
 """
 struct SDF_Sphere{T}
     
@@ -58,13 +58,13 @@ struct SDF_Sphere{T}
 end 
 
 """
-    sdf = struct SDF_Cylinder{T}
+    SDF = struct SDF_Cylinder{T}
 
-Constructor of the structure containing the properties of the analytical SDF of an infinite cylinder oriented along z.
-- `r`: beam radius;
-- `R`: cylinder radius.
+Constructor of the structure containing the properties of the analytical SDF of an infinite cylinder oriented along z:
+- `r`: beam radius (`::T`);
+- `R`: cylinder radius (`::T`).
     
-Returns a structure containing the information of the created sdf. 
+Returns a structure containing the information of the created SDF. 
 """
 struct SDF_Cylinder{T}
     
@@ -93,26 +93,26 @@ end
 # CONSTRUCTOR DISCRETE SDF
 #----------------------------------
 """
-    sdf = constructor_discrete_sdf(filename, rWireSection, inside,  T=Float64)
+    SDF = constructor_discrete_SDF(filename, rWireSection, inside,  T=Float64)
 
-Constructor of the discrete SDF from a vtk file.
-- `filename`: sdf file (all files with extensions .vtk are accepted);
-- `rWireSection`: cylinder radius;
-- `inside`: true if the sdf is negative inside.
+Constructor of the discrete SDF from a vtk file:
+- `filename`: SDF file (files with extensions .vtk are accepted);
+- `rWireSection`: cylinder radius (`::T`);
+- `inside`: true if the SDF is negative inside (`::Bool`).
 
-Returns a structure containing the information of the created sdf. 
+Returns a structure containing the information relative to the created SDF. 
 """
-function constructor_discrete_sdf(filename, rWireSection, inside,  T=Float64)
+function constructor_discrete_SDF(filename, rWireSection, inside,  T=Float64)
     
-    # Read sdf from file
-    npx, npy, npz, dx, dy, dz, dom, sdf = read_VTK_sdf(filename)
+    # Read SDF from file
+    npx, npy, npz, dx, dy, dz, dom, SDF = read_VTK_sdf(filename)
     if inside 
-        field = reshape(sdf, (npx,npy,npz))
+        field = reshape(SDF, (npx,npy,npz))
     else 
-        field = reshape(-sdf, (npx,npy,npz))
+        field = reshape(-SDF, (npx,npy,npz))
     end 
 
-    # Coordinates where the sdf values are taken 
+    # Coordinates where the SDF values are taken 
     x0 = dom[1]
     y0 = dom[3]
     z0 = dom[5]
@@ -131,7 +131,7 @@ function constructor_discrete_sdf(filename, rWireSection, inside,  T=Float64)
     # Scale the interpolation on the defined coordinate grid
     sitp = scale(itp, x, y, z)  
 
-    # initialise sdf variables
+    # initialise SDF variables
     g = 0
     dg = zeros(3)
     ddg = zeros(3,3)
@@ -145,9 +145,9 @@ end
 #----------------------------------
 
 # Get gap, gradient and hession of z-normal plane analytical SDF at P 
-function get_SDF_at_P_analitycal_plane_z(P, sdf,  T=Float64)
+function get_SDF_at_P_analitycal_plane_z(P, SDF,  T=Float64)
     
-    g_G = P[3] - sdf.z0 - sdf.r
+    g_G = P[3] - SDF.z0 - SDF.r
     dg_G = Vec3(0, 0, 1)
     ddg_G = zeros(Mat33{T})
     
@@ -156,9 +156,9 @@ function get_SDF_at_P_analitycal_plane_z(P, sdf,  T=Float64)
 end 
 
 # Get gap, gradient and hession of y-normal plane analytical SDF at P 
-function get_SDF_at_P_analitycal_plane_y(P, sdf,  T=Float64)
+function get_SDF_at_P_analitycal_plane_y(P, SDF,  T=Float64)
     
-    g_G = P[2] - sdf.y0 - sdf.r
+    g_G = P[2] - SDF.y0 - SDF.r
     dg_G = Vec3(0, 1, 0)
     ddg_G = zeros(Mat33{T})
     
@@ -167,14 +167,14 @@ function get_SDF_at_P_analitycal_plane_y(P, sdf,  T=Float64)
 end
 
 # Get gap, gradient and hession of sphere analytical SDF at P 
-function get_SDF_at_P_analitycal_sphere(P, sdf,  T=Float64)
+function get_SDF_at_P_analitycal_sphere(P, SDF,  T=Float64)
     
-    aux = Vec3(P[1] - sdf.x0, P[2] - sdf.y0, P[3] - sdf.z0)
+    aux = Vec3(P[1] - SDF.x0, P[2] - SDF.y0, P[3] - SDF.z0)
     
     norm_aux = norm(aux)
     invnorm = 1/norm_aux
     
-    g_G = norm_aux - sdf.R - sdf.r
+    g_G = norm_aux - SDF.R - SDF.r
     dg_G = invnorm * aux
     ddg_G = invnorm*ID3 + (invnorm^3)*(aux*aux')
     
@@ -183,14 +183,14 @@ function get_SDF_at_P_analitycal_sphere(P, sdf,  T=Float64)
 end
 
 # Get gap, gradient and hession of cylinder analytical SDF at P 
-function get_SDF_at_P_analitycal_cylinder(P, sdf,  T=Float64)
+function get_SDF_at_P_analitycal_cylinder(P, SDF,  T=Float64)
     
     aux = Vec3(P[1], P[2], 0)
     
     norm_aux = norm(aux)
     invnorm = 1/norm_aux
     
-    g_G = norm_aux - sdf.R + sdf.r
+    g_G = norm_aux - SDF.R + SDF.r
     dg_G = invnorm * aux
     ddg_G = invnorm*I + (invnorm^3)*(aux*aux')
     
@@ -202,10 +202,10 @@ end
 # INTERPOLATE DISCRETE SDF 
 #----------------------------------
 
-function get_SDF_at_P_discrete(xP, sdf,  T=Float64)
+function get_SDF_at_P_discrete(xP, SDF,  T=Float64)
     
-    dom = sdf.dom
-    sitp = sdf.sitp
+    dom = SDF.dom
+    sitp = SDF.sitp
 
     l_x = xP[1] - dom[1]  
     flag_lx = l_x>=0 && l_x<=(dom[2]-dom[1]) 
@@ -231,7 +231,7 @@ function get_SDF_at_P_discrete(xP, sdf,  T=Float64)
                 
     end 
 
-    return g - sdf.r, dg, ddg
+    return g - SDF.r, dg, ddg
         
 end 
 
@@ -240,17 +240,17 @@ end
 #----------------------------------
 
 # Get contact at point GP
-get_contact_GP_specialize(GP, sdf::SDF_Plane_z, T) = get_SDF_at_P_analitycal_plane_z(GP, sdf, T)
-get_contact_GP_specialize(GP, sdf::SDF_Sphere, T) = get_SDF_at_P_analitycal_sphere(GP, sdf, T)
-get_contact_GP_specialize(GP, sdf::SDF_Cylinder, T) = get_SDF_at_P_analitycal_cylinder(GP, sdf, T)
-get_contact_GP_specialize(GP, sdf::SDF_Plane_y, T) = get_SDF_at_P_analitycal_plane_y(GP, sdf, T)
-get_contact_GP_specialize(GP, sdf::SDF_Discrete, T) = get_SDF_at_P_discrete(GP, sdf, T)
+get_contact_GP_specialize(GP, SDF::SDF_Plane_z, T) = get_SDF_at_P_analitycal_plane_z(GP, SDF, T)
+get_contact_GP_specialize(GP, SDF::SDF_Sphere, T) = get_SDF_at_P_analitycal_sphere(GP, SDF, T)
+get_contact_GP_specialize(GP, SDF::SDF_Cylinder, T) = get_SDF_at_P_analitycal_cylinder(GP, SDF, T)
+get_contact_GP_specialize(GP, SDF::SDF_Plane_y, T) = get_SDF_at_P_analitycal_plane_y(GP, SDF, T)
+get_contact_GP_specialize(GP, SDF::SDF_Discrete, T) = get_SDF_at_P_discrete(GP, SDF, T)
     
-function get_contact_GP(GP, epsC, sdf, T=Float64)
+function get_contact_GP(GP, epsC, SDF, T=Float64)
         
-    g_G, dg_G, ddg_G = get_contact_GP_specialize(GP, sdf, T)
+    g_G, dg_G, ddg_G = get_contact_GP_specialize(GP, SDF, T)
     
-    fc_eps, dfc_eps, Pic_eps = quadratically_regularized_penalty(g_G, epsC, sdf.r, T)
+    fc_eps, dfc_eps, Pic_eps = quadratically_regularized_penalty(g_G, epsC, SDF.r, T)
     
     return fc_eps, dfc_eps, Pic_eps, g_G, dg_G, ddg_G
     

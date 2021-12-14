@@ -43,17 +43,17 @@ end
 nodes = constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R0=nothing, T=Float64) 
 
 Constructor of the nodes StructArray:
-- `X`: nodes StructArray (created with constructor_nodes);
-- `u_0`: initial displacements;
-- `udt_0`: initial velocities;
-- `udtdt_0`: initial accelerations;
-- `w_0`: initial rotations;
-- `wdt_0`: initial rotation velocities;
-- `wdtdt_0`: initial rotation acceleration;
-- `plane`: plane used for the conversin in cylindrical coordinates in case of BCs expressed in cylindrical coordinates.
-- `R0`: (not mandatory) initial rotation of the nodes.
+- `X`: nodal material position (`::Vector{Vec3}`);
+- `u_0`: nodal initial displacements (`::Vector{Vec3}`);
+- `udt_0`: nodal initial velocities (`::Vector{Vec3}`);
+- `udtdt_0`: nodal initial accelerations (`::Vector{Vec3}`);
+- `w_0`: nodal initial rotations (`::Vector{Vec3}`);
+- `wdt_0`: nodal initial rotation velocities (`::Vector{Vec3}`);
+- `wdtdt_0`: nodal initial rotation acceleration (`::Vector{Vec3}`);
+- `plane`: plane used for the conversin in cylindrical coordinates in case of BCs expressed in cylindrical coordinates ('xy', 'xz', 'yz');
+- `R0`: (not mandatory) nodal initial rotation matrix (`::Vector{Mat33}`).
 
-Returns a StructArray{MyNode}, structure containing the information of the nodes. 
+Returns a StructArray{MyNode} containing the information relative to the nodes. 
 """
 function constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R0=nothing, T=Float64) 
   
