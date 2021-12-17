@@ -25,7 +25,7 @@ struct SimulationParameters{T}
     
     # Gauss points
     nG::Int
-    wG::Vec3{T}
+    ωG::Vec3{T}
     zG::Vec3{T}
     
     # penalty parameters
@@ -81,7 +81,7 @@ struct Material{T}
     E::T
     G::T
     Arho::T
-    Jrho::Mat33{T}
+    Jᵨ::Mat33{T}
     
 end 
 
@@ -230,10 +230,10 @@ function constructor_material_properties(E, nu, rho, rWireSection, T=Float64)
     I22 = pi*rWireSection^4/4
     I33 = pi*rWireSection^4/4
     Io = I22+I33
-    Jrho = Mat33(rho*Io, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
+    Jᵨ = Mat33(rho*Io, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
     Arho = rho*A
  
-    mat = Material{T}(E, G, Arho, Jrho)
+    mat = Material{T}(E, G, Arho, Jᵨ)
 
     return mat
 
@@ -263,7 +263,7 @@ function constructor_geometry_properties(rWireSection, T=Float64)
 end 
 
 """
-    comp = constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T=Float64)    
+    comp = constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, mu_T, eps_tol_fric, T=Float64)    
 
 Constructor of the structure containing the simulation parameters:
     - `alpha`: integration parameter;
@@ -277,7 +277,7 @@ Constructor of the structure containing the simulation parameters:
     - `tol_ddk`: solution vector tolerance for the Newton-Raphson algorithm;
     - `max_it`: maximum number of iterations for the Newton-Raphson algorithm;
     - `nG`: number of Gauss points;
-    - `wG`: Gauss points weights;
+    - `ωG`: Gauss points weights;
     - `zG`: Gauss points positions along centreline;
     - `eps_C`: penalty coefficient for the contact normal contributions;
     - `mu_T`: friction coefficient;
@@ -285,9 +285,9 @@ Constructor of the structure containing the simulation parameters:
 
 Returns a SimulationParameters structure.
 """
-function constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T=Float64)
+function constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, mu_T, eps_tol_fric, T=Float64)
     
-    return SimulationParameters{T}(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric)
+    return SimulationParameters{T}(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, mu_T, eps_tol_fric)
     
 end 
 
@@ -429,19 +429,19 @@ function constructor_preallocated_matrices_fixed(allbeams, comp, T=Float64)
     0 )
     
     # ----------------------------------------------------------------------
-    l0 = allbeams.l0[1]
+    l₀ = allbeams.l₀[1]
     
     # _1
     zG = comp.zG[1] 
-    xG = l0*(zG+1)/2
+    ξ = l₀*(zG+1)/2
     
     # eqB3:5 in [2]: shape functions
-    N1_1 = 1-xG/l0
+    N1_1 = 1-ξ/l₀
     N2_1 = 1-N1_1
-    N3_1 = xG*(1-xG/l0)^2
-    N4_1 = -(1-xG/l0)*((xG^2)/l0)
-    N5_1 = (1-3*xG/l0)*(1-xG/l0)
-    N6_1 = (3*xG/l0-2)*(xG/l0)
+    N3_1 = ξ*(1-ξ/l₀)^2
+    N4_1 = -(1-ξ/l₀)*((ξ^2)/l₀)
+    N5_1 = (1-3*ξ/l₀)*(1-ξ/l₀)
+    N6_1 = (3*ξ/l₀-2)*(ξ/l₀)
     N7_1 = N3_1+N4_1
     N8_1 = N5_1+N6_1-1
     
@@ -483,15 +483,15 @@ function constructor_preallocated_matrices_fixed(allbeams, comp, T=Float64)
     # ----------------------------------------------------------------------
     # _2
     zG = comp.zG[2] 
-    xG = l0*(zG+1)/2
+    ξ = l₀*(zG+1)/2
     
     # eqB3:5 in [2]: shape functions
-    N1_2 = 1-xG/l0
+    N1_2 = 1-ξ/l₀
     N2_2 = 1-N1_2
-    N3_2 = xG*(1-xG/l0)^2
-    N4_2 = -(1-xG/l0)*((xG^2)/l0)
-    N5_2 = (1-3*xG/l0)*(1-xG/l0)
-    N6_2 = (3*xG/l0-2)*(xG/l0)
+    N3_2 = ξ*(1-ξ/l₀)^2
+    N4_2 = -(1-ξ/l₀)*((ξ^2)/l₀)
+    N5_2 = (1-3*ξ/l₀)*(1-ξ/l₀)
+    N6_2 = (3*ξ/l₀-2)*(ξ/l₀)
     N7_2 = N3_2+N4_2
     N8_2 = N5_2+N6_2-1
     
@@ -531,15 +531,15 @@ function constructor_preallocated_matrices_fixed(allbeams, comp, T=Float64)
     # ----------------------------------------------------------------------
     # _3
     zG = comp.zG[3] 
-    xG = l0*(zG+1)/2
+    ξ = l₀*(zG+1)/2
     
     # eqB3:5 in [2]: shape functions
-    N1_3 = 1-xG/l0
+    N1_3 = 1-ξ/l₀
     N2_3 = 1-N1_3
-    N3_3 = xG*(1-xG/l0)^2
-    N4_3 = -(1-xG/l0)*((xG^2)/l0)
-    N5_3 = (1-3*xG/l0)*(1-xG/l0)
-    N6_3 = (3*xG/l0-2)*(xG/l0)
+    N3_3 = ξ*(1-ξ/l₀)^2
+    N4_3 = -(1-ξ/l₀)*((ξ^2)/l₀)
+    N5_3 = (1-3*ξ/l₀)*(1-ξ/l₀)
+    N6_3 = (3*ξ/l₀-2)*(ξ/l₀)
     N7_3 = N3_3+N4_3
     N8_3 = N5_3+N6_3-1
     

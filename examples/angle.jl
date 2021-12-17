@@ -56,7 +56,7 @@ nbInterpolationPoints = 30
 # geometric and material properties
 E = 1e6
 G = 1e6
-Jrho = Mat33(20, 0, 0, 0, 10, 0, 0, 0, 10)
+Jᵨ = Mat33(20, 0, 0, 0, 10, 0, 0, 0, 10)
 Arho = 1
 A = 1
 I22 = 1e-3
@@ -66,7 +66,7 @@ Irr = 0
 J = 1e-3
 
 geom = Geometry{T}(A, I22, I33, Io, Irr, J)
-mat = Material{T}(E, G, Arho, Jrho)
+mat = Material{T}(E, G, Arho, Jᵨ)
 
 # beams vector
 allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints, nothing, T)
@@ -93,7 +93,7 @@ max_it = 10
 
 # Gauss points
 nG = 3
-wG = Vec3(5/9, 8/9, 5/9)
+ωG = Vec3(5/9, 8/9, 5/9)
 zG = Vec3(-sqrt(3/5), 0, sqrt(3/5)) 
 
 # penalty parameters
@@ -101,7 +101,7 @@ eps_C = 5000
 mu_T = 0
 eps_tol_fric = 0.1
 
-comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T)
+comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, mu_T, eps_tol_fric, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces

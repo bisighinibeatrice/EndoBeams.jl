@@ -3,56 +3,56 @@
 #-------------------------------------------------------------------
 
 # Gets the position of the two nodes forming the given beam element
-@inline function get_local_pos(e, allnodes)
+@inline function local_pos(e, allnodes)
     
     return allnodes.pos[e.node1], allnodes.pos[e.node2]
     
 end 
 
 # Gets the displacement of the two nodes forming the given beam element
-@inline function get_local_displ(e, allnodes)
+@inline function local_disp(e, allnodes)
     
     return allnodes.u[e.node1], allnodes.u[e.node2]
     
 end 
 
 # Gets the velocity of the two nodes forming the given beam element
-@inline function get_local_vel(e, allnodes)
+@inline function local_vel(e, allnodes)
     
     return allnodes.udt[e.node1], allnodes.udt[e.node2]
     
 end 
 
 # Gets the acceleration of the two nodes forming the given beam element
-@inline function get_local_acc(e, allnodes)
+@inline function local_acc(e, allnodes)
     
     return allnodes.udtdt[e.node1], allnodes.udtdt[e.node2]
     
 end 
 
 # Gets the angular velocity of the two nodes forming the given beam element
-@inline function get_local_ang_vel(e, allnodes)
+@inline function local_ang_vel(e, allnodes)
     
     return allnodes.wdt[e.node1], allnodes.wdt[e.node2]
     
 end 
 
 # Gets the angular acceleration of the two nodes forming the given beam element
-@inline function get_local_ang_acc(e, allnodes)
+@inline function local_ang_acc(e, allnodes)
     
     return allnodes.wdtdt[e.node1], allnodes.wdtdt[e.node2]
     
 end 
 
 # Gets the rotation matrix of the two nodes forming the given beam element
-@inline function get_local_rot(e, allnodes)
+@inline function local_rot(e, allnodes)
     
     return allnodes.R[e.node1], allnodes.R[e.node2]
     
 end 
 
 # Gets the rotation matrix displacement of the two nodes forming the given beam element
-@inline function get_local_rot_delt(e, allnodes)
+@inline function local_rot_delt(e, allnodes)
     
     return allnodes.Delt[e.node1], allnodes.Delt[e.node2]
     
@@ -75,10 +75,10 @@ end
 
 function compute_ssmatrices_Vec4Vec3_return_Vec4Mat33(a)
     
-    aux1 = get_skew_skymmetric_matrix_from_vector(a[1])
-    aux2 = get_skew_skymmetric_matrix_from_vector(a[2])
-    aux3 = get_skew_skymmetric_matrix_from_vector(a[3])
-    aux4 = get_skew_skymmetric_matrix_from_vector(a[4])
+    aux1 = skew_skymmetric_matrix_from_vector(a[1])
+    aux2 = skew_skymmetric_matrix_from_vector(a[2])
+    aux3 = skew_skymmetric_matrix_from_vector(a[3])
+    aux4 = skew_skymmetric_matrix_from_vector(a[4])
     
     return Vec4(aux1, aux2, aux3, aux4)
 end
@@ -120,9 +120,9 @@ function reshapeA2!(M, v)
     
 end
 
-function reshapeP1G(N3, N4, Θ1_bar, Θ2_bar)
+function reshapeP1G(N3, N4, Θ̅₁, Θ̅₂)
     
-    return Vec3(0, N3*Θ1_bar[3]+N4*Θ2_bar[3], -(N3*Θ1_bar[2]+N4*Θ2_bar[2]))
+    return Vec3(0, N3*Θ̅₁[3]+N4*Θ̅₂[3], -(N3*Θ̅₁[2]+N4*Θ̅₂[2]))
     
 end 
 
@@ -130,19 +130,21 @@ end
 # FUNCTIONS TO COMPUTE SPECIFIC MATRICES
 #------------------------------------------
 
-function compute_E_or_Et(Re)
+
+
+function compute_E_or_Et(Rₑ)
     
-    Re11 = Re[1,1]
-    Re21 = Re[2,1]
-    Re31 = Re[3,1]
+    Re11 = Rₑ[1,1]
+    Re21 = Rₑ[2,1]
+    Re31 = Rₑ[3,1]
     
-    Re12 = Re[1,2]
-    Re22 = Re[2,2]
-    Re32 = Re[3,2]
+    Re12 = Rₑ[1,2]
+    Re22 = Rₑ[2,2]
+    Re32 = Rₑ[3,2]
     
-    Re13 = Re[1,3]
-    Re23 = Re[2,3]
-    Re33 = Re[3,3]
+    Re13 = Rₑ[1,3]
+    Re23 = Rₑ[2,3]
+    Re33 = Rₑ[3,3]
     
     E = Mat1212(
     Re11, Re21, Re31, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -169,49 +171,46 @@ function compute_r(v)
     
 end
 
-function compute_GT_P_eta(ln, Re, p, t2_0,  t2_l)
+function compute_GT_P_eta(lₙ, R̅₁, R̅₂)
     
-    # eqC7 in [2]: eta, eta11, eta12, eta21, eta22
-    aux = Re'*p; q1 = aux[1]; q2 = aux[2]
-    aux = Re'*t2_0; q11 = aux[1]; q12 = aux[2]
-    aux = Re'*t2_l; q21 = aux[1]; q22 = aux[2]
+    # eqC7 in [2]: η, eta11, eta12, eta21, eta22
+    t1 = R̅₁[:,2]
+    tl = R̅₂[:,2]
+    p = (v1+v2)/2
+    q1 = p[1]; q2 = p[2]
+    q11 = t1[1]; q12 = t1[2]
+    q21 = tl[1]; q22 = tl[2]
     
-    eta = q1/q2
+    η = q1/q2
     eta11 = q11/q2
     eta12 = q12/q2
     eta21 = q21/q2
     eta22 = q22/q2
     
     # eqC6 in [2]: GT
-    GT = Mat312(
-    0, 0, 0,
-    0, 0, -1/ln,
-    eta/ln, 1/ln, 0,
-    eta12/2, 0, 0,
-    -eta11/2, 0, 0,
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 1/ln,
-    -eta/ln, -1/ln, 0,
-    eta22/2, 0, 0,
-    -eta21/2, 0, 0,
-    0, 0, 0)
+    GTu1 = @SMatrix [0 0     η/lₙ;
+                     0 0     1/lₙ  ;
+                     0 -1/lₙ 0      ]
     
-    P = Mat612(
-    0, 0, 0, 0, 0, 0,
-    0, 0, 1/ln, 0, 0, 1/ln,
-    -eta/ln, -1/ln, 0, -eta/ln, -1/ln, 0,
-    1-eta12/2, 0, 0, -eta12/2, 0, 0,
-    eta11/2, 1, 0, eta11/2, 0, 0,
-    0, 0, 1, 0, 0, 0,
-    0, 0, 0, 0, 0, 0,
-    0, 0, -1/ln, 0, 0, -1/ln,
-    eta/ln, 1/ln, 0, eta/ln, 1/ln, 0,
-    -eta22/2, 0, 0, 1-eta22/2, 0, 0,
-    eta21/2, 0, 0, eta21/2, 1, 0,
-    0, 0, 0, 0, 0, 1)
+    GTΘ1 = @SMatrix [eta12/2 -eta11/2 0;
+                     0       0        0;
+                     0       0        0]
+
+    GTu2 = -GTu1
+
+    GTΘ1 = @SMatrix [eta22/2 -eta21/2 0;
+                     0       0        0;
+                     0       0        0]
+
+    Pu1 = [-GTu1; -GTu1]
+
+    PΘ1 = [ID3-GTΘ1; -GTΘ1]
+
+    Pu2 = [-GTu2; -GTu2]
+
+    PΘ2 = [-GTΘ1; ID3-GTΘ1]
     
-    return GT, P, eta
+    return GTu1, GTΘ1, GTu2, GTΘ2, Pu1, PΘ1, Pu2, PΘ2, η
     
 end
 
@@ -230,18 +229,9 @@ function compute_Kh_bar(Kh1_bar, Kh2_bar)
     
 end
 
-function compute_B_bar(TsinvΘ1_bar, TsinvΘ2_bar) 
+function compute_B_bar(Tₛ⁻¹Θ̅₁, Tₛ⁻¹Θ̅₂) 
     
-    B_bar = Mat77(
-    1, 0, 0, 0, 0, 0, 0,
-    0, TsinvΘ1_bar[1,1], TsinvΘ1_bar[2,1], TsinvΘ1_bar[3,1], 0, 0, 0,
-    0, TsinvΘ1_bar[1,2], TsinvΘ1_bar[2,2], TsinvΘ1_bar[3,2], 0, 0, 0,
-    0, TsinvΘ1_bar[1,3], TsinvΘ1_bar[2,3], TsinvΘ1_bar[3,3], 0, 0, 0,
-    0, 0, 0, 0, TsinvΘ2_bar[1,1], TsinvΘ2_bar[2,1], TsinvΘ2_bar[3,1],
-    0, 0, 0, 0, TsinvΘ2_bar[1,2], TsinvΘ2_bar[2,2], TsinvΘ2_bar[3,2],
-    0, 0, 0, 0, TsinvΘ2_bar[1,3], TsinvΘ2_bar[2,3], TsinvΘ2_bar[3,3])
-    
-    return B_bar
+    return Tₛ⁻¹Θ̅₁, Tₛ⁻¹Θ̅₂
     
 end
 
@@ -315,67 +305,155 @@ function compute_D(D3)
     return E
 end
 
-function compute_Bt(Tsinv_th1g, Tsinv_th2g)
+function compute_Bt(Tₛ⁻¹_th1g, Tₛ⁻¹_th2g)
     
     Bt = Mat1212(
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, Tsinv_th1g[1,1], Tsinv_th1g[2,1], Tsinv_th1g[3,1], 0, 0, 0, 0, 0, 0,
-    0, 0, 0, Tsinv_th1g[1,2], Tsinv_th1g[2,2], Tsinv_th1g[3,2], 0, 0, 0, 0, 0, 0,
-    0, 0, 0,  Tsinv_th1g[1,3], Tsinv_th1g[2,3], Tsinv_th1g[3,3], 0, 0, 0, 0, 0, 0,
+    0, 0, 0, Tₛ⁻¹_th1g[1,1], Tₛ⁻¹_th1g[2,1], Tₛ⁻¹_th1g[3,1], 0, 0, 0, 0, 0, 0,
+    0, 0, 0, Tₛ⁻¹_th1g[1,2], Tₛ⁻¹_th1g[2,2], Tₛ⁻¹_th1g[3,2], 0, 0, 0, 0, 0, 0,
+    0, 0, 0,  Tₛ⁻¹_th1g[1,3], Tₛ⁻¹_th1g[2,3], Tₛ⁻¹_th1g[3,3], 0, 0, 0, 0, 0, 0,
     0, 0, 0,  0, 0, 0, 1, 0, 0, 0, 0, 0,
     0, 0, 0,  0, 0, 0, 0, 1, 0, 0, 0, 0,
     0, 0, 0,  0, 0, 0, 0, 0, 1, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, Tsinv_th2g[1,1], Tsinv_th2g[2,1], Tsinv_th2g[3,1],
-    0, 0, 0, 0, 0, 0, 0, 0, 0, Tsinv_th2g[1,2], Tsinv_th2g[2,2], Tsinv_th2g[3,2],
-    0, 0, 0, 0, 0, 0, 0, 0, 0, Tsinv_th2g[1,3], Tsinv_th2g[2,3], Tsinv_th2g[3,3])
+    0, 0, 0, 0, 0, 0, 0, 0, 0, Tₛ⁻¹_th2g[1,1], Tₛ⁻¹_th2g[2,1], Tₛ⁻¹_th2g[3,1],
+    0, 0, 0, 0, 0, 0, 0, 0, 0, Tₛ⁻¹_th2g[1,2], Tₛ⁻¹_th2g[2,2], Tₛ⁻¹_th2g[3,2],
+    0, 0, 0, 0, 0, 0, 0, 0, 0, Tₛ⁻¹_th2g[1,3], Tₛ⁻¹_th2g[2,3], Tₛ⁻¹_th2g[3,3])
     
     return Bt
 end
 
-function get_eta_mu(theta::AbstractVector{T}) where T
+function compute_η_μ(Θ̄::AbstractVector{T}) where T
+
+    Θ = norm(Θ̄)
+
+    if Θ<10*eps(T)
+        η = T(1/12)
+        μ = T(1/360)
+    else
+        sinΘ, cosΘ = sincos(Θ)
+        sinΘ2 = sin(Θ/2)
+        η = ((2*sinΘ)-Θ*(1+cosΘ))/(2*(Θ^2)*sinΘ)
+        μ = (Θ*(Θ+sinΘ)-8*(sinΘ2)^2)/(4*(Θ^4)*(sinΘ2)^2)
+    end
     
-    eta_1 = 1/12
-    mu_1 = 1/360
-    
-    theta= norm(theta)
-    
-    sin_theta = sin(theta)
-    cos_theta = cos(theta)
-    sin_theta2 = sin(theta/2)
-    
-    eta_2 = ((2*sin_theta)-theta*(1+cos_theta))/(2*(theta^2)*sin_theta)
-    
-    mu_2 = (theta*(theta+sin_theta)-8*(sin_theta2)^2)/(4*(theta^4)*(sin_theta2)^2)
-    
-    ind_choose = theta<10*eps(T) ? 1 : 2
-    
-    aux_eta = (eta_1, eta_2)
-    aux_mu = (mu_1, mu_2)
-    
-    
-    return aux_eta[ind_choose], aux_mu[ind_choose]
-    
+    return η, μ
+
 end
 
-function get_Kah_bar(theta, M, Tsinvtheta)
-    
-    Stheta = get_skew_skymmetric_matrix_from_vector(theta)
-    SM = get_skew_skymmetric_matrix_from_vector(M)
-    
-    eta, mu = get_eta_mu(theta)
-    
-    aux = theta*M'
-    
-    aux1 = eta * (aux - 2*aux'+ (theta'*M)*ID3) 
-    aux2 = mu * (Stheta * Stheta * aux') 
-    aux3 = - SM/2
-    
-    Kah_bar = (aux1 + aux2 + aux3) * Tsinvtheta
-    
-    return Kah_bar
-    
-end 
 
 
+function compute_K̄ₕ(Θ̅, M̄, Tₛ⁻¹Θ̅)
+
+    Θ̅M̄ᵀ = Θ̅*M̄'
+    M̄Θ̅ᵀ = Θ̅M̄ᵀ'
+
+    SΘ̅ = skew_skymmetric_matrix_from_vector(Θ̅)
+    SM̄ = skew_skymmetric_matrix_from_vector(M̄)
+
+    K̄ₕ =   η₁*(Θ̅M̄ᵀ - 2*M̄Θ̅ᵀ + dot(Θ̅, M̄)*ID3) * Tₛ⁻¹Θ̅
+        + μ₁*(SΘ̅*SΘ̅*M̄*Θ̅') * Tₛ⁻¹Θ̅
+        - (SM̄*Tₛ⁻¹Θ̅)/2
+
+    return K̄ₕ
+
+end
+
+
+
+
+
+# rotation matrix from the global reference system to the rigidly_moving local reference
+# system  of the deformed configuration
+@inline function local_Rₑ(x₁, x₂, Rₑ⁰E₂)
+    v₁ = (x₂ - x₁)/lₙ
+    p₁ = R₁ * Rₑ⁰E₂
+    p₂ = R₂ * Rₑ⁰E₂
+    p = (p₁+p₂)/2
+    v₃ = cross(v₁, p)
+    v₃ = v₃ / norm(v₃)
+    v₂ = cross(v₃, v₁)
+    return [v₁ v₂ v₃]
+end
+
+
+
+@inline function auxiliary_variables(Rₑ, v₁, p, p₁, p₂)
+
+    ru₁ = -v₁
+    ru₂ = v₁
+
+    q₁, q₂, _ = Rₑ*p
+    q₁₁, q₁₂, _ = Rₑ*p₁
+    q₂₁, q₂₂, _ = Rₑ*p₂
+    
+    η = q₁/q₂
+    η₁₁ = q₁₁/q₂
+    η₁₂ = q₁₂/q₂
+    η₂₁ = q₂₁/q2
+    η₂₂ = q₂₂/q2
+
+    Gᵀu₁ = @Smatrix [0 0 η/lₙ; 0 0 1/lₙ; 0 -1/lₙ 0]
+    GᵀΘ₁ = @Smatrix [η₁₂/2 -η₁₁/2 0; 0 0 0; 0 0 0]
+    Gᵀu₂ = -Gᵀu₁
+    GᵀΘ₂ = @Smatrix [η₂₂/2 -η₂₁/2 0; 0 0 0; 0 0 0]
+
+    return ru₁, ru₂, η, (η₁₁, η₁₂, η₂₁, η₂₂), Gᵀu₁, GᵀΘ₁, Gᵀu₂, GᵀΘ₂
+
+end
+
+
+
+@inline function Pmatrices(N₁, N₂, N₃, N₄, N₅, N₆, lₙ, η, η₁₁, η₁₂, η₂₁, η₂₂)
+
+    P₁Pu₁ = @Smatrix [0 0 0; 0 (N₃+N₄)/lₙ 0; 0 0 (N₃+N₄)/lₙ]
+    P₁PΘ₁ = @Smatrix [0 0 0; 0 0 N₃; 0 -N₃ 0]
+    P₁Pu₂ = -P₁Pu₁
+    P₁PΘ₂ = @Smatrix [0 0 0; 0 0 N₄; 0 -N₄ 0]
+
+    P₂Pu₁ = @Smatrix [0 0 -η*(N₁+N₂)/ln; 0 0 -(N₅+N₆)/lₙ; 0 (N₅+N₆)/lₙ 0]
+    P₂PΘ₁ = @Smatrix [-(N₂*η₁₂)/2-N₁*(η₁₂/2 - 1) (η₁₁*(N₁+N₂))/2 0; 0 N₅ 0; 0 0 N₆]
+    P₂Pu₂ = -P₂Pu₁
+    P₂PΘ₂ = @Smatrix [-(N₁*η₂₂)/2-N₂*(η₂₂/2 - 1) (η₂₁*(N₁+N₂))/2 0; 0 N₅ 0; 0 0 N₆]
+
+
+    return P₁Pu₁, P₁PΘ₁, P₁Pu₂, P₁PΘ₂, P₂Pu₁, P₂PΘ₁, P₂Pu₂, P₂PΘ₂
+
+end
+
+
+
+
+struct BlockMatDiag_4_4{T11, T22, T33, T44}
+    B11::T11
+    B22::T22
+    B33::T33
+    B44::T44
+end
+
+struct BlockMatDiag_2_2{T11, T22}
+    B11::T11
+    B22::T22
+end
+
+struct BlockMat_1_4{T11, T12, T13, T14}
+    B11::T11
+    B12::T12
+    B13::T13
+    B14::T14
+end
+
+struct BlockMat_2_4{T11, T12, T13, T14, T21, T22, T23, T24}
+    B11::T11
+    B12::T12
+    B13::T13
+    B14::T14
+end
+
+Base.:*(M1::BlockMat_1_4, M2::BlockMatDiag_4_4) = BlockMat_1_4(M1.B11*M2.B11, M1.B12*M2.B22, M1.B13*M2.B33, M1.B14*M2.B44)
+
+Base.:*(M1::BlockMat_1_4, M2::BlockMat_4_4) = BlockMat_1_4(M1.B11*M2.B11 + M1.B12*M2.B21 + M1.B13*M2.B31 + M1.B14*M2.B41,
+                                                           M1.B11*M2.B12 + M1.B12*M2.B22 + M1.B13*M2.B32 + M1.B14*M2.B42, 
+                                                           M1.B11*M2.B13 + M1.B12*M2.B23 + M1.B13*M2.B33 + M1.B14*M2.B43, 
+                                                           M1.B11*M2.B14 + M1.B12*M2.B24 + M1.B13*M2.B34 + M1.B14*M2.B44)

@@ -327,7 +327,7 @@ function update_local_corrector!(allnodes, ΔD_k, dt, nodes_sol, comp)
 
         wdt_n = allnodes.wdt_n[i]
         wdtdt_n = allnodes.wdtdt_n[i]
-        w_n1 = get_angle_from_rotation_matrix(allnodes.Delt[i])
+        w_n1 = angle_from_rotation_matrix(allnodes.Delt[i])
         allnodes.wdt[i] = allnodes.Delt[i] * (gamma/(beta*dt)*w_n1 + (beta-gamma)/beta*wdt_n + dt*(beta-gamma/2)/beta*wdtdt_n)     
         allnodes.wdtdt[i] = allnodes.Delt[i] * (1/(beta*dt^2)*w_n1 - 1/(beta*dt)*wdt_n - (0.5-beta)/beta*wdtdt_n)
 
@@ -350,7 +350,7 @@ function update_local_predictor!(allnodes, nodes_sol)
         allnodes.wdt[i] = nodes_sol.Ddt[allnodes.idof_ang[i]]
         allnodes.wdtdt[i] = nodes_sol.Ddtdt[allnodes.idof_ang[i]]
 
-        Sw = get_skew_skymmetric_matrix_from_vector(nodes_sol.D[allnodes.idof_ang[i]])
+        Sw = skew_skymmetric_matrix_from_vector(nodes_sol.D[allnodes.idof_ang[i]])
         allnodes.Delt[i] = exp(Sw)*allnodes.Delt[i]
         allnodes.R[i] = allnodes.Delt[i]*allnodes.R_n[i] 
         

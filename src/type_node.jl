@@ -40,7 +40,7 @@ end
 #----------------------------------
 
 """
-nodes = constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R0=nothing, T=Float64) 
+nodes = constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R₀=nothing, T=Float64) 
 
 Constructor of the nodes StructArray:
 - `X`: nodes StructArray (created with constructor_nodes);
@@ -51,13 +51,13 @@ Constructor of the nodes StructArray:
 - `wdt_0`: initial rotation velocities;
 - `wdtdt_0`: initial rotation acceleration;
 - `plane`: plane used for the conversin in cylindrical coordinates in case of BCs expressed in cylindrical coordinates.
-- `R0`: (not mandatory) initial rotation of the nodes.
+- `R₀`: (not mandatory) initial rotation of the nodes.
 
 Returns a StructArray{MyNode}, structure containing the information of the nodes. 
 """
-function constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R0=nothing, T=Float64) 
+function constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R₀=nothing, T=Float64) 
   
-    if isnothing(R0)
+    if isnothing(R₀)
             nodes = StructArray(MyNode{T}(
             i, 
             X[i], 
@@ -94,7 +94,7 @@ function constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R
             Vec3(w_0[3*(i-1)+1], w_0[3*(i-1)+2], w_0[3*(i-1)+3]), 
             Vec3(wdt_0[3*(i-1)+1], wdt_0[3*(i-1)+2], wdt_0[3*(i-1)+3]), 
             Vec3(wdtdt_0[3*(i-1)+1], wdtdt_0[3*(i-1)+2], wdtdt_0[3*(i-1)+3]), 
-            R0[i], 
+            R₀[i], 
             ID3,
             Vec3(u_0[3*(i-1)+1], u_0[3*(i-1)+2], u_0[3*(i-1)+3]), 
             Vec3(udt_0[3*(i-1)+1], udt_0[3*(i-1)+2], udt_0[3*(i-1)+3]), 
@@ -102,7 +102,7 @@ function constructor_nodes(X, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R
             Vec3(w_0[3*(i-1)+1], w_0[3*(i-1)+2], w_0[3*(i-1)+3]), 
             Vec3(wdt_0[3*(i-1)+1], wdt_0[3*(i-1)+2], wdt_0[3*(i-1)+3]), 
             Vec3(wdtdt_0[3*(i-1)+1], wdtdt_0[3*(i-1)+2], wdtdt_0[3*(i-1)+3]), 
-            R0[i], 
+            R₀[i], 
             ID3,
             compute_local_to_global_matrix(i, X, plane[i], T))
         for i in 1:size(X,1))
@@ -122,20 +122,20 @@ function compute_local_to_global_matrix(i, X, plane, T=Float64)
     if plane == "xy"
 
         Xi = X[i]
-        thetai = atan(Xi[2], Xi[1])  
-        return Mat33(cos(thetai), -sin(thetai), 0,  sin(thetai), cos(thetai), 0, 0, 0, 1)
+        Θi = atan(Xi[2], Xi[1])  
+        return Mat33(cos(Θi), -sin(Θi), 0,  sin(Θi), cos(Θi), 0, 0, 0, 1)
 
     elseif plane == "yz"
 
         Xi = X[i]
-        thetai = atan(Xi[3], Xi[2])
-        return Mat33(1, 0, 0, 0, cos(thetai), -sin(thetai), 0, sin(thetai), cos(thetai))
+        Θi = atan(Xi[3], Xi[2])
+        return Mat33(1, 0, 0, 0, cos(Θi), -sin(Θi), 0, sin(Θi), cos(Θi))
     
     elseif plane == "xz"
 
         Xi = X[i]
-        thetai = atan(Xi[3], Xi[1])
-        return Mat33(cos(thetai), 0, -sin(thetai), 0, 1, 0, sin(thetai), 0, cos(thetai))
+        Θi = atan(Xi[3], Xi[1])
+        return Mat33(cos(Θi), 0, -sin(Θi), 0, 1, 0, sin(Θi), 0, cos(Θi))
 
     end 
     
