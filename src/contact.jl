@@ -83,9 +83,9 @@ struct SDF_Discrete{T, F}
     dx::T
     dy::T
     dz::T
-    g::T
-    dg::Vector{T}
-    ddg::Matrix{T}
+    gₙ::T
+    ∂gₙ∂x::Vector{T}
+    ∂²gₙ∂x²::Matrix{T}
     
 end 
 
@@ -132,11 +132,11 @@ function constructor_discrete_sdf(filename, rWireSection, inside,  T=Float64)
     sitp = scale(itp, x, y, z)  
 
     # initialise sdf variables
-    g = 0
-    dg = zeros(3)
-    ddg = zeros(3,3)
+    gₙ = 0
+    ∂gₙ∂x = zeros(3)
+    ∂²gₙ∂x² = zeros(3,3)
 
-    return SDF_Discrete{T, typeof(sitp)}(rWireSection, sitp, dom, dx, dy, dz, g, dg, ddg)  
+    return SDF_Discrete{T, typeof(sitp)}(rWireSection, sitp, dom, dx, dy, dz, gₙ, ∂gₙ∂x, ∂²gₙ∂x²)  
 
 end 
 
@@ -144,57 +144,57 @@ end
 # GET INFO OF ANALYTICAL SDFs
 #----------------------------------
 
-# Get gap, gradient and hession of z-normal plane analytical SDF at P 
-function get_SDF_at_P_analitycal_plane_z(P, sdf,  T=Float64)
+# Get gap, gradient and hession of z-normal plane analytical SDF at point 
+function get_SDF_at_P_analitycal_plane_z(point, sdf,  T=Float64)
     
-    g_G = P[3] - sdf.z0 - sdf.r
-    dg_G = Vec3(0, 0, 1)
-    ddg_G = zeros(Mat33{T})
+    gₙ = point[3] - sdf.z0 - sdf.r
+    ∂gₙ∂x = Vec3(0, 0, 1)
+    ∂²gₙ∂x² = zeros(Mat33{T})
     
-    return g_G, dg_G, ddg_G
+    return gₙ, ∂gₙ∂x, ∂²gₙ∂x²
     
 end 
 
-# Get gap, gradient and hession of y-normal plane analytical SDF at P 
-function get_SDF_at_P_analitycal_plane_y(P, sdf,  T=Float64)
+# Get gap, gradient and hession of y-normal plane analytical SDF at point 
+function get_SDF_at_P_analitycal_plane_y(point, sdf,  T=Float64)
     
-    g_G = P[2] - sdf.y0 - sdf.r
-    dg_G = Vec3(0, 1, 0)
-    ddg_G = zeros(Mat33{T})
+    gₙ = point[2] - sdf.y0 - sdf.r
+    ∂gₙ∂x = Vec3(0, 1, 0)
+    ∂²gₙ∂x² = zeros(Mat33{T})
     
-    return -g_G, dg_G, ddg_G
+    return -gₙ, ∂gₙ∂x, ∂²gₙ∂x²
     
 end
 
-# Get gap, gradient and hession of sphere analytical SDF at P 
-function get_SDF_at_P_analitycal_sphere(P, sdf,  T=Float64)
+# Get gap, gradient and hession of sphere analytical SDF at point 
+function get_SDF_at_P_analitycal_sphere(point, sdf,  T=Float64)
     
-    aux = Vec3(P[1] - sdf.x0, P[2] - sdf.y0, P[3] - sdf.z0)
+    aux = Vec3(point[1] - sdf.x0, point[2] - sdf.y0, point[3] - sdf.z0)
     
     norm_aux = norm(aux)
     invnorm = 1/norm_aux
     
-    g_G = norm_aux - sdf.R - sdf.r
-    dg_G = invnorm * aux
-    ddg_G = invnorm*ID3 + (invnorm^3)*(aux*aux')
+    gₙ = norm_aux - sdf.R - sdf.r
+    ∂gₙ∂x = invnorm * aux
+    ∂²gₙ∂x² = invnorm*ID3 + (invnorm^3)*(aux*aux')
     
-    return g_G, dg_G, ddg_G
+    return gₙ, ∂gₙ∂x, ∂²gₙ∂x²
     
 end
 
-# Get gap, gradient and hession of cylinder analytical SDF at P 
-function get_SDF_at_P_analitycal_cylinder(P, sdf,  T=Float64)
+# Get gap, gradient and hession of cylinder analytical SDF at point 
+function get_SDF_at_P_analitycal_cylinder(point, sdf,  T=Float64)
     
-    aux = Vec3(P[1], P[2], 0)
+    aux = Vec3(point[1], point[2], 0)
     
     norm_aux = norm(aux)
     invnorm = 1/norm_aux
     
-    g_G = norm_aux - sdf.R + sdf.r
-    dg_G = invnorm * aux
-    ddg_G = invnorm*ID3 + (invnorm^3)*(aux*aux')
+    gₙ = norm_aux - sdf.R + sdf.r
+    ∂gₙ∂x = invnorm * aux
+    ∂²gₙ∂x² = invnorm*ID3 + (invnorm^3)*(aux*aux')
     
-    return -g_G, -dg_G, -ddg_G
+    return -gₙ, -∂gₙ∂x, -∂²gₙ∂x²
     
 end 
 
@@ -202,36 +202,38 @@ end
 # INTERPOLATE DISCRETE SDF 
 #----------------------------------
 
-function get_SDF_at_P_discrete(xP, sdf,  T=Float64)
-    
-    dom = sdf.dom
-    sitp = sdf.sitp
+function isinside(point, dom)
 
-    l_x = xP[1] - dom[1]  
+    l_x = point[1] - dom[1]  
     flag_lx = l_x>=0 && l_x<=(dom[2]-dom[1]) 
-    l_y = xP[2] - dom[3]
+    l_y = point[2] - dom[3]
     flag_ly = l_y>=0 && l_y<=(dom[4]-dom[3])
-    l_z = xP[3] - dom[5] 
+    l_z = point[3] - dom[5] 
     flag_lz = l_z>=0 && l_z<=(dom[6]-dom[5])
 
-    flag_in = flag_lx*flag_ly*flag_lz               
+    return flag_lx && flag_ly && flag_lz   
 
-    
-    if flag_in == 0
-        
-        g = zero(T)
-        dg = zeros(Vec3{T})
-        ddg = zeros(Mat33{T})
+end
+
+function get_SDF_at_P_discrete(point, sdf,  T=Float64)
+
+    sitp = sdf.sitp
+
+    if isinside(point, sdf.dom)
+
+        gₙ = sitp(point...)
+        ∂gₙ∂x = Interpolations.gradient(sitp, point...)
+        ∂²gₙ∂x² = Interpolations.hessian(sitp, point...)
 
     else 
-    
-        g = sitp(xP...)
-        dg = Interpolations.gradient(sitp, xP...)
-        ddg = Interpolations.hessian(sitp, xP...)
+
+        gₙ = zero(T)
+        ∂gₙ∂x = zeros(Vec3{T})
+        ∂²gₙ∂x² = zeros(Mat33{T})
                 
     end 
 
-    return g - sdf.r, dg, ddg
+    return gₙ - sdf.r, ∂gₙ∂x, ∂²gₙ∂x²
         
 end 
 
@@ -239,50 +241,51 @@ end
 # CONTACT FUNCTIONS
 #----------------------------------
 
-# Get contact at point GP
-get_contact_GP_specialize(GP, sdf::SDF_Plane_z, T) = get_SDF_at_P_analitycal_plane_z(GP, sdf, T)
-get_contact_GP_specialize(GP, sdf::SDF_Sphere, T) = get_SDF_at_P_analitycal_sphere(GP, sdf, T)
-get_contact_GP_specialize(GP, sdf::SDF_Cylinder, T) = get_SDF_at_P_analitycal_cylinder(GP, sdf, T)
-get_contact_GP_specialize(GP, sdf::SDF_Plane_y, T) = get_SDF_at_P_analitycal_plane_y(GP, sdf, T)
-get_contact_GP_specialize(GP, sdf::SDF_Discrete, T) = get_SDF_at_P_discrete(GP, sdf, T)
+# Get contact at point point
+get_contact_GP_specialize(point, sdf::SDF_Plane_z, T) = get_SDF_at_P_analitycal_plane_z(point, sdf, T)
+get_contact_GP_specialize(point, sdf::SDF_Sphere, T) = get_SDF_at_P_analitycal_sphere(point, sdf, T)
+get_contact_GP_specialize(point, sdf::SDF_Cylinder, T) = get_SDF_at_P_analitycal_cylinder(point, sdf, T)
+get_contact_GP_specialize(point, sdf::SDF_Plane_y, T) = get_SDF_at_P_analitycal_plane_y(point, sdf, T)
+get_contact_GP_specialize(point, sdf::SDF_Discrete, T) = get_SDF_at_P_discrete(point, sdf, T)
     
-function get_contact_GP(GP, epsC, sdf, T=Float64)
+function get_contact_GP(point, εᶜ, sdf, T=Float64)
         
-    g_G, dg_G, ddg_G = get_contact_GP_specialize(GP, sdf, T)
+    gₙ, ∂gₙ∂x, ∂²gₙ∂x² = get_contact_GP_specialize(point, sdf, T)
     
-    fc_eps, dfc_eps, Pic_eps = quadratically_regularized_penalty(g_G, epsC, sdf.r, T)
+    pₙ, p′ₙ, Pic_eps = quadratically_regularized_penalty(gₙ, εᶜ, sdf.r, T)
     
-    return fc_eps, dfc_eps, Pic_eps, g_G, dg_G, ddg_G
+    return pₙ, p′ₙ, Pic_eps, gₙ, ∂gₙ∂x, ∂²gₙ∂x²
     
 end 
 
+
 # Quadratically regulise penalty
-function quadratically_regularized_penalty(g, epsC, r,  T=Float64)
+function quadratically_regularized_penalty(gₙ, εᶜ, r, T=Float64)
     
-    gbar = r/10
-    fbar = epsC*gbar/2
-    aux = (epsC*gbar-fbar)/(gbar^2)
-     
-    fc_eps = zero(T)
-    dfc_eps = zero(T)
+    ḡₙ = r/10 
+    p̄ₙ = εᶜ*ḡₙ/2
+    
+    pₙ = zero(T)
+    p′ₙ = zero(T)
     Pic_eps = zero(T)
     
     # eq[111] in [2]
-    if g<=0
+    if gₙ<=0
 
-        fc_eps = fbar - epsC*g
-        dfc_eps = -epsC
-        Pic_eps = (epsC/2)*g^2 - fbar*g + (epsC*gbar^2)/6
+        pₙ = p̄ₙ - εᶜ*gₙ
+        p′ₙ = -εᶜ
+        Pic_eps = (εᶜ/2)*gₙ^2 - p̄ₙ*gₙ + (εᶜ*ḡₙ^2)/6
         
-    elseif gbar>=g && g>0
+    elseif ḡₙ>=gₙ && gₙ>0
         
-        fc_eps =  aux*g^2 - epsC*g + fbar
-        dfc_eps = 2*aux*g - epsC
-        Pic_eps = -(epsC*gbar-fbar)/(3*gbar^2)*g^3 + (epsC/2)*g^2 - fbar*g + (epsC*gbar^2)/6
+        aux = (εᶜ*ḡₙ-p̄ₙ)/(ḡₙ^2)
+        pₙ =  aux*gₙ^2 - εᶜ*gₙ + p̄ₙ
+        p′ₙ = 2*aux*gₙ - εᶜ
+        Pic_eps = -(εᶜ*ḡₙ-p̄ₙ)/(3*ḡₙ^2)*gₙ^3 + (εᶜ/2)*gₙ^2 - p̄ₙ*gₙ + (εᶜ*ḡₙ^2)/6
         
     end
     
-    return fc_eps, dfc_eps, Pic_eps
+    return pₙ, p′ₙ, Pic_eps
     
 end 
 

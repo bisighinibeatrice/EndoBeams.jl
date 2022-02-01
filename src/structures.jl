@@ -29,9 +29,9 @@ struct SimulationParameters{T}
     zG::Vec3{T}
     
     # penalty parameters
-    epsC::T
-    mu_T::T
-    eps_tol_fric::T
+    εᶜ::T
+    μ::T
+    εₜ::T
     
 end
 
@@ -263,7 +263,7 @@ function constructor_geometry_properties(rWireSection, T=Float64)
 end 
 
 """
-    comp = constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, mu_T, eps_tol_fric, T=Float64)    
+    comp = constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T=Float64)    
 
 Constructor of the structure containing the simulation parameters:
     - `alpha`: integration parameter;
@@ -280,14 +280,14 @@ Constructor of the structure containing the simulation parameters:
     - `ωG`: Gauss points weights;
     - `zG`: Gauss points positions along centreline;
     - `eps_C`: penalty coefficient for the contact normal contributions;
-    - `mu_T`: friction coefficient;
-    - `eps_tol_fric`: regularisation coefficient for the contact tangential contributions.
+    - `μ`: friction coefficient;
+    - `εₜ`: regularisation coefficient for the contact tangential contributions.
 
 Returns a SimulationParameters structure.
 """
-function constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, mu_T, eps_tol_fric, T=Float64)
+function constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T=Float64)
     
-    return SimulationParameters{T}(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, mu_T, eps_tol_fric)
+    return SimulationParameters{T}(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ)
     
 end 
 

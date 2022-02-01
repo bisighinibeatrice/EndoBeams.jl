@@ -98,10 +98,10 @@ zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 
 # penalty parameters
 eps_C = 5000
-mu_T = 0
-eps_tol_fric = 0.1
+μ = 0
+εₜ = 0.1
 
-comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, mu_T, eps_tol_fric, T)
+comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces

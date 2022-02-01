@@ -379,7 +379,9 @@ end
 
 
 
-@inline function auxiliary_variables(Rₑ, v₁, p, p₁, p₂)
+@inline function auxiliary_variables(Rₑ, p, p₁, p₂)
+
+    v₁ = Re[:,1]
 
     ru₁ = -v₁
     ru₂ = v₁
