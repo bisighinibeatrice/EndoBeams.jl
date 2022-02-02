@@ -6,9 +6,9 @@
 struct SimulationParameters{T}
     
     # integration parameters
-    alpha::T
-    beta::T 
-    gamma::T
+    α::T 
+    β::T 
+    γ::T 
     
     # numerical damping
     damping::T
@@ -24,9 +24,9 @@ struct SimulationParameters{T}
     max_it::T
     
     # Gauss points
-    nG::Int
-    ωG::Vec3{T}
-    zG::Vec3{T}
+    nᴳ::Int
+    ωᴳ::Vec3{T}
+    zᴳ::Vec3{T}
     
     # penalty parameters
     εᶜ::T
@@ -80,7 +80,7 @@ struct Material{T}
     
     E::T
     G::T
-    Arho::T
+    Aᵨ::T
     Jᵨ::Mat33{T}
     
 end 
@@ -89,10 +89,10 @@ end
 struct Geometry{T}
     
     A::T
-    I22::T
-    I33::T
-    Io::T
-    Irr::T
+    I₂₂::T
+    I₃₃::T
+    Iₒ::T
+    Iᵣᵣ::T
     J::T   
     
 end 
@@ -123,10 +123,10 @@ end
 struct Solution{T}  
     
     fext::Vector{T}
-    Tint::Vector{T}
-    Tk::Vector{T}
-    Tct::Vector{T}
-    Tconstr::Vector{T}
+    Tⁱⁿᵗ::Vector{T}
+    Tᵏ::Vector{T}
+    Tᶜᵗ::Vector{T}
+    Tᶜᵒⁿ::Vector{T}
     
 end 
 
@@ -134,8 +134,8 @@ end
 struct NodalSolution{T}  
     
     D::Vector{T}
-    Ddt::Vector{T}
-    Ddtdt::Vector{T}
+    Ḋ::Vector{T}
+    D̈::Vector{T}
     Ddt_n::Vector{T}
     
     r::Vector{T}
@@ -156,46 +156,30 @@ end
 # Global matrices structure (sparse arrays)
 struct Matrices{T}
     
-    Kint::SparseMatrixCSC{T,Int}
-    Ck::SparseMatrixCSC{T,Int} 
+    Kⁱⁿᵗ ::SparseMatrixCSC{T,Int}
+    Cᵏ::SparseMatrixCSC{T,Int} 
     M::SparseMatrixCSC{T,Int}
-    Kct::SparseMatrixCSC{T,Int}
-    Kconstr::SparseMatrixCSC{T,Int}
-    Cconstr::SparseMatrixCSC{T,Int}
+    Kᶜᵗ::SparseMatrixCSC{T,Int}
+    Kᶜᵒⁿ::SparseMatrixCSC{T,Int}
+    Cᶜᵒⁿ::SparseMatrixCSC{T,Int}
     
-    Tint::Vector{T}
-    Tk::Vector{T}
-    Tdamp::Vector{T}
-    Tct::Vector{T}
-    Tconstr::Vector{T}
+    Tⁱⁿᵗ::Vector{T}
+    Tᵏ::Vector{T}
+    Tᵈᵃᵐᵖ::Vector{T}
+    Tᶜᵗ::Vector{T}
+    Tᶜᵒⁿ::Vector{T}
     
 end 
 
 # Energy contributions structure
 mutable struct Energy{T}
     
-    Phi_energy::T
-    K_energy::T
+    strain_energy::T
+    kinetic_energy::T
     C_energy::T
     
 end
 
-# Fixed matrices used in the beam contributions computation (preallocation)
-struct PreAllocatedMatricesFixed{T}
-    
-    E1::Vec3{T}
-    E2::Vec3{T}
-    E3::Vec3{T}
-    
-    A1::Mat312{T}
-    A2::Mat312{T}
-    re::Vec12{T}
-    
-    P1G_v::Vec3{Mat36{T}}
-    P2G_v::Vec3{Mat36{T}}
-    NG_v::Vec3{Mat312{T}}
-    
-end 
 
 # Information related to the contact at the Gauss points
 mutable struct GPSolution{T}  
@@ -213,27 +197,27 @@ end
 #----------------------------------
 
 """
-    mat = constructor_material_properties(E, nu, rho, rWireSection)
+    mat = constructor_material_properties(E, nu, ρ, rWireSection)
 
 Constructor of the structure containing the material properties:
 - `E`: Young modulus;
 - `nu`: Poisson coefficient;
-- `rho`: density;
+- `ρ`: density;
 - `rWireSection`: beam radius.
 
 Returns a Material structure.
 """
-function constructor_material_properties(E, nu, rho, rWireSection, T=Float64)
+function constructor_material_properties(E, nu, ρ, rWireSection, T=Float64)
 
     G = E/(2*(1+nu))
     A = pi*rWireSection^2
-    I22 = pi*rWireSection^4/4
-    I33 = pi*rWireSection^4/4
-    Io = I22+I33
-    Jᵨ = Mat33(rho*Io, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
-    Arho = rho*A
- 
-    mat = Material{T}(E, G, Arho, Jᵨ)
+    I₂₂ = pi*rWireSection^4/4
+    I₃₃ = pi*rWireSection^4/4
+    Iₒ = I₂₂+I₃₃
+    Jᵨ = Mat33(ρ*Iₒ, 0, 0, 0, ρ*I₂₂, 0, 0, 0, ρ*I₃₃)
+    Aᵨ = ρ*A
+
+    mat = Material{T}(E, G, Aᵨ, Jᵨ)
 
     return mat
 
@@ -250,25 +234,25 @@ Returns a Geometry structure.
 function constructor_geometry_properties(rWireSection, T=Float64)
 
     A = pi*rWireSection^2
-    I22 = pi*rWireSection^4/4
-    I33 = pi*rWireSection^4/4
-    Io = I22+I33
-    Irr = Io
-    J = Io
+    I₂₂ = pi*rWireSection^4/4
+    I₃₃ = pi*rWireSection^4/4
+    Iₒ = I₂₂+I₃₃
+    Iᵣᵣ = Iₒ
+    J = Iₒ
     
-    geom = Geometry{T}(A, I22, I33, Io, Irr, J)
+    geom = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
 
     return geom
 
 end 
 
 """
-    comp = constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T=Float64)    
+    comp = constructor_simulation_parameters(α, β, γ, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T=Float64)    
 
 Constructor of the structure containing the simulation parameters:
-    - `alpha`: integration parameter;
-    - `beta`: integration parameter;
-    - `gamma`: integration parameter;
+    - `α`: integration parameter;
+    - `β`: integration parameter;
+    - `γ`: integration parameter;
     - `damping`: damping coefficient;
     - `dt`: time step;
     - `dt_plot`: time step for the saving of output files;
@@ -285,9 +269,9 @@ Constructor of the structure containing the simulation parameters:
 
 Returns a SimulationParameters structure.
 """
-function constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T=Float64)
+function constructor_simulation_parameters(α, β, γ, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T=Float64)
     
-    return SimulationParameters{T}(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ)
+    return SimulationParameters{T}(α, β, γ, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ)
     
 end 
 
@@ -369,224 +353,15 @@ function constructor_solution(conf, T=Float64)
     fext_0  = zeros(ndofs)
     get_current_external_force!(fext_0, 0, conf)
     
-    Tint_0 = zeros(ndofs)
-    Tk_0 = zeros(ndofs)
-    Tct_0 = zeros(ndofs)
-    Tconstr_0 = zeros(ndofs)
+    T⁰ᵢₙₜ = zeros(ndofs)
+    T⁰ₖ = zeros(ndofs)
+    T⁰ₜ = zeros(ndofs)
+    T⁰ₓ = zeros(ndofs)
     
-    return Solution{T}(fext_0, Tint_0, Tk_0, Tct_0, Tconstr_0)
+    return Solution{T}(fext_0, T⁰ᵢₙₜ, T⁰ₖ, T⁰ₜ, T⁰ₓ)
     
 end 
 
-# Constructor of the structure containing some fixed matrices used in the beam contributions computation 
-function constructor_preallocated_matrices_fixed(allbeams, comp, T=Float64)
-    
-    E1 = Vec3(1,0,0)
-    E2 = Vec3(0,1,0)
-    E3 = Vec3(0,0,1)
-    
-    # Note: do not use these matrices, define a function that reorganises elements insead
-    A1 = Mat312(
-    0, 0, 0, 
-    0,-1, 0, 
-    0, 0,-1, 
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 0,
-    0, 1, 0,
-    0, 0, 1,
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 0)
-    
-    A2 = Mat312(
-    0, 0, 0, 
-    0, 0,-1, 
-    0, 1, 0, 
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 1,
-    0,-1, 0,
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 0)
-    
-    re = Vec12( 
-    -1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0,
-    0 )
-    
-    # ----------------------------------------------------------------------
-    l₀ = allbeams.l₀[1]
-    
-    # _1
-    zG = comp.zG[1] 
-    ξ = l₀*(zG+1)/2
-    
-    # eqB3:5 in [2]: shape functions
-    N1_1 = 1-ξ/l₀
-    N2_1 = 1-N1_1
-    N3_1 = ξ*(1-ξ/l₀)^2
-    N4_1 = -(1-ξ/l₀)*((ξ^2)/l₀)
-    N5_1 = (1-3*ξ/l₀)*(1-ξ/l₀)
-    N6_1 = (3*ξ/l₀-2)*(ξ/l₀)
-    N7_1 = N3_1+N4_1
-    N8_1 = N5_1+N6_1-1
-    
-    # eqB1 in [2]: FE interpolation matrices for displacement
-    P1G_1 = Mat36(
-    0, 0, 0, 
-    0, 0, -N3_1, 
-    0, N3_1, 0, 
-    0, 0, 0,
-    0, 0, -N4_1,
-    0, N4_1, 0)
-    
-    # eqB2 in [2]: FE interpolation matrices for rotations
-    P2G_1 = Mat36(
-    N1_1, 0, 0, 
-    0, N5_1, 0, 
-    0, 0, N5_1, 
-    N2_1, 0, 0,
-    0, N6_1, 0,
-    0, 0, N6_1)
-    
-    # eqD7 in [2], N
-    NG_1 = Mat312(
-    N1_1, 0, 0, 
-    0, N1_1, 0, 
-    0, 0, N1_1, 
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 0,
-    N2_1, 0, 0,
-    0, N2_1, 0,
-    0, 0, N2_1,
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 0)
-    
-    # NG = Vec4{T}(N1*eye33, zeros(Mat33{T}), N2*eye33, zeros(Mat33{T}))
-    
-    # ----------------------------------------------------------------------
-    # _2
-    zG = comp.zG[2] 
-    ξ = l₀*(zG+1)/2
-    
-    # eqB3:5 in [2]: shape functions
-    N1_2 = 1-ξ/l₀
-    N2_2 = 1-N1_2
-    N3_2 = ξ*(1-ξ/l₀)^2
-    N4_2 = -(1-ξ/l₀)*((ξ^2)/l₀)
-    N5_2 = (1-3*ξ/l₀)*(1-ξ/l₀)
-    N6_2 = (3*ξ/l₀-2)*(ξ/l₀)
-    N7_2 = N3_2+N4_2
-    N8_2 = N5_2+N6_2-1
-    
-    # eqB1 in [2]: FE interpolation matrices for displacement
-    P1G_2 = Mat36(
-    0, 0, 0, 
-    0, 0, -N3_2, 
-    0, N3_2, 0, 
-    0, 0, 0,
-    0, 0, -N4_2,
-    0, N4_2, 0)
-    
-    # eqB2 in [2]: FE interpolation matrices for rotations
-    P2G_2 = Mat36(
-    N1_2, 0, 0, 
-    0, N5_2, 0, 
-    0, 0, N5_2, 
-    N2_2, 0, 0,
-    0, N6_2, 0,
-    0, 0, N6_2)
-    
-    # eqD7 in [2], N
-    NG_2 = Mat312(
-    N1_2, 0, 0, 
-    0, N1_2, 0, 
-    0, 0, N1_2, 
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 0,
-    N2_2, 0, 0,
-    0, N2_2, 0,
-    0, 0, N2_2,
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 0)
-    
-    # ----------------------------------------------------------------------
-    # _3
-    zG = comp.zG[3] 
-    ξ = l₀*(zG+1)/2
-    
-    # eqB3:5 in [2]: shape functions
-    N1_3 = 1-ξ/l₀
-    N2_3 = 1-N1_3
-    N3_3 = ξ*(1-ξ/l₀)^2
-    N4_3 = -(1-ξ/l₀)*((ξ^2)/l₀)
-    N5_3 = (1-3*ξ/l₀)*(1-ξ/l₀)
-    N6_3 = (3*ξ/l₀-2)*(ξ/l₀)
-    N7_3 = N3_3+N4_3
-    N8_3 = N5_3+N6_3-1
-    
-    # eqB1 in [2]: FE interpolation matrices for displacement
-    P1G_3 = Mat36(
-    0, 0, 0, 
-    0, 0, -N3_3, 
-    0, N3_3, 0, 
-    0, 0, 0,
-    0, 0, -N4_3,
-    0, N4_3, 0)
-    
-    
-    # eqB2 in [2]: FE interpolation matrices for rotations
-    P2G_3 = Mat36(
-    N1_3, 0, 0, 
-    0, N5_3, 0, 
-    0, 0, N5_3, 
-    N2_3, 0, 0,
-    0, N6_3, 0,
-    0, 0, N6_3)
-    
-    
-    # eqD7 in [2], N
-    NG_3 = Mat312(
-    N1_3, 0, 0, 
-    0, N1_3, 0, 
-    0, 0, N1_3, 
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 0,
-    N2_3, 0, 0,
-    0, N2_3, 0,
-    0, 0, N2_3,
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 0)
-    
-    # ----------------------------------------------------------------------
-    # Assembly
-    
-    P1G_v = Vec3{Mat36{T}}(P1G_1, P1G_2, P1G_3)
-    P2G_v = Vec3{Mat36{T}}(P2G_1, P2G_2, P2G_3)
-    NG_v = Vec3{Mat312{T}}(NG_1, NG_2, NG_3)
-    return PreAllocatedMatricesFixed{T}(E1, E2, E3, A1, A2, re, P1G_v, P2G_v, NG_v)
-    
-end 
 
 # Constructor of the structure containing the energy contributions
 function constructor_energy(T=Float64)
@@ -604,8 +379,8 @@ function constructor_nodal_solution(ndofs, nfreedofs, dofs_tan, dofs_free, spmap
     return NodalSolution{T}(
 
     zeros(ndofs), #D
-    zeros(ndofs), #Ddt 
-    zeros(ndofs), #Ddtdt 
+    zeros(ndofs), #Ḋ 
+    zeros(ndofs), #D̈ 
     zeros(ndofs), #Ddt_n  -> needed by predictor
     
     spzeros(ndofs), #r
@@ -624,40 +399,40 @@ function constructor_nodal_solution(ndofs, nfreedofs, dofs_tan, dofs_free, spmap
 end
 
 # Constructor of the structure containing the global matrices 
-function constructor_global_matrices(allnodes, dofs_tan, T=Float64)
+function constructor_global_matrices(nodes, dofs_tan, T=Float64)
     
     rows, cols, zval = dofs_tan
 
-    nnodes = length(allnodes)
+    nnodes = length(nodes)
     ndofs_per_node = 6
     ndofs = nnodes*ndofs_per_node
     
-    Kint_0 = sparse(rows, cols, zval)
-    Ck_0 =  sparse(rows, cols, zval)
-    M_0 = sparse(rows, cols, zval)
-    Kct_0 =  sparse(rows, cols, zval)
-    Kconstr_0  = sparse(rows, cols, zval)
-    Ccosntr_0  = sparse(rows, cols, zval)
+    Kⁱⁿᵗ = sparse(rows, cols, zval)
+    Cᵏ =  sparse(rows, cols, zval)
+    M = sparse(rows, cols, zval)
+    Kᶜᵗ =  sparse(rows, cols, zval)
+    Kᶜᵒⁿ  = sparse(rows, cols, zval)
+    Cᶜᵒⁿ  = sparse(rows, cols, zval)
 
-    Tint_0 = zeros(ndofs)
-    Tk_0 =  zeros(ndofs)
-    Tdamp_0 = zeros(ndofs)
-    Tct_0 = zeros(ndofs)
-    Tconstr_0 = zeros(ndofs)
+    Tⁱⁿᵗ = zeros(ndofs)
+    Tᵏ =  zeros(ndofs)
+    Tᵈᵃᵐᵖ = zeros(ndofs)
+    Tᶜᵗ = zeros(ndofs)
+    Tᶜᵒⁿ = zeros(ndofs)
 
-    return Matrices{T}(Kint_0, Ck_0, M_0, Kct_0, Kconstr_0, Ccosntr_0,Tint_0, Tk_0, Tdamp_0, Tct_0, Tconstr_0)
+    return Matrices{T}(Kⁱⁿᵗ, Cᵏ, M, Kᶜᵗ, Kᶜᵒⁿ, Cᶜᵒⁿ,Tⁱⁿᵗ, Tᵏ, Tᵈᵃᵐᵖ, Tᶜᵗ, Tᶜᵒⁿ)
     
 end 
 
 # Constructor of the sparse matrices
-function constructor_sparse_matrices!(allbeams, allnodes, pncons, conf, T=Float64)
+function constructor_sparse_matrices!(allbeams, nodes, pncons, conf, T=Float64)
 
-    dofs_tan, dofs_free, spmap_free = compute_sparsity!(allbeams, allnodes, pncons, conf, T)
+    dofs_tan, dofs_free, spmap_free = compute_sparsity!(allbeams, nodes, pncons, conf, T)
     
-    ndofs = length(allnodes)*6
+    ndofs = length(nodes)*6
     nfreedofs = length(setdiff(1:ndofs, conf.bc.fixed_dofs))
 
-    matrices = constructor_global_matrices(allnodes, dofs_tan, T)
+    matrices = constructor_global_matrices(nodes, dofs_tan, T)
     nodes_sol = constructor_nodal_solution(ndofs, nfreedofs, dofs_tan, dofs_free, spmap_free, T)
 
     return matrices, nodes_sol

@@ -182,12 +182,12 @@ end
 end
 
 
-#  Compute Kint matrix
+#  Compute Kⁱⁿᵗ matrix
 @inline function K̄ᵢₙₜ_beam(mat, geom, l₀)
     
     K̄ᵢₙₜū = geom.A*mat.E/l₀
-    K̄ᵢₙₜΘ̅ = Diagonal(@SVector [mat.G*geom.J/l₀, 4*mat.E*geom.I33/l₀, 4*mat.E*geom.I22/l₀])
-    K̄ᵢₙₜΘ̅Θ̅ = Diagonal(@SVector [-mat.G*geom.J/l₀, 2*mat.E*geom.I33/l₀, 2*mat.E*geom.I22/l₀])
+    K̄ᵢₙₜΘ̅ = Diagonal(@SVector [mat.G*geom.J/l₀, 4*mat.E*geom.I₃₃/l₀, 4*mat.E*geom.I₂₂/l₀])
+    K̄ᵢₙₜΘ̅Θ̅ = Diagonal(@SVector [-mat.G*geom.J/l₀, 2*mat.E*geom.I₃₃/l₀, 2*mat.E*geom.I₂₂/l₀])
     
     return K̄ᵢₙₜū, K̄ᵢₙₜΘ̅, K̄ᵢₙₜΘ̅Θ̅
     
@@ -198,11 +198,11 @@ end
     
     K̄ᵢₙₜū = geom.A*mat.E/l₀
     K̄ᵢₙₜΘ̅ = @SMatrix [mat.G*geom.J/l₀ 0 0;
-                      0 4*mat.E*geom.I33/l₀ 0;
-                      0 0 4*mat.E*geom.I22/l₀]
+                      0 4*mat.E*geom.I₃₃/l₀ 0;
+                      0 0 4*mat.E*geom.I₂₂/l₀]
     K̄ᵢₙₜΘ̅Θ̅ = @SMatrix [-mat.G*geom.J/l₀ 0 0;
-                       0 2*mat.E*geom.I33/l₀ 0;
-                       0 0 2*mat.E*geom.I22/l₀]
+                       0 2*mat.E*geom.I₃₃/l₀ 0;
+                       0 0 2*mat.E*geom.I₂₂/l₀]
 
     O13 = @SMatrix zeros(1,3)
     O31 = @SMatrix zeros(3,1)
@@ -887,10 +887,10 @@ function compute(u₁, Θ₁, u₂, Θ₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü�
         #         Tᶜ³ += ωᴳ*l₀/2 * (Rₑ * H₁ᵀ𝓕ᶜ³)
         #         Tᶜ⁴ += ωᴳ*l₀/2 * (Rₑ * H₁ᵀ𝓕ᶜ⁴)
 
-        #         ŜH₁ᵀ𝓕ᶜ¹ = skew_skymmetric_matrix_from_vector(H₁ᵀ𝓕ᶜ¹)
-        #         ŜH₁ᵀ𝓕ᶜ² = skew_skymmetric_matrix_from_vector(H₁ᵀ𝓕ᶜ²)
-        #         ŜH₁ᵀ𝓕ᶜ³ = skew_skymmetric_matrix_from_vector(H₁ᵀ𝓕ᶜ³)
-        #         ŜH₁ᵀ𝓕ᶜ⁴ = skew_skymmetric_matrix_from_vector(H₁ᵀ𝓕ᶜ⁴)
+        #         ŜH₁ᵀ𝓕ᶜ¹ = skew(H₁ᵀ𝓕ᶜ¹)
+        #         ŜH₁ᵀ𝓕ᶜ² = skew(H₁ᵀ𝓕ᶜ²)
+        #         ŜH₁ᵀ𝓕ᶜ³ = skew(H₁ᵀ𝓕ᶜ³)
+        #         ŜH₁ᵀ𝓕ᶜ⁴ = skew(H₁ᵀ𝓕ᶜ⁴)
 
         #         t¹₁₁ = -Rₑ * ŜH₁ᵀ𝓕ᶜ¹ * Gᵀ¹ * Rₑ'
         #         t¹₁₂ = -Rₑ * ŜH₁ᵀ𝓕ᶜ¹ * Gᵀ² * Rₑ'
@@ -921,7 +921,7 @@ function compute(u₁, Θ₁, u₂, Θ₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü�
         #         A₁ᵀ𝓕ᶜr₃₁ = -A
         #         A₁ᵀ𝓕ᶜr₃₃ = A
 
-        #         S𝓕ᶜ = skew_skymmetric_matrix_from_vector(𝓕ᶜ)
+        #         S𝓕ᶜ = skew(𝓕ᶜ)
 
 
         #         t²₁₁ = N₇/lₙ^2 * Rₑ * A₁ᵀ𝓕ᶜr₁₁ - Rₑ * Gᵀ¹' * S𝓕ᶜ * P₁P¹ * Rₑ'
@@ -982,16 +982,16 @@ function compute(u₁, Θ₁, u₂, Θ₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü�
         #         𝓐₂³ = I∂gₙ∂xRₑSh₁ * Gᵀ³ * Rₑ'
         #         𝓐₂⁴ = I∂gₙ∂xRₑSh₁ * Gᵀ⁴ * Rₑ'
 
-        #         𝓐₃¹ = I∂gₙ∂x * N₇/lₙ^2 * Rₑ * A₁Ḋr¹ + Rₑ * skew_skymmetric_matrix_from_vector(Gᵀ¹ * U̇₁) * P₁P¹ * Rₑ'
-        #         𝓐₃² =                                  Rₑ * skew_skymmetric_matrix_from_vector(Gᵀ² * Ẇ₁) * P₁P² * Rₑ'
-        #         𝓐₃³ = I∂gₙ∂x * N₇/lₙ^2 * Rₑ * A₁Ḋr³ + Rₑ * skew_skymmetric_matrix_from_vector(Gᵀ³ * U̇₂) * P₁P³ * Rₑ'
-        #         𝓐₃⁴ =                                  Rₑ * skew_skymmetric_matrix_from_vector(Gᵀ⁴ * Ẇ₂) * P₁P⁴ * Rₑ'
+        #         𝓐₃¹ = I∂gₙ∂x * N₇/lₙ^2 * Rₑ * A₁Ḋr¹ + Rₑ * skew(Gᵀ¹ * U̇₁) * P₁P¹ * Rₑ'
+        #         𝓐₃² =                                  Rₑ * skew(Gᵀ² * Ẇ₁) * P₁P² * Rₑ'
+        #         𝓐₃³ = I∂gₙ∂x * N₇/lₙ^2 * Rₑ * A₁Ḋr³ + Rₑ * skew(Gᵀ³ * U̇₂) * P₁P³ * Rₑ'
+        #         𝓐₃⁴ =                                  Rₑ * skew(Gᵀ⁴ * Ẇ₂) * P₁P⁴ * Rₑ'
 
 
 
         #         # eq110 in [2]
         #         Inn = ID3 - ∂gₙ∂x*∂gₙ∂x'
-        #         dgT = Inn*Rₑ*H1G*E'*ddt
+        #         dgT = Inn*Rₑ*H1G*E'*Ḋ
         #         dgTdgT = dot(dgT,dgT)
                 
         #         G_eN = ∂gₙ∂x
@@ -1033,7 +1033,7 @@ ẅ₂ = @SVector [-0.002394, 0.008994, 0.005902]
 
 
 const mat = (E = 1., G = 0.1, Jᵨ = Diagonal(@SVector [20, 10, 10]), Aᵨ = 0.01)
-const geom = (A = 0.01, J = 0.01, I33 = 0.01, I22 = 0.01)
+const geom = (A = 0.01, J = 0.01, I₃₃ = 0.01, I₂₂ = 0.01)
 const comp = (nᴳ = 3, zᴳ = @SVector[-sqrt(3/5), 0, sqrt(3/5)], ωᴳ = @SVector[5/9, 8/9, 5/9] )
 
 
@@ -1042,8 +1042,8 @@ const Rₑ⁰ = local_R⁰(X₁, X₂)
 
 # using BenchmarkTools
 
-# @btime Tint($x)
-# @btime Kint($x)
+# @btime Tⁱⁿᵗ($x)
+# @btime Kⁱⁿᵗ($x)
 
 
 

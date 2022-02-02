@@ -7,28 +7,28 @@ function test_sphere()
     # positions
     L = 10/100; dx = L/10
     
-    pos =  Vec3{T}[]
+    X₀ =  Vec3{T}[]
     
     for x in 0:dx:L
-        push!(pos, Vec3(0, 0, x))
+        push!(X₀, Vec3(0, 0, x))
     end
     
     # total number of nodes
-    nnodes = size(pos,1)
+    nnodes = size(X₀,1)
     
     # initial conditions
-    u_0 = zeros(size(pos,1)*3)
-    udt_0 = zeros(size(pos,1)*3)
-    udtdt_0 = zeros(size(pos,1)*3)
-    w_0 = zeros(size(pos,1)*3)
-    wdt_0 = zeros(size(pos,1)*3)
-    wdtdt_0 = zeros(size(pos,1)*3)
+    u⁰ = zeros(size(X₀,1)*3)
+    u̇⁰ = zeros(size(X₀,1)*3)
+    ü⁰ = zeros(size(X₀,1)*3)
+    w⁰ = zeros(size(X₀,1)*3)
+    ẇ⁰ = zeros(size(X₀,1)*3)
+    ẅ⁰ = zeros(size(X₀,1)*3)
     
     # plane for cylindrical coordinates
-    plane = fill("xy", length(pos))
+    plane = fill("xy", length(X₀))
     
     # nodes StructArray
-    allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, nothing, T)
+    nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, plane, nothing, T)
     
     # -------------------------------------------------------------------------------------------
     # Building the beams
@@ -54,31 +54,31 @@ function test_sphere()
     r = d/2
     E = 5*1e7
     nu = 0.33
-    rho = 7850
+    ρ = 7850
     G = E/(2*(1+nu))
     A = pi*r^2
-    I22 = 0.25*pi*r^4
-    I33 = 0.25*pi*r^4
-    Io = I22+I33
-    Irr = Io
-    J = Io
-    Jᵨ = Mat33(rho*Io, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
-    Arho = rho*A
+    I₂₂ = 0.25*pi*r^4
+    I₃₃ = 0.25*pi*r^4
+    Iₒ = I₂₂+I₃₃
+    Iᵣᵣ = Iₒ
+    J = Iₒ
+    Jᵨ = Mat33(ρ*Iₒ, 0, 0, 0, ρ*I₂₂, 0, 0, 0, ρ*I₃₃)
+    Aᵨ = ρ*A
     
-    geom = Geometry{T}(A, I22, I33, Io, Irr, J)
-    mat = Material{T}(E, G, Arho, Jᵨ)
+    geom = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
+    mat = Material{T}(E, G, Aᵨ, Jᵨ)
     
     # beams vector
-    allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints, nothing, T)
+    allbeams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
     
     #-----------------------------------------------------------------------------------
     # Simulation parameters
     # -------------------------------------------------------------------------------------------
     
     # integration parameters
-    alpha = -0.05
-    beta = 0.25*(1-alpha)^2
-    gamma = 0.5*(1-2*alpha)
+    α = -0.05
+    β = 0.25*(1-α)^2
+    γ = 0.5*(1-2*α)
     damping = 0
     
     # time step and total time
@@ -101,7 +101,7 @@ function test_sphere()
     μ = 0.3
     εₜ = 0.1
     
-    comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
+    comp = constructor_simulation_parameters(α, β, γ, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
     
     # -------------------------------------------------------------------------------------------
     # External forces
@@ -167,7 +167,7 @@ function test_sphere()
     # -------------------------------------------------------------------------------------------
     
     params = ParamsTest()
-    solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)         
+    solver!(nodes, allbeams, conf, comp, sdf, cons, params, T)         
     
     # -------------------------------------------------------------------------------------------
     # Test 
@@ -176,10 +176,10 @@ function test_sphere()
     rtol = 1e-2
     
     pos_matlab = Vec3(0.107853165032904, 0.0132224390067658, 0.0360871249073232)
-    @test isapprox(allnodes.pos[5] + allnodes.u[5], pos_matlab; rtol)
+    @test isapprox(nodes.X₀[5] + nodes.u[5], pos_matlab; rtol)
     
     pos_matlab = Vec3(0.129725721716302, 0.0548254754528272, 0.0730574700480992)
-    @test isapprox(allnodes.pos[end] + allnodes.u[end], pos_matlab; rtol)
+    @test isapprox(nodes.X₀[end] + nodes.u[end], pos_matlab; rtol)
     
 end 
 

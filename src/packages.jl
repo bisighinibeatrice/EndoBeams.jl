@@ -11,5 +11,4 @@ using Parameters
 using Infiltrator
 # using MKL
 using Pardiso
-using Polyester
 using Cthulhu

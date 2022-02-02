@@ -7,30 +7,30 @@ function test_angle()
     # positions
     dx = 2.5; L = 10
 
-    pos =  Vec3{T}[]
+    X₀ =  Vec3{T}[]
     for x in 0:dx:L
-        push!(pos, Vec3(0, x, 0))
+        push!(X₀, Vec3(0, x, 0))
     end
     for x in dx:dx:L
-        push!(pos, Vec3(-x,  L, 0))
+        push!(X₀, Vec3(-x,  L, 0))
     end
 
     # total number of nodes
-    nnodes = size(pos,1)
+    nnodes = size(X₀,1)
 
     # initial conditions
-    u_0 = zeros(nnodes*3)
-    udt_0 = zeros(nnodes*3)
-    udtdt_0 = zeros(nnodes*3)
-    w_0 = zeros(nnodes*3)
-    wdt_0 = zeros(nnodes*3)
-    wdtdt_0 = zeros(nnodes*3)
+    u⁰ = zeros(nnodes*3)
+    u̇⁰ = zeros(nnodes*3)
+    ü⁰ = zeros(nnodes*3)
+    w⁰ = zeros(nnodes*3)
+    ẇ⁰ = zeros(nnodes*3)
+    ẅ⁰ = zeros(nnodes*3)
 
     # plane for cylindrical coordinates
-    plane = fill("xy", length(pos))
+    plane = fill("xy", length(X₀))
 
     # nodes StructArray
-    allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, nothing, T)
+    nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, plane, nothing, T)
 
     # -------------------------------------------------------------------------------------------
     # Building the beams
@@ -55,28 +55,28 @@ function test_angle()
     E = 1e6
     G = 1e6
     Jᵨ = Mat33(20, 0, 0, 0, 10, 0, 0, 0, 10)
-    Arho = 1
+    Aᵨ = 1
     A = 1
-    I22 = 1e-3
-    I33 = 1e-3
-    Io = 0
-    Irr = 0
+    I₂₂ = 1e-3
+    I₃₃ = 1e-3
+    Iₒ = 0
+    Iᵣᵣ = 0
     J = 1e-3
 
-    geom = Geometry{T}(A, I22, I33, Io, Irr, J)
-    mat = Material{T}(E, G, Arho, Jᵨ)
+    geom = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
+    mat = Material{T}(E, G, Aᵨ, Jᵨ)
 
     # beams vector
-    allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints,  nothing, T)
+    allbeams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
 
     #-----------------------------------------------------------------------------------
     # Simulation parameters
     # -------------------------------------------------------------------------------------------
 
     # integration parameters
-    alpha = -0.05
-    beta = 0.25*(1-alpha)^2
-    gamma = 0.5*(1-2*alpha)
+    α = -0.05
+    β = 0.25*(1-α)^2
+    γ = 0.5*(1-2*α)
     damping = 0
 
     # time step and total time
@@ -99,7 +99,7 @@ function test_angle()
     μ = 0
     εₜ = 0.1
 
-    comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
+    comp = constructor_simulation_parameters(α, β, γ, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
 
     # -------------------------------------------------------------------------------------------
     # External forces
@@ -154,14 +154,14 @@ function test_angle()
     # -------------------------------------------------------------------------------------------
 
     params = ParamsTest()
-    solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)       
+    solver!(nodes, allbeams, conf, comp, sdf, cons, params, T)       
 
     # -------------------------------------------------------------------------------------------
     # Test
     # -------------------------------------------------------------------------------------------
   
     pos_matlab = Vec3(-10.6867358894953, 6.61144877793072, -6.2584504990589)
-    @test isapprox(allnodes.pos[end] + allnodes.u[end], pos_matlab; atol=1e-6)
+    @test isapprox(nodes.X₀[end] + nodes.u[end], pos_matlab; atol=1e-6)
 
 end
 

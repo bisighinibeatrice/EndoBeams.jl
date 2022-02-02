@@ -12,39 +12,39 @@ function test2_ring_plane()
     alpha_div = 2*pi/(nelem)
     
     # positions
-    pos =  Vec3{T}[]
+    X₀ =  Vec3{T}[]
     
-    push!(pos, Vec3(Rmid, 0, 0))
+    push!(X₀, Vec3(Rmid, 0, 0))
     
     for idiv = 1:nelem-1
         alphai = idiv*alpha_div
         Xi=Rmid*cos(alphai)
         Zi=Rmid*sin(alphai)
-        push!(pos, Vec3(Xi,  0, Zi))
+        push!(X₀, Vec3(Xi,  0, Zi))
     end 
     
     # total number of nodes
-    nnodes = size(pos,1)
+    nnodes = size(X₀,1)
     
     # initial conditions
-    u_0 = zeros(size(pos,1)*3)
+    u⁰ = zeros(size(X₀,1)*3)
     
     vx_ini = 2*sqrt(2)/2
     vz_ini = -2*sqrt(2)/2
-    udt_0 = zeros(size(pos,1)*3,1)
-    udt_0[1:3:end-2] .= vx_ini
-    udt_0[3:3:end] .= vz_ini
+    u̇⁰ = zeros(size(X₀,1)*3,1)
+    u̇⁰[1:3:end-2] .= vx_ini
+    u̇⁰[3:3:end] .= vz_ini
     
-    udtdt_0 = zeros(size(pos,1)*3)
-    w_0 = zeros(size(pos,1)*3)
-    wdt_0 = zeros(size(pos,1)*3)
-    wdtdt_0 = zeros(size(pos,1)*3)
+    ü⁰ = zeros(size(X₀,1)*3)
+    w⁰ = zeros(size(X₀,1)*3)
+    ẇ⁰ = zeros(size(X₀,1)*3)
+    ẅ⁰ = zeros(size(X₀,1)*3)
     
     # plane for cylindrical coordinates
-    plane = fill("xy", length(pos))
+    plane = fill("xy", length(X₀))
     
     # nodes StructArray
-    allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, nothing, T)    
+    nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, plane, nothing, T)    
     
     # -------------------------------------------------------------------------------------------
     # Building the beams
@@ -71,31 +71,31 @@ function test2_ring_plane()
     r = 0.5
     E = 100
     nu = 0.0001
-    rho = 0.01
+    ρ = 0.01
     G = E/(2*(1+nu))
     A = pi*r^2
-    I22 = 0.25*pi*r^4
-    I33 = 0.25*pi*r^4
-    Io = I22+I33
-    Irr = Io
-    J = Io
-    Jᵨ = Mat33(rho*Io, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
-    Arho = rho*A
+    I₂₂ = 0.25*pi*r^4
+    I₃₃ = 0.25*pi*r^4
+    Iₒ = I₂₂+I₃₃
+    Iᵣᵣ = Iₒ
+    J = Iₒ
+    Jᵨ = Mat33(ρ*Iₒ, 0, 0, 0, ρ*I₂₂, 0, 0, 0, ρ*I₃₃)
+    Aᵨ = ρ*A
     
-    geom = Geometry{T}(A, I22, I33, Io, Irr, J)
-    mat = Material{T}(E, G, Arho, Jᵨ)
+    geom = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
+    mat = Material{T}(E, G, Aᵨ, Jᵨ)
     
     # beams vector
-    allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints, nothing, T)
+    allbeams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
     
     #-----------------------------------------------------------------------------------
     # Simulation parameters
     # -------------------------------------------------------------------------------------------
     
     # integration parameters
-    alpha = -0.05
-    beta = 0.25*(1-alpha)^2
-    gamma = 0.5*(1-2*alpha)
+    α = -0.05
+    β = 0.25*(1-α)^2
+    γ = 0.5*(1-2*α)
     damping = 0
     
     # time step and total time
@@ -118,7 +118,7 @@ function test2_ring_plane()
     μ = 0
     εₜ = 0.1
     
-    comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
+    comp = constructor_simulation_parameters(α, β, γ, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
     
     # -------------------------------------------------------------------------------------------
     # External forces
@@ -175,17 +175,17 @@ function test2_ring_plane()
     # -------------------------------------------------------------------------------------------
     
     params = ParamsTest()
-    solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)       
+    solver!(nodes, allbeams, conf, comp, sdf, cons, params, T)       
     
     # -------------------------------------------------------------------------------------------
     # Test
     # -------------------------------------------------------------------------------------------
     
     pos_matlab = Vec3(13.2036958558558, -8.21451676473630e-16, -4.35974592923078)
-    @test isapprox(allnodes.pos[end] + allnodes.u[end], pos_matlab; atol=1e-6)
+    @test isapprox(nodes.X₀[end] + nodes.u[end], pos_matlab; atol=1e-6)
     
     pos_matlab = Vec3(-7.29962545377873, -1.52803374339338e-15, 0.525953386653913)
-    @test isapprox(allnodes.pos[12] + allnodes.u[12], pos_matlab; atol=1e-6)
+    @test isapprox(nodes.X₀[12] + nodes.u[12], pos_matlab; atol=1e-6)
     
 end
 

@@ -24,25 +24,25 @@ posStentCrimpedPositioned =  posStentCrimped + read_TXT_file_pos("examples/input
 nnodes = size(posStentExp,1)
 
 # initial conditions
-u_0 = zeros(nnodes*3)
+u⁰ = zeros(nnodes*3)
 for (j,i) in enumerate(1:3:nnodes*3)
-    u_0[i+0] = posStentCrimpedPositioned[j][1] - posStentExp[j][1]
-    u_0[i+1] = posStentCrimpedPositioned[j][2] - posStentExp[j][2]
-    u_0[i+2] = posStentCrimpedPositioned[j][3] - posStentExp[j][3]
+    u⁰[i+0] = posStentCrimpedPositioned[j][1] - posStentExp[j][1]
+    u⁰[i+1] = posStentCrimpedPositioned[j][2] - posStentExp[j][2]
+    u⁰[i+2] = posStentCrimpedPositioned[j][3] - posStentExp[j][3]
 end  
 
-udt_0 = zeros(nnodes*3)
-udtdt_0 = zeros(nnodes*3)
-w_0 =  zeros(nnodes*3)
-wdt_0 = zeros(nnodes*3)
-wdtdt_0 = zeros(nnodes*3)
+u̇⁰ = zeros(nnodes*3)
+ü⁰ = zeros(nnodes*3)
+w⁰ =  zeros(nnodes*3)
+ẇ⁰ = zeros(nnodes*3)
+ẅ⁰ = zeros(nnodes*3)
 R_0 = read_TXT_file_ICs_matrix("examples/input_stent/R_positioning.txt")
 
 # plane for cylindrical coordinates
 plane = fill("xy", length(posStentExp))
 
 # nodes StructArray
-allnodes = constructor_nodes(posStentExp, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, R_0, T)
+nodes = constructor_nodes(posStentExp, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, plane, R_0, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -66,16 +66,16 @@ mat = constructor_material_properties(E, ν, ρ, rWireSection, T)
 Re_0 = read_TXT_file_ICs_matrix("examples/input_stent/Re0_positioning.txt")
 
 # beams vector
-allbeams = constructor_beams(allnodes, connStent, mat, geom, nbInterpolationPoints, Re_0, T)
+allbeams = constructor_beams(nodes, connStent, mat, geom, nbInterpolationPoints, Re_0)
 
 # -------------------------------------------------------------------------------------------
 # Simulation parameters
 # -------------------------------------------------------------------------------------------
 
 # integration parameters
-alpha = -0.05
-beta = 0.25*(1-alpha)^2
-gamma = 0.5*(1-2*alpha)
+α = -0.05
+β = 0.25*(1-α)^2
+γ = 0.5*(1-2*α)
 damping = 1E5
 
 # time step and total time
@@ -98,7 +98,7 @@ eps_C = 500 #penalty parameter
 μ = 0.01
 εₜ = 0.1 #regularized parameter for friction contact
 
-comp = constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
+comp = constructor_simulation_parameters(α, β, γ, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -154,4 +154,4 @@ conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 # -------------------------------------------------------------------------------------------
 
 params = Params(thisDirOutputPath = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true, scale=2, SHOW_TIME_SECTIONS=true)
-solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)
+solver!(nodes, allbeams, conf, comp, sdf, cons, params, T)

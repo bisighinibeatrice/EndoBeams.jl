@@ -7,8 +7,8 @@ const T = Float64
 # -------------------------------------------------------------------------------------------
 
 # positions
-pos =  read_TXT_file_pos("examples/input_net/pos_net.txt")
-nnodes = length(pos)
+X₀ =  read_TXT_file_pos("examples/input_net/pos_net.txt")
+nnodes = length(X₀)
 
 # connectivity
 conn = read_TXT_file_conn("examples/input_net/conn_net.txt")
@@ -18,21 +18,21 @@ conn = read_TXT_file_conn("examples/input_net/conn_net.txt")
 # -------------------------------------------------------------------------------------------
 
 # initial conditions
-u_0 = zeros(nnodes*3)
-udt_0 = zeros(nnodes*3)
+u⁰ = zeros(nnodes*3)
+u̇⁰ = zeros(nnodes*3)
 for i in 2:3:nnodes*3
-    udt_0[i] = -0.001
+    u̇⁰[i] = -0.001
 end
-udtdt_0 = zeros(nnodes*3)
-w_0 = zeros(nnodes*3)
-wdt_0 = zeros(nnodes*3)
-wdtdt_0 = zeros(nnodes*3)
+ü⁰ = zeros(nnodes*3)
+w⁰ = zeros(nnodes*3)
+ẇ⁰ = zeros(nnodes*3)
+ẅ⁰ = zeros(nnodes*3)
 
 # plane for cylindrical coordinates
-plane = fill("xy", length(pos))
+plane = fill("xy", length(X₀))
 
 # nodes StructArray
-allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plane, nothing, T)
+nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, plane, nothing, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -46,30 +46,30 @@ r = 0.2/1000
 E = 10
 vu = 0.0
 G = E/(2*(1+vu))
-rho = 1500
+ρ = 1500
 A = pi*r^2
-I22 = 0.25*pi*r^4
-I33 = 0.25*pi*r^4
-Io = I22+I33
-Irr = I22+I33
-J = I22+I33
-Jᵨ = Mat33(rho*J, 0, 0, 0, rho*I22, 0, 0, 0, rho*I33)
-Arho = rho*A
+I₂₂ = 0.25*pi*r^4
+I₃₃ = 0.25*pi*r^4
+Iₒ = I₂₂+I₃₃
+Iᵣᵣ = I₂₂+I₃₃
+J = I₂₂+I₃₃
+Jᵨ = Mat33(ρ*J, 0, 0, 0, ρ*I₂₂, 0, 0, 0, ρ*I₃₃)
+Aᵨ = ρ*A
 
-geom = Geometry{T}(A, I22, I33, Io, Irr, J)
-mat = Material{T}(E, G, Arho, Jᵨ)
+geom = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
+mat = Material{T}(E, G, Aᵨ, Jᵨ)
 
 # beams vector
-allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints, nothing, T)
+allbeams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
     
 #-----------------------------------------------------------------------------------
 # Simulation parameters
 # -------------------------------------------------------------------------------------------
 
 # integration parameters
-alpha = -0.05
-beta = 0.25*(1-alpha)^2
-gamma = 0.5*(1-2*alpha)
+α = -0.05
+β = 0.25*(1-α)^2
+γ = 0.5*(1-2*α)
 damping = 0
 
 # time step and total time
@@ -92,7 +92,7 @@ eps_C = 0.01
 μ = 0.01
 εₜ = 0.5
 
-comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
+comp = constructor_simulation_parameters(α, β, γ, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -150,4 +150,4 @@ conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 # -------------------------------------------------------------------------------------------
 
 params = Params(scale =2,thisDirOutputPath = "examples/output3D")
-solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)
+solver!(nodes, allbeams, conf, comp, sdf, cons, params, T)

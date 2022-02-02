@@ -52,14 +52,14 @@ function compute_connected_nodes!(connected_nodes, allconstraints, allbeams, nno
 end
 
 # Compute the sparsity map for the beams
-function compute_beams_sparsity_map!(allbeams, allnodes, N, cols, rows)
+function compute_beams_sparsity_map!(allbeams, nodes, N, cols, rows)
     
     for b in allbeams
         
         i1 = b.node1
         i2 = b.node2
-        idof1 = allnodes.idof_6[i1]
-        idof2 = allnodes.idof_6[i2]
+        idof1 = nodes.idof_6[i1]
+        idof2 = nodes.idof_6[i2]
         
         if i1 > i2
             error("Error in the structure connectivity: i1 > i2")
@@ -86,14 +86,14 @@ function compute_beams_sparsity_map!(allbeams, allnodes, N, cols, rows)
 end 
 
 # Compute the sparsity map for the constraints
-function compute_constraints_sparsity_map!(allconstraints, allnodes, N, cols, rows)
+function compute_constraints_sparsity_map!(allconstraints, nodes, N, cols, rows)
     
     for c in allconstraints
         
         i1 = c.node1
         i2 = c.node2
-        idof1 = allnodes.idof_6[i1]
-        idof2 = allnodes.idof_6[i2]
+        idof1 = nodes.idof_6[i1]
+        idof2 = nodes.idof_6[i2]
         
         if i1 > i2
             error("Error in the structure connectivity: i1 > i2")
@@ -239,12 +239,12 @@ function compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs_all, nn
 end 
 
 # Compute the sparsity pattern which allows to preallocate the sparse matrices and the sparsity map of the beams and constraints (for the assemby)
-function compute_sparsity!(allbeams, allnodes, pncons, conf, T=Float64)
+function compute_sparsity!(allbeams, nodes, pncons, conf, T=Float64)
     
     # initialization
     free_dofs = conf.bc.free_dofs
 
-    nnodes = length(allnodes)
+    nnodes = length(nodes)
     ndofs_per_node = 6
     ndofs = conf.ndofs 
     ntot = ndofs 
@@ -261,8 +261,8 @@ function compute_sparsity!(allbeams, allnodes, pncons, conf, T=Float64)
     (rows_free, cols_free, zvals_free), spmap_free = compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs, nnodes, T)
 
     # compute beam sparsity map 
-    compute_beams_sparsity_map!(allbeams, allnodes, n_tan, cols_tan, rows_tan)
-    compute_constraints_sparsity_map!(pncons, allnodes, n_tan, cols_tan, rows_tan)
+    compute_beams_sparsity_map!(allbeams, nodes, n_tan, cols_tan, rows_tan)
+    compute_constraints_sparsity_map!(pncons, nodes, n_tan, cols_tan, rows_tan)
     
     return (rows_tan, cols_tan, zval_tan), (rows_free, cols_free, zvals_free), spmap_free 
     

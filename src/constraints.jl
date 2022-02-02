@@ -7,7 +7,7 @@ struct MyConstraint{T}
     node2::Int # index of node 2
     stiffness::T
     damping::T
-    sparsity_map::Array{Int,1} 
+    sparsity_map::Vector{Int} 
 end
 
 #----------------------------------
@@ -36,41 +36,41 @@ end
 #------------------------------------------
 
 # Imposes multi freedom constraints at the current step
-function compute_multifreedom_constraints!(matrices, allnodes, allconstraints, t)
+function compute_multifreedom_constraints!(matrices, nodes, allconstraints, t)
 
-    matrices.Tconstr .= 0
-    matrices.Kconstr.nzval .= 0
-    matrices.Cconstr.nzval .= 0
+    matrices.Tᶜᵒⁿ .= 0
+    matrices.Kᶜᵒⁿ.nzval .= 0
+    matrices.Cᶜᵒⁿ.nzval .= 0
     
     for c in allconstraints
-        compute_constraint_contribution!(matrices, c, allnodes)
+        compute_constraint_contribution!(matrices, c, nodes)
     end 
 
 end
 
-function compute_constraint_contribution!(matrices, c, allnodes)
+function compute_constraint_contribution!(matrices, c, nodes)
 
     k = c.stiffness
-    alpha = c.damping
+    α = c.damping
 
     i1 = c.node1
     i2 = c.node2
-    a = allnodes[i1]
-    b = allnodes[i2]
+    a = nodes[i1]
+    b = nodes[i2]
     dofs_a = a.idof_6
     dofs_b = b.idof_6 
 
     xa = a.u
     xb = b.u
-    va = a.udt
-    vb = b.udt
+    va = a.u̇
+    vb = b.u̇
 
-    ta = k * (xb - xa) + alpha * k * (vb - va)
+    ta = k * (xb - xa) + α * k * (vb - va)
 
-    update_vec(matrices.Tconstr, dofs_a, ta)
-    update_vec(matrices.Tconstr, dofs_b, -ta)
+    update_vec(matrices.Tᶜᵒⁿ, dofs_a, ta)
+    update_vec(matrices.Tᶜᵒⁿ, dofs_b, -ta)
 
-    Kconstr = Mat1212(
+    Kᶜᵒⁿ = Mat1212(
         -k, 0, 0, 0, 0, 0, k, 0, 0, 0, 0, 0,
         0, -k, 0, 0, 0, 0, 0, k, 0, 0, 0, 0,
         0, 0, -k, 0, 0, 0, 0, 0, k, 0, 0, 0,
@@ -84,7 +84,7 @@ function compute_constraint_contribution!(matrices, c, allnodes)
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
-    update_spmat(matrices.Kconstr, c.sparsity_map, Kconstr)
-    update_spmat(matrices.Cconstr, c.sparsity_map, alpha.*Kconstr)
+    update_spmat(matrices.Kᶜᵒⁿ, c.sparsity_map, Kᶜᵒⁿ)
+    update_spmat(matrices.Cᶜᵒⁿ, c.sparsity_map, α.*Kᶜᵒⁿ)
 
 end 

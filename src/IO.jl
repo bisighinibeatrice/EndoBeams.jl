@@ -4,7 +4,7 @@
 #----------------------------------
 
 # Write nodes info as vtk file
-function write_VTK_nodes(step, allnodes, allbeams, dirOutput) 
+function write_VTK_nodes(step, nodes, allbeams, dirOutput) 
     
     filename=string(dirOutput * "/nodes$step.vtk");
      
@@ -15,15 +15,15 @@ function write_VTK_nodes(step, allnodes, allbeams, dirOutput)
     write(fid,"\nASCII")
     write(fid,"\nDATASET POLYDATA")
     
-    numberPoints = length(allnodes)
+    numberPoints = length(nodes)
     write(fid,"\nPOINTS $numberPoints float")  
-    for n in allnodes
+    for n in nodes
         write(fid,"\n")
-        write(fid, string.(n.pos[1] + n.u[1])) 
+        write(fid, string.(n.X₀[1] + n.u[1])) 
         write(fid," ")
-        write(fid, string.(n.pos[2] + n.u[2])) 
+        write(fid, string.(n.X₀[2] + n.u[2])) 
         write(fid," ")
-        write(fid, string.(n.pos[3] + n.u[3])) 
+        write(fid, string.(n.X₀[3] + n.u[3])) 
     end 
     
     numberLines = length(allbeams)
@@ -49,7 +49,7 @@ function write_VTK_nodes(step, allnodes, allbeams, dirOutput)
     write(fid, "\n POINT_DATA $numberPoints")
     write(fid, "\n SCALARS u float 3")
     write(fid, "\n LOOKUP_TABLE default");
-    for n in allnodes
+    for n in nodes
         write(fid,"\n")
         write(fid, string.(n.u[1])) 
         write(fid," ")
@@ -63,9 +63,9 @@ function write_VTK_nodes(step, allnodes, allbeams, dirOutput)
 end 
 
 # Write interpolated beam info as vtk file
-function write_VTK_beams(step, allnodes, allbeams, positions, connectivity, dirOutput) 
+function write_VTK_beams(step, nodes, allbeams, positions, connectivity, dirOutput) 
 
-    get_centerline!(positions, connectivity, allnodes, allbeams)
+    get_centerline!(positions, connectivity, nodes, allbeams)
     
     filename=string(dirOutput * "/beams$step.vtk");
      
@@ -205,7 +205,7 @@ function write_VTK_GP(step, sol_GP, dirOutput)
     
 end 
 
-# Write nodes as vtk file (no allnodes, no allbeams)
+# Write nodes as vtk file (no nodes, no allbeams)
 function write_VTK_configuration(filename, X, C)
     
     fid = open(filename, "a")
@@ -255,7 +255,7 @@ end
 #----------------------------------
 
 """
-    pos = read_TXT_file_pos(filename)
+    X₀ = read_TXT_file_pos(filename)
 
 Read a .txt file as a Vec3{T}[], used for positions and displacements. 
 """
