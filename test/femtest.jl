@@ -15,7 +15,7 @@ const ID3 = Diagonal(@SVector [1,1,1])
     
     Θ_norm = norm(Θ)
     if Θ_norm > 10*eps(T)
-        sinΘ, cosΘ = sincos(Θ_norm)
+        sinΘ = sin(Θ_norm)
         SΘ = skew(Θ)
         R = ID3 + sinΘ/Θ_norm*SΘ +  2*(sin(Θ_norm/2)/Θ_norm)^2 * SΘ*SΘ
         return R
@@ -143,7 +143,6 @@ end
     if Θ_norm < 10*eps(T)
         Tₛ = SMatrix{3,3,T,9}(1, 0, 0, 0, 1, 0, 0, 0, 1)
     else
-        sinΘ, cosΘ = sincos(Θ_norm)
         SΘ = skew(Θ)
         Tₛ = ID3 + 2*(sin(Θ_norm/2)/Θ_norm)^2*SΘ + (1-sin(Θ_norm)/Θ_norm)/Θ_norm^2*(SΘ*SΘ)
     end
@@ -195,28 +194,6 @@ end
 end
 
 
-@inline function K̄ᵢₙₜ_beam12(mat, geom, l₀)
-    
-    K̄ᵢₙₜū = geom.A*mat.E/l₀
-    K̄ᵢₙₜΘ̅ = @SMatrix [mat.G*geom.J/l₀ 0 0;
-                      0 4*mat.E*geom.I33/l₀ 0;
-                      0 0 4*mat.E*geom.I22/l₀]
-    K̄ᵢₙₜΘ̅Θ̅ = @SMatrix [-mat.G*geom.J/l₀ 0 0;
-                       0 2*mat.E*geom.I33/l₀ 0;
-                       0 0 2*mat.E*geom.I22/l₀]
-
-    O13 = @SMatrix zeros(1,3)
-    O31 = @SMatrix zeros(3,1)
-
-    K̄ᵢₙₜ = vcat(
-        hcat(K̄ᵢₙₜū, O13, O13),
-        hcat(O31, K̄ᵢₙₜΘ̅,  K̄ᵢₙₜΘ̅Θ̅),
-        hcat(O31, K̄ᵢₙₜΘ̅Θ̅, K̄ᵢₙₜΘ̅))
-
-    
-    return K̄ᵢₙₜ
-    
-end
 
 
 @inline function compute_η_μ(Θ̄::AbstractVector{T}) where T

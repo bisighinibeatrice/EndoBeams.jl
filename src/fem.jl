@@ -5,7 +5,7 @@
     
     Θ_norm = norm(Θ)
     if Θ_norm > 10*eps(T)
-        sinΘ, cosΘ = sincos(Θ_norm)
+        sinΘ = sin(Θ_norm)
         SΘ = skew(Θ)
         R = ID3 + sinΘ/Θ_norm*SΘ +  2*(sin(Θ_norm/2)/Θ_norm)^2 * SΘ*SΘ
         return R
@@ -133,7 +133,6 @@ end
     if Θ_norm < 10*eps(T)
         Tₛ = SMatrix{3,3,T,9}(1, 0, 0, 0, 1, 0, 0, 0, 1)
     else
-        sinΘ, cosΘ = sincos(Θ_norm)
         SΘ = skew(Θ)
         Tₛ = ID3 + 2*(sin(Θ_norm/2)/Θ_norm)^2*SΘ + (1-sin(Θ_norm)/Θ_norm)/Θ_norm^2*(SΘ*SΘ)
     end
