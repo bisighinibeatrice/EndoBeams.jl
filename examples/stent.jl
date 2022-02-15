@@ -76,17 +76,17 @@ allbeams = constructor_beams(nodes, connStent, mat, geom, nbInterpolationPoints,
 α = -0.05
 β = 0.25*(1-α)^2
 γ = 0.5*(1-2*α)
-damping = 1E5
+damping = 1E10
 
 # time step and total time
-dt = 0.01
-dt_plot =  0.01
-tend = 1
+Δt = 0.01
+Δt_plot =  0.01
+tᵉⁿᵈ = 1
 
 # tolerance and maximum number of iterations
-tol_res = 1e-5
-tol_ddk = 1e-5
-max_it = 10
+tol_res = 1e-3
+tol_ddk = 1e-3
+max_it = 20
 
 # Gauss points
 nG = 3
@@ -94,11 +94,11 @@ nG = 3
 zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 
 # contact parameters
-eps_C = 500 #penalty parameter
+εᶜ = 500 #penalty parameter
 μ = 0.01
-εₜ = 0.1 #regularized parameter for friction contact
+εᵗ = 0.1 #regularized parameter for friction contact
 
-comp = constructor_simulation_parameters(α, β, γ, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
+comp = constructor_simulation_parameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -153,5 +153,5 @@ conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 # Start simulation
 # -------------------------------------------------------------------------------------------
 
-params = Params(thisDirOutputPath = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true, scale=2, SHOW_TIME_SECTIONS=true)
+params = Params(thisDirOutputPath = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true, scale=2, SHOW_TIME_SECTIONS=false)
 solver!(nodes, allbeams, conf, comp, sdf, cons, params, T)

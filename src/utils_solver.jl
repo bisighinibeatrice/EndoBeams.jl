@@ -36,8 +36,8 @@ function solver_initialisation(conf, nodes, allbeams, int_pos, int_conn, comp, c
 
     clean_folders(thisDirOutputPath)
 
-    sol_n = constructor_solution(conf, T)
-    sol_n1 = constructor_solution(conf, T)
+    solⁿ = constructor_solution(conf, T)
+    solⁿ⁺¹ = constructor_solution(conf, T)
     sol_GP = constructor_solution_GP(length(allbeams), T)
     energy = constructor_energy(T) 
     uimp = zeros(T, length(conf.bc.fixed_dofs))
@@ -45,12 +45,12 @@ function solver_initialisation(conf, nodes, allbeams, int_pos, int_conn, comp, c
 
     save_VTK(0, nodes, allbeams, sol_GP, int_pos, int_conn, thisDirOutputPath, SAVE_INTERPOLATION_VTK,  SAVE_GP_VTK, SAVE_NODES_VTK)
 
-    return sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, uimp
+    return solⁿ, solⁿ⁺¹, sol_GP, nodes_sol, matrices, energy, uimp
 
 end 
 
 # Save energy evolution in text file
-function save_energy(plot_Phi_energy, plot_K_energy, plot_C_energy, outputDir)
+function save_energy(plot_Phi_energy, plot_K_energy, plot_contact_energy, outputDir)
 
     open(outputDir * "/PHI ENERGY.txt", "w") do Iₒ
         writedlm(Iₒ, plot_Phi_energy)
@@ -61,7 +61,7 @@ function save_energy(plot_Phi_energy, plot_K_energy, plot_C_energy, outputDir)
     end
 
     open(outputDir * "/C ENERGY.txt", "w") do Iₒ
-        writedlm(Iₒ, plot_C_energy)
+        writedlm(Iₒ, plot_contact_energy)
     end
 
 end
@@ -122,26 +122,26 @@ function get_current_external_force_crimping!(fext, t, conf, nodes)
     
     for n in nodes
 
-        dof_disp_n = n.idof_disp
-        fext_n =  [conf.ext_forces.Fext(t), 0, 0] 
-        fext_n = (n.R_global_to_local)' * fext_n
-        fext[dof_disp_n] .= fext_n   
+        dof_dispⁿ = n.idof_disp
+        fextⁿ =  [conf.ext_forces.Fext(t), 0, 0] 
+        fextⁿ = n.R_global_to_local' * fextⁿ
+        fext[dof_dispⁿ] .= fextⁿ   
 
     end 
    
 end 
 
 # Update the solution external force @t
-function update_current_solution_external_force!(sol_n1, t, conf)
+function update_current_solution_external_force!(solⁿ⁺¹, t, conf)
 
-    get_current_external_force!(sol_n1.fext, t, conf)
+    get_current_external_force!(solⁿ⁺¹.fext, t, conf)
 
 end 
 
 # Update the solution external force @t for the radial crimping
-function update_current_solution_external_force_crimping!(sol_n1, t, conf, nodes)
+function update_current_solution_external_force_crimping!(solⁿ⁺¹, t, conf, nodes)
 
-    get_current_external_force_crimping!(sol_n1.fext, t, conf, nodes)
+    get_current_external_force_crimping!(solⁿ⁺¹.fext, t, conf, nodes)
     
 end 
 
@@ -241,9 +241,7 @@ function impose_BC_displacements!(nodes_sol, uimp, fixed_dofs)
         ΔD_imposed = D_imposed - D_prev            
         nodes_sol.ΔD[idof] = ΔD_imposed
 
-        @inbounds for i in 1:length(nodes_sol.r)  
-            nodes_sol.r[i] = nodes_sol.r[i] .- ΔD_imposed .* nodes_sol.Ktan[i, idof] 
-        end 
+        @. @views nodes_sol.r -= ΔD_imposed * nodes_sol.Ktan[:, idof] 
         
     end
     
@@ -289,7 +287,7 @@ end
 # At the beginning of the predictor, updates the NodalSolution global vectors with the current Configuration local vectors(not updating angles)
 function update_global_predictor!(nodes_sol, nodes)
         
-    @inbounds for n in nodes
+    @inbounds for n in LazyRows(nodes)
 
         nodes_sol.D[n.idof_disp] .= n.u
         nodes_sol.Ḋ[n.idof_disp] .= n.u̇
@@ -311,7 +309,7 @@ function update_global_predictor!(nodes_sol, nodes)
 end 
 
 # At the end of the corrector, updates the Configuration local vectors with the NodalSolution global vectors computed during the current iteration
-function update_local_corrector!(nodes, ΔD_k, dt, nodes_sol, comp)
+function update_local_corrector!(nodes, ΔD_k, Δt, nodes_sol, comp)
     
     β = comp.β
     γ = comp.γ
@@ -326,9 +324,9 @@ function update_local_corrector!(nodes, ΔD_k, dt, nodes_sol, comp)
 
         ẇⁿ = nodes.ẇⁿ[i]
         ẅⁿ = nodes.ẅⁿ[i]
-        w_n1 = toangle(nodes.ΔR[i])
-        nodes.ẇ[i] = nodes.ΔR[i] * (γ/(β*dt)*w_n1 + (β-γ)/β*ẇⁿ + dt*(β-γ/2)/β*ẅⁿ)     
-        nodes.ẅ[i] = nodes.ΔR[i] * (1/(β*dt^2)*w_n1 - 1/(β*dt)*ẇⁿ - (0.5-β)/β*ẅⁿ)
+        wⁿ⁺¹ = toangle(nodes.ΔR[i])
+        nodes.ẇ[i] = nodes.ΔR[i] * (γ/(β*Δt)*wⁿ⁺¹ + (β-γ)/β*ẇⁿ + Δt*(β-γ/2)/β*ẅⁿ)     
+        nodes.ẅ[i] = nodes.ΔR[i] * (1/(β*Δt^2)*wⁿ⁺¹ - 1/(β*Δt)*ẇⁿ - (0.5-β)/β*ẅⁿ)
 
         nodes.R[i] = nodes.ΔR[i]*nodes.Rⁿ[i] 
 
@@ -357,49 +355,49 @@ function update_local_predictor!(nodes, nodes_sol)
 end 
 
 # Update the displacement vectors with the solution of the linear system in the corrector
-function update_nodal_solutions_corrector!(nodes_sol, disp_dof, γ, β, dt)
+function update_nodal_solutions_corrector!(nodes_sol, disp_dof, γ, β, Δt)
     
     @inbounds for i in disp_dof
         nodes_sol.D[i]  =  nodes_sol.D[i]  + nodes_sol.ΔD[i]
-        nodes_sol.Ḋ[i] =  nodes_sol.Ḋ[i] + (γ/(β*dt))*nodes_sol.ΔD[i]
-        nodes_sol.D̈[i] = nodes_sol.D̈[i] + (1/(β*dt^2))*nodes_sol.ΔD[i]
+        nodes_sol.Ḋ[i] =  nodes_sol.Ḋ[i] + (γ/(β*Δt))*nodes_sol.ΔD[i]
+        nodes_sol.D̈[i] = nodes_sol.D̈[i] + (1/(β*Δt^2))*nodes_sol.ΔD[i]
     end 
     
 end 
 
 # Update the displacement vectors with the solution of the linear system in the predictor
-function update_nodal_solutions_predictor!(nodes_sol, β, γ, dt)
+function update_nodal_solutions_predictor!(nodes_sol, β, γ, Δt)
 
     @inbounds for i in 1:length(nodes_sol.D)
 
-        nodes_sol.Ddt_n[i] = nodes_sol.Ḋ[i] # need to save the last velocity vector 
+        nodes_sol.DΔtⁿ[i] = nodes_sol.Ḋ[i] # need to save the last velocity vector 
         nodes_sol.D[i] = nodes_sol.D[i] + nodes_sol.ΔD[i]
-        nodes_sol.Ḋ[i] = nodes_sol.Ḋ[i] + (γ/(β*dt))*nodes_sol.ΔD[i] - (γ/β)*nodes_sol.Ḋ[i] + (dt*(2*β-γ)/(2*β))*nodes_sol.D̈[i]
-        nodes_sol.D̈[i] = nodes_sol.D̈[i] + (1/(β*dt^2))*(nodes_sol.ΔD[i] - dt*nodes_sol.Ddt_n[i] - (dt^2)/2*nodes_sol.D̈[i])
+        nodes_sol.Ḋ[i] = nodes_sol.Ḋ[i] + (γ/(β*Δt))*nodes_sol.ΔD[i] - (γ/β)*nodes_sol.Ḋ[i] + (Δt*(2*β-γ)/(2*β))*nodes_sol.D̈[i]
+        nodes_sol.D̈[i] = nodes_sol.D̈[i] + (1/(β*Δt^2))*(nodes_sol.ΔD[i] - Δt*nodes_sol.DΔtⁿ[i] - (Δt^2)/2*nodes_sol.D̈[i])
 
     end 
         
 end 
 
 # Update current solutions in the correct loop
-function update_current_solution_corrector!(sol_n1, ndofs, matrices)
+function update_current_solution_corrector!(solⁿ⁺¹, ndofs, matrices)
     
     @inbounds for i in 1:ndofs
 
-        sol_n1.Tⁱⁿᵗ[i] = matrices.Tⁱⁿᵗ[i]
-        sol_n1.Tᵏ[i] =  matrices.Tᵏ[i]
-        sol_n1.Tᶜᵗ[i] =  matrices.Tᶜᵗ[i]   
-        sol_n1.Tᶜᵒⁿ[i] =  matrices.Tᶜᵒⁿ[i]   
+        solⁿ⁺¹.Tⁱⁿᵗ[i] = matrices.Tⁱⁿᵗ[i]
+        solⁿ⁺¹.Tᵏ[i] =  matrices.Tᵏ[i]
+        solⁿ⁺¹.Tᶜ[i] =  matrices.Tᶜ[i]   
+        solⁿ⁺¹.Tᶜᵒⁿ[i] =  matrices.Tᶜᵒⁿ[i]   
 
     end 
     
 end 
 
 # Compute residual and increment vector residual in the corrector loop
-function compute_norms_corrector(k, aux_tol, sol_n1, nodes_sol, matrices, SHOW_COMP_TIME::Bool = false)
+function compute_norms_corrector(k, aux_tol, solⁿ⁺¹, nodes_sol, matrices, SHOW_COMP_TIME::Bool = false)
 
     aux_tol_old = aux_tol
-    nodes_sol.f_aux .= sol_n1.fext .+ sol_n1.Tᶜᵗ .+ matrices.Tᶜᵒⁿ .- matrices.Tᵈᵃᵐᵖ
+    nodes_sol.f_aux .= solⁿ⁺¹.fext .+ solⁿ⁺¹.Tᶜ .+ matrices.Tᶜᵒⁿ .- matrices.Tᵈ
     norm_f = norm(nodes_sol.f_aux)
     norm_res = norm(nodes_sol.r_free)
     
@@ -431,19 +429,17 @@ function compute_norms_corrector(k, aux_tol, sol_n1, nodes_sol, matrices, SHOW_C
 end
 
 # Update the tangent matrix in the predictor and corrector
-function compute_Ktan_sparse!(nodes_sol, matrices, α, β, γ, dt)
+function compute_Ktan_sparse!(nodes_sol, matrices, α, β, γ, Δt)
     
-    @inbounds for i in 1:length(nodes_sol.Ktan.nzval)
-        nodes_sol.Ktan.nzval[i] = (1+α) * (matrices.Kⁱⁿᵗ.nzval[i] - matrices.Kᶜᵗ.nzval[i] - matrices.Kᶜᵒⁿ.nzval[i]) + (1/(β*dt^2)) *  matrices.M.nzval[i] + (γ/(β*dt)) * (matrices.Cᵏ.nzval[i] - matrices.Cᶜᵒⁿ.nzval[i])
-    end 
+    @. nodes_sol.Ktan = (1+α) * (matrices.Kⁱⁿᵗ- matrices.Kᶜ- matrices.Kᶜᵒⁿ) + (1/(β*Δt^2)) * matrices.M + (γ/(β*Δt)) * (matrices.Cᵏ - matrices.Cᶜᵒⁿ)
 
 end 
 
 # Update residual in the corrector loop
-function compute_res_corrector!(nodes_sol, matrices, sol_n1, sol_n, α)
+function compute_res_corrector!(nodes_sol, matrices, solⁿ⁺¹, solⁿ, α)
     
     @inbounds for i in 1:length(nodes_sol.r)
-        nodes_sol.r[i] = (1+α) * (sol_n1.fext[i] + matrices.Tᶜᵒⁿ[i] + matrices.Tᶜᵗ[i] - matrices.Tⁱⁿᵗ[i]) - α * (sol_n.fext[i]  + sol_n.Tᶜᵒⁿ[i]  + sol_n.Tᶜᵗ[i] - sol_n.Tⁱⁿᵗ[i]) - matrices.Tᵏ[i]
+        nodes_sol.r[i] = (1+α) * (solⁿ⁺¹.fext[i] + matrices.Tᶜᵒⁿ[i] + matrices.Tᶜ[i] - matrices.Tⁱⁿᵗ[i]) - α * (solⁿ.fext[i]  + solⁿ.Tᶜᵒⁿ[i]  + solⁿ.Tᶜ[i] - solⁿ.Tⁱⁿᵗ[i]) - matrices.Tᵏ[i]
     end 
     
 end 
@@ -463,26 +459,20 @@ end
 # Fill the free dofs residual vector (preallocated) to be used to solve the linear system
 function fill_r_free!(nodes_sol, free_dof)
     
-    @inbounds for (index, value) in enumerate(free_dof)
-        nodes_sol.r_free[index] = nodes_sol.r[value] 
-    end 
+    @views nodes_sol.r_free .= nodes_sol.r[free_dof] 
     
 end 
 
 # Fill the free dofs tangent matrix (preallocated) to be used to solve the linear system
 function fill_Ktan_free!(nodes_sol)
      
-    @inbounds for (index, value) in enumerate(nodes_sol.sparsity_map_free)
-        nodes_sol.Ktan_free.nzval[index] = nodes_sol.Ktan.nzval[value]
-    end
+    @views nodes_sol.Ktan_free.nzval .= nodes_sol.Ktan.nzval[nodes_sol.sparsity_map_free]
 
 end
 
 # Fill the free dofs of the whole displacements vector (preallocated) with the solution of the linear sysyem
 function fill_ΔD_free_dofs!(nodes_sol, free_dof)
     
-    @inbounds for (index,value) in enumerate(free_dof)
-        nodes_sol.ΔD[value] = nodes_sol.ΔD_free[index]
-    end 
+    nodes_sol.ΔD[free_dof] .= nodes_sol.ΔD_free
     
 end 

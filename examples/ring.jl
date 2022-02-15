@@ -99,9 +99,9 @@ allbeams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, noth
 damping = 0
 
 # time step and total time
-dt = 0.2/16
-dt_plot = 0.2/16
-tend = 20
+Δt = 0.2/16
+Δt_plot = 0.2/16
+tᵉⁿᵈ = 20
 
 # tolerance and maximum number of iterations
 tol_res = 1e-5
@@ -114,11 +114,11 @@ nG = 3
 zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 
 # penalty parameters
-eps_C = 1E6
+εᶜ = 1E6
 μ = 0.3
-εₜ = 0.5
+εᵗ = 0.5
 
-comp = constructor_simulation_parameters(α, β, γ, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
+comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces

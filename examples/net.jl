@@ -70,12 +70,12 @@ allbeams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, noth
 α = -0.05
 β = 0.25*(1-α)^2
 γ = 0.5*(1-2*α)
-damping = 0
+damping = 1
 
 # time step and total time
-dt = 0.5
-dt_plot = 0.5
-tend = 100
+Δt = 0.5
+Δt_plot = 0.5
+tᵉⁿᵈ = 100
 
 # tolerance and maximum number of iterations
 tol_res = 1e-5
@@ -88,11 +88,11 @@ nG = 3
 zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 
 # penalty parameters
-eps_C = 0.01
+εᶜ = 0.01
 μ = 0.01
-εₜ = 0.5
+εᵗ = 0.5
 
-comp = constructor_simulation_parameters(α, β, γ, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
+comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -149,5 +149,5 @@ conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 # Solve
 # -------------------------------------------------------------------------------------------
 
-params = Params(scale =2,thisDirOutputPath = "examples/output3D")
+params = Params(scale =2,thisDirOutputPath = "examples/output3D", SHOW_TIME_SECTIONS=true)
 solver!(nodes, allbeams, conf, comp, sdf, cons, params, T)

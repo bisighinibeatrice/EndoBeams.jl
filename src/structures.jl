@@ -14,9 +14,9 @@ struct SimulationParameters{T}
     damping::T
     
     # time step and total time
-    dt::T
-    dt_plot::T
-    tend::T
+    Δt::T
+    Δt_plot::T
+    tᵉⁿᵈ::T
     
     # tolerance and maximum number of iterations
     tol_res::T
@@ -31,7 +31,7 @@ struct SimulationParameters{T}
     # penalty parameters
     εᶜ::T
     μ::T
-    εₜ::T
+    εᵗ::T
     
 end
 
@@ -125,7 +125,7 @@ struct Solution{T}
     fext::Vector{T}
     Tⁱⁿᵗ::Vector{T}
     Tᵏ::Vector{T}
-    Tᶜᵗ::Vector{T}
+    Tᶜ::Vector{T}
     Tᶜᵒⁿ::Vector{T}
     
 end 
@@ -136,7 +136,7 @@ struct NodalSolution{T}
     D::Vector{T}
     Ḋ::Vector{T}
     D̈::Vector{T}
-    Ddt_n::Vector{T}
+    DΔtⁿ::Vector{T}
     
     r::Vector{T}
     aux1::Vector{T} #predictor
@@ -159,14 +159,14 @@ struct Matrices{T}
     Kⁱⁿᵗ ::SparseMatrixCSC{T,Int}
     Cᵏ::SparseMatrixCSC{T,Int} 
     M::SparseMatrixCSC{T,Int}
-    Kᶜᵗ::SparseMatrixCSC{T,Int}
+    Kᶜ::SparseMatrixCSC{T,Int}
     Kᶜᵒⁿ::SparseMatrixCSC{T,Int}
     Cᶜᵒⁿ::SparseMatrixCSC{T,Int}
     
     Tⁱⁿᵗ::Vector{T}
     Tᵏ::Vector{T}
-    Tᵈᵃᵐᵖ::Vector{T}
-    Tᶜᵗ::Vector{T}
+    Tᵈ::Vector{T}
+    Tᶜ::Vector{T}
     Tᶜᵒⁿ::Vector{T}
     
 end 
@@ -176,7 +176,7 @@ mutable struct Energy{T}
     
     strain_energy::T
     kinetic_energy::T
-    C_energy::T
+    contact_energy::T
     
 end
 
@@ -247,31 +247,31 @@ function constructor_geometry_properties(rWireSection, T=Float64)
 end 
 
 """
-    comp = constructor_simulation_parameters(α, β, γ, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T=Float64)    
+    comp = constructor_simulation_parameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T=Float64)    
 
 Constructor of the structure containing the simulation parameters:
     - `α`: integration parameter;
     - `β`: integration parameter;
     - `γ`: integration parameter;
     - `damping`: damping coefficient;
-    - `dt`: time step;
-    - `dt_plot`: time step for the saving of output files;
-    - `tend`: total time of the simulation;
+    - `Δt`: time step;
+    - `Δt_plot`: time step for the saving of output files;
+    - `tᵉⁿᵈ`: total time of the simulation;
     - `tol_res`: residual tolerance for the Newton-Raphson algorithm;
     - `tol_ddk`: solution vector tolerance for the Newton-Raphson algorithm;
     - `max_it`: maximum number of iterations for the Newton-Raphson algorithm;
     - `nG`: number of Gauss points;
     - `ωG`: Gauss points weights;
     - `zG`: Gauss points positions along centreline;
-    - `eps_C`: penalty coefficient for the contact normal contributions;
+    - `εᶜ`: penalty coefficient for the contact normal contributions;
     - `μ`: friction coefficient;
-    - `εₜ`: regularisation coefficient for the contact tangential contributions.
+    - `εᵗ`: regularisation coefficient for the contact tangential contributions.
 
 Returns a SimulationParameters structure.
 """
-function constructor_simulation_parameters(α, β, γ, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T=Float64)
+function constructor_simulation_parameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T=Float64)
     
-    return SimulationParameters{T}(α, β, γ, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ)
+    return SimulationParameters{T}(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ)
     
 end 
 
@@ -381,7 +381,7 @@ function constructor_nodal_solution(ndofs, nfreedofs, dofs_tan, dofs_free, spmap
     zeros(ndofs), #D
     zeros(ndofs), #Ḋ 
     zeros(ndofs), #D̈ 
-    zeros(ndofs), #Ddt_n  -> needed by predictor
+    zeros(ndofs), #DΔtⁿ  -> needed by predictor
     
     spzeros(ndofs), #r
     spzeros(ndofs), #res -> needed by predictor
@@ -410,17 +410,17 @@ function constructor_global_matrices(nodes, dofs_tan, T=Float64)
     Kⁱⁿᵗ = sparse(rows, cols, zval)
     Cᵏ =  sparse(rows, cols, zval)
     M = sparse(rows, cols, zval)
-    Kᶜᵗ =  sparse(rows, cols, zval)
+    Kᶜ =  sparse(rows, cols, zval)
     Kᶜᵒⁿ  = sparse(rows, cols, zval)
     Cᶜᵒⁿ  = sparse(rows, cols, zval)
 
     Tⁱⁿᵗ = zeros(ndofs)
     Tᵏ =  zeros(ndofs)
-    Tᵈᵃᵐᵖ = zeros(ndofs)
-    Tᶜᵗ = zeros(ndofs)
+    Tᵈ = zeros(ndofs)
+    Tᶜ = zeros(ndofs)
     Tᶜᵒⁿ = zeros(ndofs)
 
-    return Matrices{T}(Kⁱⁿᵗ, Cᵏ, M, Kᶜᵗ, Kᶜᵒⁿ, Cᶜᵒⁿ,Tⁱⁿᵗ, Tᵏ, Tᵈᵃᵐᵖ, Tᶜᵗ, Tᶜᵒⁿ)
+    return Matrices{T}(Kⁱⁿᵗ, Cᵏ, M, Kᶜ, Kᶜᵒⁿ, Cᶜᵒⁿ,Tⁱⁿᵗ, Tᵏ, Tᵈ, Tᶜ, Tᶜᵒⁿ)
     
 end 
 

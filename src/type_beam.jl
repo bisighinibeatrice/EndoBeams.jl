@@ -10,7 +10,7 @@ struct Beam{T, Tᵏ}
     node2::Int # index of node 2
     l₀::T # initial beam length
     Rₑ⁰::Mat33{T} # initial beam rotation matrix
-    K̄ᵢₙₜ::Tᵏ # beam internal matrix
+    K̄ⁱⁿᵗ::Tᵏ # beam internal matrix
     numberInterpolationPoints::Int # number of interpolation points (-> visualization)
     sparsity_map::Vector{Int} # sparsity map from local indices (beam matrix) to global indices (gloabl sparse matrix) -> computed in the constructor of the sparse matrices
 
@@ -48,9 +48,9 @@ function constructor_beam(ind, indGP, node1::Node{T}, node2::Node{T}, mat, geom,
     i1 = node1.i   
     i2 = node2.i  
     l₀ = norm(node1.X₀ - node2.X₀)   
-    K̄ᵢₙₜ = K̄ᵢₙₜ_beam(mat, geom, l₀)
+    K̄ⁱⁿᵗ = K̄ⁱⁿᵗ_beam(mat, geom, l₀)
     
-    return Beam{T, typeof(K̄ᵢₙₜ)}(ind, indGP, i1, i2, l₀, Rₑ⁰, K̄ᵢₙₜ, numberInterpolationPoints, zeros(Int, 144))
+    return Beam{T, typeof(K̄ⁱⁿᵗ)}(ind, indGP, i1, i2, l₀, Rₑ⁰, K̄ⁱⁿᵗ, numberInterpolationPoints, zeros(Int, 144))
     
 end 
 

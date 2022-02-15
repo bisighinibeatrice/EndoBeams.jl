@@ -145,10 +145,10 @@ end
 #----------------------------------
 
 # Get gap, gradient and hession of z-normal plane analytical SDF at point 
-function get_SDF_at_P_analitycal_plane_z(point, sdf,  T=Float64)
+@inline function get_SDF_at_P_analitycal_plane_z(point::AbstractVector{T}, sdf) where T
     
     gₙ = point[3] - sdf.z0 - sdf.r
-    ∂gₙ∂x = Vec3(0, 0, 1)
+    ∂gₙ∂x = Vec3{T}(0, 0, 1)
     ∂²gₙ∂x² = zeros(Mat33{T})
     
     return gₙ, ∂gₙ∂x, ∂²gₙ∂x²
@@ -156,10 +156,10 @@ function get_SDF_at_P_analitycal_plane_z(point, sdf,  T=Float64)
 end 
 
 # Get gap, gradient and hession of y-normal plane analytical SDF at point 
-function get_SDF_at_P_analitycal_plane_y(point, sdf,  T=Float64)
+@inline function get_SDF_at_P_analitycal_plane_y(point::AbstractVector{T}, sdf) where T
     
     gₙ = point[2] - sdf.y0 - sdf.r
-    ∂gₙ∂x = Vec3(0, 1, 0)
+    ∂gₙ∂x = Vec3{T}(0, 1, 0)
     ∂²gₙ∂x² = zeros(Mat33{T})
     
     return -gₙ, ∂gₙ∂x, ∂²gₙ∂x²
@@ -167,7 +167,7 @@ function get_SDF_at_P_analitycal_plane_y(point, sdf,  T=Float64)
 end
 
 # Get gap, gradient and hession of sphere analytical SDF at point 
-function get_SDF_at_P_analitycal_sphere(point, sdf,  T=Float64)
+@inline function get_SDF_at_P_analitycal_sphere(point::AbstractVector{T}, sdf) where T
     
     aux = Vec3(point[1] - sdf.x0, point[2] - sdf.y0, point[3] - sdf.z0)
     
@@ -176,14 +176,14 @@ function get_SDF_at_P_analitycal_sphere(point, sdf,  T=Float64)
     
     gₙ = norm_aux - sdf.R - sdf.r
     ∂gₙ∂x = invnorm * aux
-    ∂²gₙ∂x² = invnorm*ID3 + (invnorm^3)*(aux*aux')
+    ∂²gₙ∂x² = invnorm*ID3 - (invnorm^3)*(aux*aux')
     
     return gₙ, ∂gₙ∂x, ∂²gₙ∂x²
     
 end
 
 # Get gap, gradient and hession of cylinder analytical SDF at point 
-function get_SDF_at_P_analitycal_cylinder(point, sdf,  T=Float64)
+@inline function get_SDF_at_P_analitycal_cylinder(point::AbstractVector{T}, sdf) where T
     
     aux = Vec3(point[1], point[2], 0)
     
@@ -202,7 +202,7 @@ end
 # INTERPOLATE DISCRETE SDF 
 #----------------------------------
 
-function isinside(point, dom)
+@inline function isinside(point, dom)
 
     l_x = point[1] - dom[1]  
     flag_lx = l_x>=0 && l_x<=(dom[2]-dom[1]) 
@@ -215,7 +215,7 @@ function isinside(point, dom)
 
 end
 
-function get_SDF_at_P_discrete(point, sdf,  T=Float64)
+@inline function get_SDF_at_P_discrete(point::AbstractVector{T}, sdf) where T
 
     sitp = sdf.sitp
 
@@ -242,50 +242,50 @@ end
 #----------------------------------
 
 # Get contact at point point
-get_contact_GP_specialize(point, sdf::SDF_Plane_z, T) = get_SDF_at_P_analitycal_plane_z(point, sdf, T)
-get_contact_GP_specialize(point, sdf::SDF_Sphere, T) = get_SDF_at_P_analitycal_sphere(point, sdf, T)
-get_contact_GP_specialize(point, sdf::SDF_Cylinder, T) = get_SDF_at_P_analitycal_cylinder(point, sdf, T)
-get_contact_GP_specialize(point, sdf::SDF_Plane_y, T) = get_SDF_at_P_analitycal_plane_y(point, sdf, T)
-get_contact_GP_specialize(point, sdf::SDF_Discrete, T) = get_SDF_at_P_discrete(point, sdf, T)
+@inline contact_gap_specialize(point, sdf::SDF_Plane_z) = get_SDF_at_P_analitycal_plane_z(point, sdf)
+@inline contact_gap_specialize(point, sdf::SDF_Sphere) = get_SDF_at_P_analitycal_sphere(point, sdf)
+@inline contact_gap_specialize(point, sdf::SDF_Cylinder) = get_SDF_at_P_analitycal_cylinder(point, sdf)
+@inline contact_gap_specialize(point, sdf::SDF_Plane_y) = get_SDF_at_P_analitycal_plane_y(point, sdf)
+@inline contact_gap_specialize(point, sdf::SDF_Discrete) = get_SDF_at_P_discrete(point, sdf)
     
-function get_contact_GP(point, εᶜ, sdf, T=Float64)
+@inline function contact_gap(point, εᶜ, sdf)
         
-    gₙ, ∂gₙ∂x, ∂²gₙ∂x² = get_contact_GP_specialize(point, sdf, T)
+    gₙ, ∂gₙ∂x, ∂²gₙ∂x² = contact_gap_specialize(point, sdf)
     
-    pₙ, p′ₙ, Pic_eps = quadratically_regularized_penalty(gₙ, εᶜ, sdf.r, T)
+    pₙ, p′ₙ, Πₑ = quadratically_regularized_penalty(gₙ, εᶜ, sdf.r)
     
-    return pₙ, p′ₙ, Pic_eps, gₙ, ∂gₙ∂x, ∂²gₙ∂x²
+    return pₙ, p′ₙ, Πₑ, gₙ, ∂gₙ∂x, ∂²gₙ∂x²
     
 end 
 
 
 # Quadratically regulise penalty
-function quadratically_regularized_penalty(gₙ, εᶜ, r, T=Float64)
+@inline function quadratically_regularized_penalty(gₙ::T, εᶜ, r) where T
     
     ḡₙ = r/10 
     p̄ₙ = εᶜ*ḡₙ/2
     
     pₙ = zero(T)
     p′ₙ = zero(T)
-    Pic_eps = zero(T)
+    Πₑ = zero(T)
     
     # eq[111] in [2]
     if gₙ<=0
 
         pₙ = p̄ₙ - εᶜ*gₙ
         p′ₙ = -εᶜ
-        Pic_eps = (εᶜ/2)*gₙ^2 - p̄ₙ*gₙ + (εᶜ*ḡₙ^2)/6
+        Πₑ = (εᶜ/2)*gₙ^2 - p̄ₙ*gₙ + (εᶜ*ḡₙ^2)/6
         
     elseif ḡₙ>=gₙ && gₙ>0
         
         aux = (εᶜ*ḡₙ-p̄ₙ)/(ḡₙ^2)
         pₙ =  aux*gₙ^2 - εᶜ*gₙ + p̄ₙ
         p′ₙ = 2*aux*gₙ - εᶜ
-        Pic_eps = -(εᶜ*ḡₙ-p̄ₙ)/(3*ḡₙ^2)*gₙ^3 + (εᶜ/2)*gₙ^2 - p̄ₙ*gₙ + (εᶜ*ḡₙ^2)/6
+        Πₑ = -(εᶜ*ḡₙ-p̄ₙ)/(3*ḡₙ^2)*gₙ^3 + (εᶜ/2)*gₙ^2 - p̄ₙ*gₙ + (εᶜ*ḡₙ^2)/6
         
     end
     
-    return pₙ, p′ₙ, Pic_eps
+    return pₙ, p′ₙ, Πₑ
     
 end 
 

@@ -129,8 +129,8 @@ function compute_sparsity_pattern_tan!(ndofs_per_node, nnodes, connected_nodes)
     mat = zeros(Bool, nnodes*ndofs_per_node, nnodes*ndofs_per_node)
     
     for n in 1:nnodes
-        idof_n = 6*(n-1) .+ [1,2,3,4,5,6]
-        for j in idof_n
+        idofⁿ = 6*(n-1) .+ [1,2,3,4,5,6]
+        for j in idofⁿ
             for cn in connected_nodes[n] 
                 idof_cn = 6*(cn-1) .+ [1,2,3,4,5,6]
                 for i in idof_cn
@@ -165,8 +165,8 @@ function compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs_all, nn
     mat = zeros(Int, ntot,ntot)
 
     for n in 1:nnodes
-        idof_n = 6*(n-1) .+ [1,2,3,4,5,6]
-        for j in idof_n
+        idofⁿ = 6*(n-1) .+ [1,2,3,4,5,6]
+        for j in idofⁿ
             for cn in connected_nodes[n] 
                 idof_cn = 6*(cn-1) .+ [1,2,3,4,5,6]
                 for i in idof_cn

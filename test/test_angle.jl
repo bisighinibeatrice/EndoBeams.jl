@@ -80,9 +80,9 @@ function test_angle()
     damping = 0
 
     # time step and total time
-    dt = 0.25
-    dt_plot = 0.25
-    tend = 150
+    Δt = 0.25
+    Δt_plot = 0.25
+    tᵉⁿᵈ = 150
 
     # tolerance and maximum number of iterations
     tol_res = 1e-5
@@ -95,11 +95,11 @@ function test_angle()
     zG = Vec3(-sqrt(3/5), 0, sqrt(3/5)) 
 
     # penalty parameters
-    eps_C = 5000
+    εᶜ = 5000
     μ = 0
-    εₜ = 0.1
+    εᵗ = 0.1
 
-    comp = constructor_simulation_parameters(α, β, γ, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, ωG, zG, eps_C, μ, εₜ, T)
+    comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
 
     # -------------------------------------------------------------------------------------------
     # External forces
