@@ -1297,15 +1297,15 @@ function compute_K_T!(nodes, allbeams, matrices, energy, conf, sdf, comp, sol_GP
                 energy.contact_energy +=  contact_energy
             
                 update_spmat_sum(matrices.Kⁱⁿᵗ, e.sparsity_map, Kⁱⁿᵗ)
-                update_spmat_sum(matrices.Cᵏ, e.sparsity_map, Cᵏ-(1+comp.α)*Cᶜ)
+                update_spmat_sum(matrices.Cᵏ, e.sparsity_map, Cᵏ)#-(1+comp.α)*Cᶜ)
                 update_spmat_sum(matrices.M, e.sparsity_map, M)
-                update_spmat_sum(matrices.Kᶜ, e.sparsity_map, Kᶜ)
+                # update_spmat_sum(matrices.Kᶜ, e.sparsity_map, Kᶜ)
 
                 
                 update_vec_sum(matrices.Tᵏ, idof, Tᵏ)
                 update_vec_sum(matrices.Tᵈ, idof, Tᵈ)
                 update_vec_sum(matrices.Tⁱⁿᵗ, idof, Tⁱⁿᵗ)
-                update_vec_sum(matrices.Tᶜ, idof, Tᶜ)
+                # update_vec_sum(matrices.Tᶜ, idof, Tᶜ)
             end
                                
         end

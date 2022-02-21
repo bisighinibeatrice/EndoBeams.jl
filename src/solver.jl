@@ -265,7 +265,19 @@ function predictor!(nodes, allbeams, pencons, matrices, energy, solⁿ⁺¹, sol
     
     @timeit_debug to "Compute residual" begin
 
-        mul!(nodes_sol.r, nodes_sol.Ktan, nodes_sol.ΔD)
+        # eq119 in [3]: compute the residual
+        nodes_sol.r .=  (1+α) .* (solⁿ⁺¹.fext .- matrices.Tⁱⁿᵗ .- matrices.Tᵏ .- matrices.Tᶜ) .- α .* (solⁿ.fext)
+
+        nodes_sol.aux1 .= (γ/β) .* nodes_sol.Ḋ .- (Δt/2*(2*β-γ)/β) .* nodes_sol.D̈
+        mul!(nodes_sol.aux2, matrices.Cᵏ, nodes_sol.aux1)
+        nodes_sol.r .= nodes_sol.r .+  nodes_sol.aux2 
+        
+        nodes_sol.aux1 .= Δt .* nodes_sol.Ḋ .+ (Δt^2)/2 .* nodes_sol.D̈
+        mul!(nodes_sol.aux2, matrices.M, nodes_sol.aux1)
+        nodes_sol.aux2 .= 1/(β*Δt^2) .* nodes_sol.aux2
+            
+        nodes_sol.r .= nodes_sol.r .+ nodes_sol.aux2 
+        
 
 
     end

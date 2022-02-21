@@ -241,7 +241,10 @@ function impose_BC_displacements!(nodes_sol, uimp, fixed_dofs)
         ΔD_imposed = D_imposed - D_prev            
         nodes_sol.ΔD[idof] = ΔD_imposed
 
-        @. @views nodes_sol.r -= ΔD_imposed * nodes_sol.Ktan[:, idof] 
+        @inbounds for i in 1:length(nodes_sol.r)  
+            nodes_sol.r[i] = nodes_sol.r[i] .- ΔD_imposed .* nodes_sol.Ktan[i, idof] 
+        end 
+
         
     end
     
@@ -431,7 +434,10 @@ end
 # Update the tangent matrix in the predictor and corrector
 function compute_Ktan_sparse!(nodes_sol, matrices, α, β, γ, Δt)
     
-    @. nodes_sol.Ktan = (1+α) * (matrices.Kⁱⁿᵗ- matrices.Kᶜ- matrices.Kᶜᵒⁿ) + (1/(β*Δt^2)) * matrices.M + (γ/(β*Δt)) * (matrices.Cᵏ - matrices.Cᶜᵒⁿ)
+    @inbounds for i in 1:length(nodes_sol.Ktan.nzval)
+        nodes_sol.Ktan.nzval[i] = (1+α) * (matrices.Kⁱⁿᵗ.nzval[i] - matrices.Kᶜ.nzval[i] - matrices.Kᶜᵒⁿ.nzval[i]) + (1/(β*Δt^2)) *  matrices.M.nzval[i] + (γ/(β*Δt)) * (matrices.Cᵏ.nzval[i] - matrices.Cᶜᵒⁿ.nzval[i])
+    end 
+
 
 end 
 
@@ -459,20 +465,29 @@ end
 # Fill the free dofs residual vector (preallocated) to be used to solve the linear system
 function fill_r_free!(nodes_sol, free_dof)
     
-    @views nodes_sol.r_free .= nodes_sol.r[free_dof] 
+    @inbounds for (index, value) in enumerate(free_dof)
+        nodes_sol.r_free[index] = nodes_sol.r[value] 
+    end 
+
     
 end 
 
 # Fill the free dofs tangent matrix (preallocated) to be used to solve the linear system
 function fill_Ktan_free!(nodes_sol)
      
-    @views nodes_sol.Ktan_free.nzval .= nodes_sol.Ktan.nzval[nodes_sol.sparsity_map_free]
+    @inbounds for (index, value) in enumerate(nodes_sol.sparsity_map_free)
+        nodes_sol.Ktan_free.nzval[index] = nodes_sol.Ktan.nzval[value]
+    end
+
 
 end
 
 # Fill the free dofs of the whole displacements vector (preallocated) with the solution of the linear sysyem
 function fill_ΔD_free_dofs!(nodes_sol, free_dof)
     
-    nodes_sol.ΔD[free_dof] .= nodes_sol.ΔD_free
+    @inbounds for (index,value) in enumerate(free_dof)
+        nodes_sol.ΔD[value] = nodes_sol.ΔD_free[index]
+    end 
+
     
 end 
