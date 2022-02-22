@@ -15,10 +15,10 @@ function clean_folders(thisDirOutputPath)
 end 
 
 # Calls the functions saving the VTKs related to the nodes and beams positions i-snapshot
-function save_VTK(i, nodes, allbeams, sol_GP, int_pos, int_conn, dirOutput, SAVE_INTERPOLATION_VTK = false, SAVE_GP_VTK = false, SAVE_NODES_VTK = false)
+function save_VTK(i, nodes, beams, sol_GP, int_pos, int_conn, dirOutput, SAVE_INTERPOLATION_VTK = false, SAVE_GP_VTK = false, SAVE_NODES_VTK = false)
     
     if SAVE_INTERPOLATION_VTK    
-        write_VTK_beams(i, nodes, allbeams, int_pos, int_conn, dirOutput)
+        write_VTK_beams(i, nodes, beams, int_pos, int_conn, dirOutput)
     end 
     
     if SAVE_GP_VTK 
@@ -26,24 +26,24 @@ function save_VTK(i, nodes, allbeams, sol_GP, int_pos, int_conn, dirOutput, SAVE
     end 
     
     if SAVE_NODES_VTK 
-        write_VTK_nodes(i, nodes, allbeams, dirOutput)
+        write_VTK_nodes(i, nodes, beams, dirOutput)
     end 
 
 end 
 
 # Cleans folders, pre-allocate and initialise the variables used during the simulation and save the VTKs of the initial configuration
-function solver_initialisation(conf, nodes, allbeams, int_pos, int_conn, comp, cons, thisDirOutputPath, SAVE_INTERPOLATION_VTK = false, SAVE_GP_VTK = false, SAVE_NODES_VTK = false, T=Float64)
+function solver_initialisation(conf, nodes, beams, int_pos, int_conn, comp, cons, thisDirOutputPath, SAVE_INTERPOLATION_VTK = false, SAVE_GP_VTK = false, SAVE_NODES_VTK = false, T=Float64)
 
     clean_folders(thisDirOutputPath)
 
     solⁿ = constructor_solution(conf, T)
     solⁿ⁺¹ = constructor_solution(conf, T)
-    sol_GP = constructor_solution_GP(length(allbeams), T)
+    sol_GP = constructor_solution_GP(length(beams), T)
     energy = constructor_energy(T) 
     uimp = zeros(T, length(conf.bc.fixed_dofs))
-    matrices, nodes_sol = constructor_sparse_matrices!(allbeams, nodes, cons, conf, T)
+    matrices, nodes_sol = constructor_sparse_matrices!(beams, nodes, cons, conf, T)
 
-    save_VTK(0, nodes, allbeams, sol_GP, int_pos, int_conn, thisDirOutputPath, SAVE_INTERPOLATION_VTK,  SAVE_GP_VTK, SAVE_NODES_VTK)
+    save_VTK(0, nodes, beams, sol_GP, int_pos, int_conn, thisDirOutputPath, SAVE_INTERPOLATION_VTK,  SAVE_GP_VTK, SAVE_NODES_VTK)
 
     return solⁿ, solⁿ⁺¹, sol_GP, nodes_sol, matrices, energy, uimp
 
@@ -67,36 +67,42 @@ function save_energy(plot_Phi_energy, plot_K_energy, plot_contact_energy, output
 end
 
 # Update nodes values @n if converged
-function  update_nodes_converged!(nodes)
+function  update_nodes_converged!(nodes, solⁿ, matrices)
 
-    @inbounds for i in 1:length(nodes)      
+    @inbounds for i in eachindex(nodes)      
 
-        nodes.uⁿ[i] = deepcopy(nodes.u[i])
-        nodes.u̇ⁿ[i] = deepcopy(nodes.u̇[i])
-        nodes.üⁿ[i] = deepcopy(nodes.ü[i])
-        nodes.wⁿ[i] = deepcopy(nodes.w[i])
-        nodes.ẇⁿ[i] = deepcopy(nodes.ẇ[i])
-        nodes.ẅⁿ[i] = deepcopy(nodes.ẅ[i])
-        nodes.Rⁿ[i] = deepcopy(nodes.R[i])
-        nodes.ΔRⁿ[i] = deepcopy(nodes.ΔR[i])
+        nodes.uⁿ[i] = nodes.u[i]
+        nodes.u̇ⁿ[i] = nodes.u̇[i]
+        nodes.üⁿ[i] = nodes.ü[i]
+        nodes.wⁿ[i] = nodes.w[i]
+        nodes.ẇⁿ[i] = nodes.ẇ[i]
+        nodes.ẅⁿ[i] = nodes.ẅ[i]
+        nodes.Rⁿ[i] = nodes.R[i]
+        nodes.ΔRⁿ[i] = nodes.ΔR[i]
 
     end
+
+    # update the current solution vectors (used in the next time step)
+    solⁿ.Tⁱⁿᵗ .= matrices.Tⁱⁿᵗ
+    solⁿ.Tᵏ .=  matrices.Tᵏ
+    solⁿ.Tᶜ .=  matrices.Tᶜ
+    solⁿ.Tᶜᵒⁿ .=  matrices.Tᶜᵒⁿ
 
 end
 
 # Update nodes values @n+1 if NOT converged
 function update_nodes_not_converged!(nodes)
 
-    @inbounds for i in 1:length(nodes)
+    @inbounds for i in eachindex(nodes)
 
-        nodes.u[i] = deepcopy(nodes.uⁿ[i])
-        nodes.u̇[i] = deepcopy(nodes.u̇ⁿ[i])
-        nodes.ü[i] = deepcopy(nodes.üⁿ[i])
-        nodes.w[i] = deepcopy(nodes.wⁿ[i])
-        nodes.ẇ[i] = deepcopy(nodes.ẇⁿ[i])
-        nodes.ẅ[i] = deepcopy(nodes.ẅⁿ[i])
-        nodes.R[i] = deepcopy(nodes.Rⁿ[i])
-        nodes.ΔR[i] = deepcopy(nodes.ΔRⁿ[i])
+        nodes.u[i] = nodes.uⁿ[i]
+        nodes.u̇[i] = nodes.u̇ⁿ[i]
+        nodes.ü[i] = nodes.üⁿ[i]
+        nodes.w[i] = nodes.wⁿ[i]
+        nodes.ẇ[i] = nodes.ẇⁿ[i]
+        nodes.ẅ[i] = nodes.ẅⁿ[i]
+        nodes.R[i] = nodes.Rⁿ[i]
+        nodes.ΔR[i] = nodes.ΔRⁿ[i]
 
     end
 
@@ -106,26 +112,26 @@ end
 # FUNCTIONS TO UPDATE THE EXTERNAL LOADS
 #----------------------------------------
 
-# Replaces fext with the external force @t
-function get_current_external_force!(fext, t, conf)
+# Replaces fᵉˣᵗ with the external force @t
+function get_current_external_force!(fᵉˣᵗ, t, conf)
 
     for i in conf.ext_forces.dof_load
-        fext[i] = conf.ext_forces.Fext(t)     
+        fᵉˣᵗ[i] = conf.ext_forces.Fext(t)     
     end
 
 end 
 
-# Replaces fext with the external force @t for the radial crimping
-function get_current_external_force_crimping!(fext, t, conf, nodes)
+# Replaces fᵉˣᵗ with the external force @t for the radial crimping
+function get_current_external_force_crimping!(fᵉˣᵗ, t, conf, nodes)
     
     update_local_to_global_matrix!(nodes)
     
     for n in nodes
 
         dof_dispⁿ = n.idof_disp
-        fextⁿ =  [conf.ext_forces.Fext(t), 0, 0] 
-        fextⁿ = n.R_global_to_local' * fextⁿ
-        fext[dof_dispⁿ] .= fextⁿ   
+        fᵉˣᵗⁿ =  [conf.ext_forces.Fext(t), 0, 0] 
+        fᵉˣᵗⁿ = n.R_global_to_local' * fᵉˣᵗⁿ
+        fᵉˣᵗ[dof_dispⁿ] .= fᵉˣᵗⁿ   
 
     end 
    
@@ -134,14 +140,14 @@ end
 # Update the solution external force @t
 function update_current_solution_external_force!(solⁿ⁺¹, t, conf)
 
-    get_current_external_force!(solⁿ⁺¹.fext, t, conf)
+    get_current_external_force!(solⁿ⁺¹.fᵉˣᵗ, t, conf)
 
 end 
 
 # Update the solution external force @t for the radial crimping
 function update_current_solution_external_force_crimping!(solⁿ⁺¹, t, conf, nodes)
 
-    get_current_external_force_crimping!(solⁿ⁺¹.fext, t, conf, nodes)
+    get_current_external_force_crimping!(solⁿ⁺¹.fᵉˣᵗ, t, conf, nodes)
     
 end 
 
@@ -194,13 +200,12 @@ end
 # Convert the tangent matrix and the residual from cylindrical to carthesian coordinates
 function dirichlet_local_to_global!(nodes_sol, nodes)
     
-    @inbounds for a = 1:length(nodes)
+    @inbounds for i in eachindex(nodes)
         
-        Ra = nodes.R_global_to_local[a]       
-        RaT = Ra'
+        R = nodes.R_global_to_local[i]       
         
-        adof = 6*(a-1) .+ Vec3(1,2,3) 
-        nodes_sol.ΔD[adof] .= RaT*nodes_sol.ΔD[adof]
+        idof = 6*(i-1) .+ Vec3(1,2,3) 
+        nodes_sol.ΔD[idof] .= R'*nodes_sol.ΔD[idof]
         
     end
     
@@ -231,22 +236,23 @@ function update_current_boundary_conditions_vector!(uimp::AbstractVector{T}, t, 
 end 
 
 # Imposes single freedom constrains at the current step
-function impose_BC_displacements!(nodes_sol, uimp, fixed_dofs)
+function apply_BCs!(nodes_sol, uimp, fixed_dofs)
     
-    @inbounds for i in 1:length(fixed_dofs)
+    @inbounds for i in eachindex(fixed_dofs)
         
         idof = fixed_dofs[i]   
-        D_prev = nodes_sol.asol[idof]   
+        D_prev = nodes_sol.D[idof]   
         D_imposed = uimp[i]        
         ΔD_imposed = D_imposed - D_prev            
         nodes_sol.ΔD[idof] = ΔD_imposed
 
-        @inbounds for i in 1:length(nodes_sol.r)  
-            nodes_sol.r[i] = nodes_sol.r[i] .- ΔD_imposed .* nodes_sol.Ktan[i, idof] 
-        end 
+        for j in nzrange(nodes_sol.Ktan_mat, idof)
+            nodes_sol.r[nodes_sol.Ktan_mat.rowval[j]] -= ΔD_imposed * nodes_sol.Ktan[j]
+        end
 
         
     end
+
     
 end
 
@@ -257,7 +263,7 @@ end
 # Update R_global_to_local for each node
 function update_local_to_global_matrix!(nodes)
     
-    @inbounds for i in 1:length(nodes)
+    @inbounds for i in eachindex(nodes)
         
         x = nodes.X₀[i]+ nodes.u[i]
         theta = atan(x[2], x[1])
@@ -279,57 +285,33 @@ function update_global_corrector!(nodes_sol, nodes, disp_dof)
         nodes_sol.D[n.idof_disp] .= n.u
         nodes_sol.Ḋ[n.idof_disp] .= n.u̇
         nodes_sol.D̈[n.idof_disp] .= n.ü
-        nodes_sol.D[n.idof_ang] .= n.w
-        nodes_sol.Ḋ[n.idof_ang] .= n.ẇ
-        nodes_sol.D̈[n.idof_ang] .= n.ẅ
+        nodes_sol.D[n.idof_rot] .= n.w
+        nodes_sol.Ḋ[n.idof_rot] .= n.ẇ
+        nodes_sol.D̈[n.idof_rot] .= n.ẅ
 
     end
     
 end 
 
-# At the beginning of the predictor, updates the NodalSolution global vectors with the current Configuration local vectors(not updating angles)
-function update_global_predictor!(nodes_sol, nodes)
-        
-    @inbounds for n in LazyRows(nodes)
 
-        nodes_sol.D[n.idof_disp] .= n.u
-        nodes_sol.Ḋ[n.idof_disp] .= n.u̇
-        nodes_sol.D̈[n.idof_disp] .= n.ü
-        nodes_sol.D[n.idof_ang] .= 0
-        nodes_sol.Ḋ[n.idof_ang] .= n.ẇ
-        nodes_sol.D̈[n.idof_ang] .= n.ẅ
-
-    end
-    
-    
-    @inbounds for i in 1:length(nodes_sol.asol)
-
-        nodes_sol.asol[i] = nodes_sol.D[i] 
-        nodes_sol.ΔD[i] = 0  
-
-    end 
-    
-end 
 
 # At the end of the corrector, updates the Configuration local vectors with the NodalSolution global vectors computed during the current iteration
-function update_local_corrector!(nodes, ΔD_k, Δt, nodes_sol, comp)
+function update_local_corrector!(nodes, nodes_sol, Δt, β, γ)
     
-    β = comp.β
-    γ = comp.γ
     
-    @inbounds for i in 1:length(nodes)
+    @inbounds for i in eachindex(nodes)
 
         nodes.u[i] = nodes_sol.D[nodes.idof_disp[i]]
         nodes.u̇[i] = nodes_sol.Ḋ[nodes.idof_disp[i]]
         nodes.ü[i] = nodes_sol.D̈[nodes.idof_disp[i]]
 
-        nodes.ΔR[i] = rotation_matrix(ΔD_k[nodes.idof_ang[i]]) * nodes.ΔR[i]
+        nodes.ΔR[i] = rotation_matrix(nodes_sol.ΔD[nodes.idof_rot[i]]) * nodes.ΔR[i]
 
         ẇⁿ = nodes.ẇⁿ[i]
         ẅⁿ = nodes.ẅⁿ[i]
         wⁿ⁺¹ = toangle(nodes.ΔR[i])
         nodes.ẇ[i] = nodes.ΔR[i] * (γ/(β*Δt)*wⁿ⁺¹ + (β-γ)/β*ẇⁿ + Δt*(β-γ/2)/β*ẅⁿ)     
-        nodes.ẅ[i] = nodes.ΔR[i] * (1/(β*Δt^2)*wⁿ⁺¹ - 1/(β*Δt)*ẇⁿ - (0.5-β)/β*ẅⁿ)
+        nodes.ẅ[i] = nodes.ΔR[i] * (1/(β*Δt^2)*wⁿ⁺¹ - 1/(β*Δt)*ẇⁿ - (1/(2*β)-1)*ẅⁿ)
 
         nodes.R[i] = nodes.ΔR[i]*nodes.Rⁿ[i] 
 
@@ -338,22 +320,31 @@ function update_local_corrector!(nodes, ΔD_k, Δt, nodes_sol, comp)
 end 
 
 # At the end of the predictor, updates the Configuration local vectors with the NodalSolution global vectors predicted for the current time step
-function update_local_predictor!(nodes, nodes_sol)
+function update_local_predictor!(nodes, nodes_sol, Δt, β, γ)
+
     
-    @inbounds for i in 1:length(nodes)
+    @inbounds for i in eachindex(nodes)
 
-        nodes.u[i] = nodes_sol.D[nodes.idof_disp[i]]
-        nodes.u̇[i] = nodes_sol.Ḋ[nodes.idof_disp[i]]
-        nodes.ü[i] = nodes_sol.D̈[nodes.idof_disp[i]]
+        dofs_disp = nodes.idof_disp[i]
+        dofs_rot = nodes.idof_rot[i]
 
-        nodes.w[i] = nodes_sol.D[nodes.idof_ang[i]]
-        nodes.ẇ[i] = nodes_sol.Ḋ[nodes.idof_ang[i]]
-        nodes.ẅ[i] = nodes_sol.D̈[nodes.idof_ang[i]]
+        nodes.u[i] = nodes_sol.D[dofs_disp]
+        nodes.u̇[i] = nodes_sol.Ḋ[dofs_disp]
+        nodes.ü[i] = nodes_sol.D̈[dofs_disp]
 
-        nodes.ΔR[i] = rotation_matrix(nodes_sol.D[nodes.idof_ang[i]])
+        θ̃ = nodes_sol.D[dofs_rot]
+        nodes.w[i] = θ̃
+        nodes.ΔR[i] = rotation_matrix(θ̃)
         nodes.R[i] = nodes.ΔR[i]*nodes.Rⁿ[i]
+
+        ẇⁿ = nodes.ẇⁿ[i]
+        ẅⁿ = nodes.ẅⁿ[i]
+        nodes.ẇ[i] = nodes.ΔR[i] * (γ/(β*Δt)*θ̃ + (β-γ)/β*ẇⁿ + Δt*(β-γ/2)/β*ẅⁿ)     
+        nodes.ẅ[i] = nodes.ΔR[i] * (1/(β*Δt^2)*θ̃ - 1/(β*Δt)*ẇⁿ - (1/(2*β)-1)*ẅⁿ)
+        
         
     end
+
     
 end 
 
@@ -371,12 +362,12 @@ end
 # Update the displacement vectors with the solution of the linear system in the predictor
 function update_nodal_solutions_predictor!(nodes_sol, β, γ, Δt)
 
-    @inbounds for i in 1:length(nodes_sol.D)
+    @inbounds for i in eachindex(nodes_sol.D)
 
-        nodes_sol.DΔtⁿ[i] = nodes_sol.Ḋ[i] # need to save the last velocity vector 
+        nodes_sol.Ḋⁿ[i] = nodes_sol.Ḋ[i] # need to save the last velocity vector 
         nodes_sol.D[i] = nodes_sol.D[i] + nodes_sol.ΔD[i]
         nodes_sol.Ḋ[i] = nodes_sol.Ḋ[i] + (γ/(β*Δt))*nodes_sol.ΔD[i] - (γ/β)*nodes_sol.Ḋ[i] + (Δt*(2*β-γ)/(2*β))*nodes_sol.D̈[i]
-        nodes_sol.D̈[i] = nodes_sol.D̈[i] + (1/(β*Δt^2))*(nodes_sol.ΔD[i] - Δt*nodes_sol.DΔtⁿ[i] - (Δt^2)/2*nodes_sol.D̈[i])
+        nodes_sol.D̈[i] = nodes_sol.D̈[i] + (1/(β*Δt^2))*(nodes_sol.ΔD[i] - Δt*nodes_sol.Ḋⁿ[i] - (Δt^2)/2*nodes_sol.D̈[i])
 
     end 
         
@@ -397,97 +388,44 @@ function update_current_solution_corrector!(solⁿ⁺¹, ndofs, matrices)
 end 
 
 # Compute residual and increment vector residual in the corrector loop
-function compute_norms_corrector(k, aux_tol, solⁿ⁺¹, nodes_sol, matrices, SHOW_COMP_TIME::Bool = false)
-
-    aux_tol_old = aux_tol
-    nodes_sol.f_aux .= solⁿ⁺¹.fext .+ solⁿ⁺¹.Tᶜ .+ matrices.Tᶜᵒⁿ .- matrices.Tᵈ
-    norm_f = norm(nodes_sol.f_aux)
-    norm_res = norm(nodes_sol.r_free)
+function compute_norms_corrector(k, solⁿ⁺¹, nodes_sol, matrices, SHOW_COMP_TIME = false)
     
-    if norm_f > 1e-1
-        aux_tol = norm_res/norm_f
-    else
-        aux_tol = norm_res 
+    f_norm = mapreduce((f...) -> sum(f^2 for f in f), +, solⁿ⁺¹.fᵉˣᵗ, solⁿ⁺¹.Tᶜ, matrices.Tᶜᵒⁿ)
+    f_norm = sqrt(f_norm)
+    res_norm = norm(nodes_sol.r_free)
+    
+    res_norm = f_norm > 1e-1 ? res_norm/f_norm : res_norm
+    
+    ΔD_norm = norm(nodes_sol.ΔD_free)
+    if SHOW_COMP_TIME
+        k == 1 && @printf "%4s\t%8s\t%8s\n" "iter" "‖res‖" "‖ΔD‖"
+        @printf "%4d\t%1.2e\t%1.2e\n"  k  res_norm  ΔD_norm 
     end
     
-    if (k == 1)
-        norm_ddk = norm(nodes_sol.ΔD_free)
-        
-        if SHOW_COMP_TIME
-            println("iteration $k, ||res|| = $aux_tol   ||ΔD_k[free_dof]|| = $norm_ddk")
-        end
-        
-    else
-        norm_ddk = norm(nodes_sol.ΔD_free)
-        
-        if SHOW_COMP_TIME
-            frac_norm = log10(aux_tol_old/aux_tol)
-            println("iteration $k, ||res|| = $aux_tol ($frac_norm)  ||ΔD_k[free_dof]|| = $norm_ddk")
-        end
-        
-    end
-    
-    return aux_tol
+    return res_norm, ΔD_norm
     
 end
 
-# Update the tangent matrix in the predictor and corrector
-function compute_Ktan_sparse!(nodes_sol, matrices, α, β, γ, Δt)
-    
-    @inbounds for i in 1:length(nodes_sol.Ktan.nzval)
-        nodes_sol.Ktan.nzval[i] = (1+α) * (matrices.Kⁱⁿᵗ.nzval[i] - matrices.Kᶜ.nzval[i] - matrices.Kᶜᵒⁿ.nzval[i]) + (1/(β*Δt^2)) *  matrices.M.nzval[i] + (γ/(β*Δt)) * (matrices.Cᵏ.nzval[i] - matrices.Cᶜᵒⁿ.nzval[i])
-    end 
 
 
-end 
+function tangent_and_residuals_predictor!(nodes_sol, matrices, solⁿ, solⁿ⁺¹, Δt, α, β, γ)
+        
+        @. nodes_sol.Ktan = (1+α) * matrices.K + (1/(β*Δt^2)) * matrices.M + (γ/(β*Δt)) * matrices.C
 
-# Update residual in the corrector loop
-function compute_res_corrector!(nodes_sol, matrices, solⁿ⁺¹, solⁿ, α)
-    
-    @inbounds for i in 1:length(nodes_sol.r)
-        nodes_sol.r[i] = (1+α) * (solⁿ⁺¹.fext[i] + matrices.Tᶜᵒⁿ[i] + matrices.Tᶜ[i] - matrices.Tⁱⁿᵗ[i]) - α * (solⁿ.fext[i]  + solⁿ.Tᶜᵒⁿ[i]  + solⁿ.Tᶜ[i] - solⁿ.Tⁱⁿᵗ[i]) - matrices.Tᵏ[i]
-    end 
-    
-end 
-
-# Update nodal solutions in the corrector loop
-function update_nodal_solution_corrector_loop!(nodes_sol, disp_dof)
-    
-    nodes_sol.ΔD .= 0    
-    nodes_sol.asol .= 0   
-    
-    @inbounds for i in disp_dof
-        nodes_sol.asol[i] = nodes_sol.D[i] 
-    end 
-    
-end
-
-# Fill the free dofs residual vector (preallocated) to be used to solve the linear system
-function fill_r_free!(nodes_sol, free_dof)
-    
-    @inbounds for (index, value) in enumerate(free_dof)
-        nodes_sol.r_free[index] = nodes_sol.r[value] 
-    end 
-
-    
-end 
-
-# Fill the free dofs tangent matrix (preallocated) to be used to solve the linear system
-function fill_Ktan_free!(nodes_sol)
-     
-    @inbounds for (index, value) in enumerate(nodes_sol.sparsity_map_free)
-        nodes_sol.Ktan_free.nzval[index] = nodes_sol.Ktan.nzval[value]
-    end
-
+        @. nodes_sol.r =  (1+α) * solⁿ⁺¹.fᵉˣᵗ - matrices.Tⁱⁿᵗ - matrices.Tᶜ - matrices.Tᶜᵒⁿ - matrices.Tᵏ - α * solⁿ.fᵉˣᵗ
+        @. nodes_sol.temp = γ/β * nodes_sol.Ḋ - (Δt/2*(2*β-γ)/β) * nodes_sol.D̈
+        mul!(nodes_sol.r, matrices.C_mat, nodes_sol.temp, 1, 1)
+        @. nodes_sol.temp =  Δt * nodes_sol.Ḋ + Δt^2/2 * nodes_sol.D̈
+        mul!(nodes_sol.r, matrices.M_mat, nodes_sol.temp, 1/(β*Δt^2), 1)
 
 end
 
-# Fill the free dofs of the whole displacements vector (preallocated) with the solution of the linear sysyem
-function fill_ΔD_free_dofs!(nodes_sol, free_dof)
-    
-    @inbounds for (index,value) in enumerate(free_dof)
-        nodes_sol.ΔD[value] = nodes_sol.ΔD_free[index]
-    end 
 
-    
-end 
+
+function tangent_and_residuals_corrector!(nodes_sol, matrices, solⁿ, solⁿ⁺¹, Δt, α, β, γ)
+        
+    @. nodes_sol.Ktan = (1+α) * matrices.K + (1/(β*Δt^2)) * matrices.M + (γ/(β*Δt)) * matrices.C
+    @. nodes_sol.r = (1+α) * (solⁿ⁺¹.fᵉˣᵗ + matrices.Tᶜᵒⁿ + matrices.Tᶜ - matrices.Tⁱⁿᵗ) - α * (solⁿ.fᵉˣᵗ + solⁿ.Tᶜᵒⁿ + solⁿ.Tᶜ - solⁿ.Tⁱⁿᵗ) - matrices.Tᵏ
+
+end
+

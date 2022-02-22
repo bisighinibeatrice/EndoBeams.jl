@@ -1,5 +1,5 @@
 "Preallocates and initialises all the variables and starts the temporal loop"
-function solver!(nodes, allbeams, conf, comp, sdf, pn_constrains, params, T=Float64)
+function solver!(nodes, beams, conf, comp, sdf, constraints, params, T=Float64)
     
     # -------------------------------------------------------------------------------------------
     # INITIALISATION
@@ -9,11 +9,10 @@ function solver!(nodes, allbeams, conf, comp, sdf, pn_constrains, params, T=Floa
 
     if SHOW_TIME_SECTIONS
         TimerOutputs.enable_debug_timings(@__MODULE__)
+        reset_timer!()
     end 
 
-    to = TimerOutput()
-
-    @timeit_debug to "Solver initialization" begin
+    @timeit_debug "Solver initialization" begin
 
         # vectors to save energy evolution
         plot_Phi_energy  = T[]
@@ -21,21 +20,21 @@ function solver!(nodes, allbeams, conf, comp, sdf, pn_constrains, params, T=Floa
         plot_contact_energy = T[]
         
         # initialization of time loop variables
-        t = zero(T)
+        t = 0.
         start = time()
-        i = 1
+        write_counter = 1
         Δt = comp.Δt
         Δt_plot = comp.Δt_plot 
-        fact_div = 1   
-        k_count_OKit = 0
+        fact_div = 1.   
+        successive_convergence = 0
         step = 1
 
         # preallocated vectors for beam interpolation
-        int_pos = zeros(T, (allbeams.numberInterpolationPoints[1]+1)*length(allbeams), 3)
-        int_conn = zeros(Int, allbeams.numberInterpolationPoints[1]+1, length(allbeams))
+        int_pos = zeros(T, (beams.numberInterpolationPoints[1]+1)*length(beams), 3)
+        int_conn = zeros(Int, beams.numberInterpolationPoints[1]+1, length(beams))
         
         # preallocation of the vectors and matrices used in the computaion
-        solⁿ, solⁿ⁺¹, sol_GP, nodes_sol, matrices, energy, u_imp = solver_initialisation(conf, nodes, allbeams, int_pos, int_conn, comp, pn_constrains, thisDirOutputPath, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, SAVE_NODES_VTK, T)
+        solⁿ, solⁿ⁺¹, sol_GP, nodes_sol, matrices, energy, u_imp = solver_initialisation(conf, nodes, beams, int_pos, int_conn, comp, constraints, thisDirOutputPath, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, SAVE_NODES_VTK, T)
         
         # Linear solver
         ps = MKLPardisoSolver()
@@ -48,79 +47,74 @@ function solver!(nodes, allbeams, conf, comp, sdf, pn_constrains, params, T=Floa
 
     STOP_SIMULATION = false
 
-    @timeit_debug to "Solver time loop" begin
+    @timeit_debug "Solver time loop" begin
         
         while (t<comp.tᵉⁿᵈ && fact_div < 1E20 && !STOP_SIMULATION)
             
-            @timeit_debug to "Dynamic step" begin
+            @timeit_debug "Dynamic step" begin
                 
                 tⁿ = t
                 tⁿ⁺¹ = tⁿ + Δt
                 tcomp = time() - start
                 
-                if SHOW_COMP_TIME
-                    println("-------------------------------------------------")
-                    println("tphys = $tⁿ⁺¹, tcomp = $tcomp, ratio = $(tcomp/t), Δt = $Δt, step = $step ")
+                if SHOW_COMP_TIME 
+                    println("------------------------------------------------")
+                    @printf "%8s\t%8s\t%4s\t%4s\n" "t" "Δt" "step" "tcomp"
+                    @printf "%1.2e\t%1.2e\t%4d\t%1.2f\n" tⁿ⁺¹ Δt step tcomp
+                    println("------------------------------------------------")
                 end 
                 
                 # solve system @tⁿ
-                flag_conv = solve_step_dynamics!(nodes, allbeams, pn_constrains, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, sol_GP, nodes_sol, matrices, energy, u_imp, conf, comp, sdf, to, ps, SHOW_COMP_TIME, T)
+                flag_conv = solve_step_dynamics!(nodes, beams, constraints, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, sol_GP, nodes_sol, matrices, energy, u_imp, conf, comp, sdf, ps, SHOW_COMP_TIME, T)
 
                 # if not converged, halve the time step and re-solve the system until it converges
-                while (flag_conv == 0 && fact_div < 1E20)
+                if !flag_conv
+
+                    SHOW_COMP_TIME && printstyled("Time step did not converge...\n"; color = :yellow)
                     
                     fact_div = fact_div*scale
                     Δt = Δt/scale
                     
-                    tⁿ⁺¹ = tⁿ + Δt
-                    
-                    if SHOW_COMP_TIME
-                        println("-----TIME STEP DECREASED Δt = Δt0/$fact_div")
-                        println("tphys = $tⁿ⁺¹, tcomp = $tcomp  Δt = $Δt, ratio = $(tcomp/t)")
-                    end
+                    SHOW_COMP_TIME && printstyled("Δt decreased: Δt₀/$fact_div\n"; color = :yellow)
 
                     if Δt<1E-10
-                        @error "Δt < 1E-10: stopping simulation" 
-                        STOP_SIMULATION = true
+                        printstyled("Δt < 1E-10: aborting simulation...\n"; color = :red)
                         break
                     end
                     
                     solⁿ⁺¹ = deepcopy(solⁿ)
                     update_nodes_not_converged!(nodes)
-                    
-                    flag_conv = solve_step_dynamics!(nodes, allbeams, pn_constrains, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, sol_GP, nodes_sol, matrices, energy, u_imp, conf, comp, sdf, to, ps, SHOW_COMP_TIME), T
-                    k_count_OKit = 0
-                    
+                    successive_convergence = 0
+
+                    continue
+
+                else
+
+                    SHOW_COMP_TIME && printstyled("Time step converged!\n"; color = :green) 
+                    successive_convergence = successive_convergence + 1
+
                 end
                 
                 # if the time step has been halved but the simulation has converged the last 8 times, double it
-                #if fact_div > 1
-                    
-                    k_count_OKit = k_count_OKit + 1
-                
-                    if k_count_OKit > 15
+                if fact_div > 1 && successive_convergence > 8
                         
-                        if SHOW_COMP_TIME
-                            println("-----TIME STEP INCREASED Δt=Δt0/$fact_div")
-                        end 
+                        SHOW_COMP_TIME && printstyled("Δt increased: Δt₀/$fact_div\n"; color = :green)
 
                         fact_div = fact_div/scale
                         Δt = Δt*scale
                         
-                        k_count_OKit = 0
-                        
-                    end
+                        successive_convergence = 0
                     
-                #end
+                end
                 
             end
             
-            @timeit_debug to "Write results to file" begin
+            @timeit_debug "Write results to file" begin
                 
                 # save VTK with frequency 1/Δt_plot: 
-                if  abs(tⁿ⁺¹-i*Δt_plot)<1e-9 || tⁿ⁺¹>i*Δt_plot
-                    save_VTK(i, nodes, allbeams, sol_GP, int_pos, int_conn, thisDirOutputPath, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, SAVE_NODES_VTK)
-                    i = i+1
+                if  tⁿ⁺¹ > write_counter*Δt_plot  ||  tⁿ⁺¹ ≈ write_counter*Δt_plot
+                    save_VTK(write_counter, nodes, beams, sol_GP, int_pos, int_conn, thisDirOutputPath, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, SAVE_NODES_VTK)
+                    write_counter += 1
                 end
 
                 # save the energy values at the current step
@@ -134,21 +128,19 @@ function solver!(nodes, allbeams, conf, comp, sdf, pn_constrains, params, T=Floa
                 
             end 
             
-            @timeit_debug to "Update variables" begin
+            @timeit_debug "Update variables" begin
                 
                 # update variables after the step
                 solⁿ = deepcopy(solⁿ⁺¹)
-                update_nodes_converged!(nodes)
+                update_nodes_converged!(nodes, solⁿ, matrices)
                 t = tⁿ⁺¹
-                step = step+1
+                step += 1
                 
             end 
 
-            if ENERGY_STOP
-                if plot_K_energy[end] < 1e-10
-                    println("ENERGY THRESHOLD REACHED")
-                    STOP_SIMULATION = true
-                end 
+            if ENERGY_STOP && plot_K_energy[end] < 1e-10
+                printstyled("Energy threshold reached! Ending simulation.\n"; color = :green) 
+                break
             end
 
         end 
@@ -157,19 +149,19 @@ function solver!(nodes, allbeams, conf, comp, sdf, pn_constrains, params, T=Floa
     
     # show  sections time
     if SHOW_TIME_SECTIONS
-        show(to)
+        print_timer()
     end 
     
 end
 
 #  Solves the current step
-function solve_step_dynamics!(nodes, allbeams, pn_constrains, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, sol_GP, nodes_sol, matrices, energy, u_imp, conf, comp, sdf, to, ps, SHOW_COMP_TIME, T=Float64) 
+function solve_step_dynamics!(nodes, beams, constraints, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, sol_GP, nodes_sol, matrices, energy, u_imp, conf, comp, sdf, ps, SHOW_COMP_TIME, T=Float64) 
 
     # -------------------------------------------------------------------------------------------
     # INITIALIZATION
     # -------------------------------------------------------------------------------------------
     
-    @timeit_debug to "Time step initialization" begin
+    @timeit_debug "Time step initialization" begin
         
         # maximum number of iterations
         max_it = comp.max_it
@@ -194,10 +186,10 @@ function solve_step_dynamics!(nodes, allbeams, pn_constrains, tⁿ⁺¹, Δt, so
     # PREDICTOR
     # -------------------------------------------------------------------------------------------
     
-    @timeit_debug to "Predictor" begin
+    @timeit_debug "Predictor" begin
         
         # predict the solution @n+1
-        predictor!(nodes, allbeams, pn_constrains, matrices, energy, solⁿ⁺¹, solⁿ, sol_GP, u_imp, Δt, conf, comp, sdf, nodes_sol, tⁿ⁺¹, to, ps, T) 
+        predictor!(nodes, beams, constraints, matrices, energy, solⁿ⁺¹, solⁿ, sol_GP, u_imp, Δt, conf, comp, sdf, nodes_sol, tⁿ⁺¹, ps, T) 
         
     end
     
@@ -205,25 +197,25 @@ function solve_step_dynamics!(nodes, allbeams, pn_constrains, tⁿ⁺¹, Δt, so
     # CORRECTOR
     # -------------------------------------------------------------------------------------------
     
-    @timeit_debug to "Corrector" begin
+    @timeit_debug "Corrector" begin
         
         # corrector loop: output = number of iterations
-        k = corrector_loop!(nodes, allbeams, pn_constrains, matrices, energy, solⁿ⁺¹, solⁿ, sol_GP, u_imp, Δt, conf, comp, sdf, nodes_sol, tⁿ⁺¹, to, ps, SHOW_COMP_TIME, T)
+        k = corrector_loop!(nodes, beams, constraints, matrices, energy, solⁿ⁺¹, solⁿ, sol_GP, u_imp, Δt, conf, comp, sdf, nodes_sol, tⁿ⁺¹, ps, SHOW_COMP_TIME, T)
         
     end
-    
+   
     return k < max_it
     
 end 
 
 # Predicts the solution at the current step
-function predictor!(nodes, allbeams, pencons, matrices, energy, solⁿ⁺¹, solⁿ, sol_GP, u_imp, Δt, conf, comp, sdf, nodes_sol, tⁿ⁺¹, to, ps, T=Float64)
+function predictor!(nodes, beams, pencons, matrices, energy, solⁿ⁺¹, solⁿ, sol_GP, u_imp, Δt, conf, comp, sdf, nodes_sol, tⁿ⁺¹, ps, T=Float64)
     
     # -------------------------------------------------------------------------------------------
     # INITIALISATION
     # -------------------------------------------------------------------------------------------
     
-    @timeit_debug to "Initialization" begin
+    @timeit_debug "Initialization" begin
         
         # dofs
         free_dofs = conf.bc.free_dofs
@@ -235,7 +227,17 @@ function predictor!(nodes, allbeams, pencons, matrices, energy, solⁿ⁺¹, sol
         α = comp.α
         
         # solutions @n
-        update_global_predictor!(nodes_sol, nodes)
+        for n in LazyRows(nodes)
+            nodes_sol.D[n.idof_disp] .= n.u
+            nodes_sol.Ḋ[n.idof_disp] .= n.u̇
+            nodes_sol.D̈[n.idof_disp] .= n.ü
+            nodes_sol.D[n.idof_rot] .= 0
+            nodes_sol.Ḋ[n.idof_rot] .= n.ẇ
+            nodes_sol.D̈[n.idof_rot] .= n.ẅ
+        end
+        
+        nodes_sol.ΔD .= 0  
+
         
     end
     
@@ -243,219 +245,138 @@ function predictor!(nodes, allbeams, pencons, matrices, energy, solⁿ⁺¹, sol
     # SOLVE
     # -------------------------------------------------------------------------------------------
     
-    @timeit_debug to "Compute matrices" begin
-        
-        # compute the matrices    
-        compute_K_T!(nodes, allbeams, matrices, energy, conf, sdf, comp, sol_GP, to, T)
-        
-    end
+    @timeit_debug "Assemble element contributions" assemble!(nodes, beams, matrices, energy, conf, sdf, comp, sol_GP)
     
-    @timeit_debug to "Compute penalty constrains contributions" begin
-        
-        # impose multi freedom constrains
-        compute_multifreedom_constraints!(matrices, nodes, pencons, tⁿ⁺¹)        
-    end 
+    @timeit_debug "Compute penalty constrains contributions" constraints!(matrices, nodes, pencons)        
     
-    @timeit_debug to "Compute tangent matrix" begin
-        
-        # eq142 in [2]: compute tangent matrix
-        compute_Ktan_sparse!(nodes_sol, matrices, α, β, γ, Δt)
-
-    end
+    @timeit_debug "Compute tangent matrix and residuals" tangent_and_residuals_predictor!(nodes_sol, matrices, solⁿ, solⁿ⁺¹, Δt, α, β, γ)
     
-    @timeit_debug to "Compute residual" begin
+    @timeit_debug "Impose BCs" apply_BCs!(nodes_sol, u_imp, fixed_dofs)
 
-        # eq119 in [3]: compute the residual
-        nodes_sol.r .=  (1+α) .* (solⁿ⁺¹.fext .- matrices.Tⁱⁿᵗ .- matrices.Tᵏ .- matrices.Tᶜ) .- α .* (solⁿ.fext)
+    @timeit_debug "Compute free tangent matrix and residual" begin
 
-        nodes_sol.aux1 .= (γ/β) .* nodes_sol.Ḋ .- (Δt/2*(2*β-γ)/β) .* nodes_sol.D̈
-        mul!(nodes_sol.aux2, matrices.Cᵏ, nodes_sol.aux1)
-        nodes_sol.r .= nodes_sol.r .+  nodes_sol.aux2 
-        
-        nodes_sol.aux1 .= Δt .* nodes_sol.Ḋ .+ (Δt^2)/2 .* nodes_sol.D̈
-        mul!(nodes_sol.aux2, matrices.M, nodes_sol.aux1)
-        nodes_sol.aux2 .= 1/(β*Δt^2) .* nodes_sol.aux2
-            
-        nodes_sol.r .= nodes_sol.r .+ nodes_sol.aux2 
-        
-
-
-    end
-    
-    @timeit_debug to "Impose BCs" begin
-        
-        # impose BCs   
-        if conf.bc.flag_cylindrical == 1       
-            dirichlet_global_to_local!(nodes_sol, nodes)     
-        end  
-        
-        # impose single freedom constrain
-        impose_BC_displacements!(nodes_sol, u_imp, fixed_dofs)
-    end 
-
-
-    @timeit_debug to "Compute free tangent matrix and residual" begin
-
-        fill_r_free!(nodes_sol, free_dofs)                
-        fill_Ktan_free!(nodes_sol)
+        @views nodes_sol.r_free .= nodes_sol.r[free_dofs]              
+        @views nodes_sol.Ktan_free.nzval .= nodes_sol.Ktan[nodes_sol.sparsity_map_free]
 
     end 
     
-    @timeit_debug to "Linear solve" begin 
-
-        solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
-
-    end
+    @timeit_debug "Linear solve" solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
     
-    @timeit_debug to "Update" begin 
+    @timeit_debug "Update" begin 
 
         # fill whole dofs solution vector with free dofs solution
-        fill_ΔD_free_dofs!(nodes_sol, free_dofs)
-                        
-        if conf.bc.flag_cylindrical == 1
-            dirichlet_local_to_global!(nodes_sol, nodes)    
-        end  
-        
-        # eq114-115 in [3]
-        update_nodal_solutions_predictor!(nodes_sol, β, γ, Δt)
-        
+        nodes_sol.ΔD[free_dofs] .= nodes_sol.ΔD_free
+
+        @inbounds for i in eachindex(nodes_sol.D)
+            Ḋⁿ = nodes_sol.Ḋ[i]
+            nodes_sol.D[i] += nodes_sol.ΔD[i]
+            nodes_sol.Ḋ[i] += (γ/(β*Δt))*nodes_sol.ΔD[i] - (γ/β)*Ḋⁿ + (Δt*(2*β-γ)/(2*β))*nodes_sol.D̈[i]
+            nodes_sol.D̈[i] += (1/(β*Δt^2))*(nodes_sol.ΔD[i] - Δt*Ḋⁿ - (Δt^2)/2*nodes_sol.D̈[i])
+        end
+
         # update the local nodes 
-        update_local_predictor!(nodes, nodes_sol)
+        update_local_predictor!(nodes, nodes_sol, Δt, β, γ)
         
     end
     
 end 
 
 # Corrects the solution at the current step
-function corrector_loop!(nodes, allbeams, pncons, matrices, energy, solⁿ⁺¹, solⁿ, sol_GP, u_imp, Δt, conf, comp, sdf, nodes_sol, tⁿ⁺¹, to, ps, SHOW_COMP_TIME, T=Float64) 
+function corrector_loop!(nodes, beams, pncons, matrices, energy, solⁿ⁺¹, solⁿ, sol_GP, u_imp, Δt, conf, comp, sdf, nodes_sol, tⁿ⁺¹, ps, SHOW_COMP_TIME, T=Float64) 
     
     # -------------------------------------------------------------------------------------------
     # INITIALISATION
     # -------------------------------------------------------------------------------------------
     
-    @timeit_debug to "Initialization" begin
+    @timeit_debug "Initialization" begin
         
         # tollerances
-        tol_res = comp.tol_res
-        tol_ΔD_k = comp.tol_ΔDk
+        res_tol = comp.res_tol
+        ΔD_tol = comp.tol_ΔDk
         max_it = comp.max_it
         
         # dofs
-        ndofs = conf.ndofs
         free_dofs = conf.bc.free_dofs
         fixed_dofs = conf.bc.fixed_dofs
         disp_dofs = conf.disp_dofs
 
         # update @n+1   
-        update_global_corrector!(nodes_sol, nodes, disp_dofs)
+        for n in LazyRows(nodes)
+            nodes_sol.D[n.idof_disp] .= n.u
+            nodes_sol.Ḋ[n.idof_disp] .= n.u̇
+            nodes_sol.D̈[n.idof_disp] .= n.ü
+            nodes_sol.D[n.idof_rot] .= n.w
+            nodes_sol.Ḋ[n.idof_rot] .= n.ẇ
+            nodes_sol.D̈[n.idof_rot] .= n.ẅ
+        end
+
         
         # constants for the numerical integration
         β = comp.β
         γ = comp.γ
         α = comp.α
+
         
-        # current iteration number, initalised to 0
-        k = 0
-        
+        # current iteration number, initalised to 1
+        k = 1
+
         # randomly initialised the variables for the while cycle 
-        nodes_sol.ΔD .= 5 
-        aux_tol = 1.0e10
+        ΔD_norm = Inf
+        res_norm = Inf
         
     end
     
     # -------------------------------------------------------------------------------------------
     # CORRECTOR LOOP
     # -------------------------------------------------------------------------------------------
-    
-    @timeit_debug to "Newton solver" begin
+
+    @timeit_debug "Newton solver" begin
         
-        while ((aux_tol>tol_res) || (((norm(nodes_sol.ΔD[free_dofs])))>tol_ΔD_k)) && (k<max_it)         
+        while ((res_norm>res_tol) || (ΔD_norm>ΔD_tol)) && (k<max_it)         
+            
+            @timeit_debug "Assemble element contributions" assemble!(nodes, beams, matrices, energy, conf, sdf, comp, sol_GP)  
+            
+            @timeit_debug "Compute constraints contributions" constraints!(matrices, nodes, pncons)             
+                
+            @timeit_debug "Compute tangent matrix and residual" tangent_and_residuals_corrector!(nodes_sol, matrices, solⁿ, solⁿ⁺¹, Δt, α, β, γ)
 
-            k += 1
-            
-            @timeit_debug to "Compute matrices" begin
+            @timeit_debug "Impose BCs" apply_BCs!(nodes_sol, u_imp, fixed_dofs)
                 
-                # compute the contributions for each beam and assemble into the Matrix structure
-                compute_K_T!(nodes, allbeams, matrices, energy, conf, sdf, comp, sol_GP, to, T)  
-                
-            end
-            
-            @timeit_debug to "Compute multi freedom constrains contributions" begin
-                
-                # impose multi freedom constrains
-                compute_multifreedom_constraints!(matrices, nodes, pncons, tⁿ⁺¹)             
-                
+            @timeit_debug "Compute free tangent matrix and residual" begin
+                @views nodes_sol.r_free .= nodes_sol.r[free_dofs]               
+                @views nodes_sol.Ktan_free.nzval .= nodes_sol.Ktan[nodes_sol.sparsity_map_free]
             end 
             
-            @timeit_debug to "Compute tangent matrix and residual" begin
-                
-                # eq142 in [2]: compute tangent matrix
-                compute_Ktan_sparse!(nodes_sol, matrices, α, β, γ, Δt)
-
-                # eq140 in [2]: compute residual 
-                compute_res_corrector!(nodes_sol, matrices, solⁿ⁺¹, solⁿ, α)
-
-            end
+            @timeit_debug "Linear solve" solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
             
-            @timeit_debug to "Update nodal solutions" begin
-                
-                # update global nodal solution at each iteration
-                update_nodal_solution_corrector_loop!(nodes_sol, disp_dofs)
-                
-            end 
-            
-            @timeit_debug to "Impose BCs" begin
-                
-                
-                # if necessary, move to cylindrical coordinates     
-                if conf.bc.flag_cylindrical == 1  
-                    dirichlet_global_to_local!(nodes_sol, nodes)          
-                end     
-                
-                # impose single freedom constrains
-                impose_BC_displacements!(nodes_sol, u_imp, fixed_dofs)
-                
-            end 
-            
-            @timeit_debug to "Compute free tangent matrix and residual" begin
-
-                fill_r_free!(nodes_sol, free_dofs)                
-                fill_Ktan_free!(nodes_sol)
-        
-            end 
-            
-            @timeit_debug to "Linear solve" begin
-                
-                solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
-
-            end 
-            
-            @timeit_debug to "Update global and local variables" begin
+            @timeit_debug "Update global and local variables" begin
     
                 # fill whole dofs solution vector with free dofs solution
-                fill_ΔD_free_dofs!(nodes_sol, free_dofs)
+                nodes_sol.ΔD[free_dofs] .= nodes_sol.ΔD_free  
                 
                 # if necessary, return to cartesian coordinates        
-                if conf.bc.flag_cylindrical == 1   
-                    dirichlet_local_to_global!(nodes_sol,  nodes)            
-                end     
+                # if conf.bc.flag_cylindrical == 1   
+                #     dirichlet_local_to_global!(nodes_sol,  nodes)            
+                # end     
                 
                 # update global displacement variables
-                update_nodal_solutions_corrector!(nodes_sol, disp_dofs, γ, β, Δt)
+                @inbounds for i in disp_dofs
+                    nodes_sol.D[i] += nodes_sol.ΔD[i]
+                    nodes_sol.Ḋ[i] += (γ/(β*Δt))*nodes_sol.ΔD[i]
+                    nodes_sol.D̈[i] += (1/(β*Δt^2))*nodes_sol.ΔD[i]
+                end
+
                 
                 # update the nodes displacement, velocity, acceleration and rotation
-                update_local_corrector!(nodes, nodes_sol.ΔD, Δt, nodes_sol, comp)
+                update_local_corrector!(nodes, nodes_sol, Δt, β, γ)
                 
-                # update the current solution vectors (used in the next time step)
-                update_current_solution_corrector!(solⁿ⁺¹, ndofs, matrices)
+
+
             end 
             
-            @timeit_debug to "Compute norms" begin
-                
-                # update norms (used to check while cycle)
-                aux_tol = compute_norms_corrector(k, aux_tol, solⁿ⁺¹, nodes_sol, matrices, SHOW_COMP_TIME)
-                
-            end 
+            @timeit_debug "Compute norms" res_norm, ΔD_norm = compute_norms_corrector(k, solⁿ⁺¹, nodes_sol, matrices, SHOW_COMP_TIME)
+
+            k += 1
 
         end
         

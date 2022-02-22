@@ -60,7 +60,7 @@ geom = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
 mat = Material{T}(E, G, Aᵨ, Jᵨ)
 
 # beams vector
-allbeams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
+beams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
     
 #-----------------------------------------------------------------------------------
 # Simulation parameters
@@ -70,7 +70,7 @@ allbeams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, noth
 α = -0.05
 β = 0.25*(1-α)^2
 γ = 0.5*(1-2*α)
-damping = 1
+damping = 1e-3
 
 # time step and total time
 Δt = 0.5
@@ -78,7 +78,7 @@ damping = 1
 tᵉⁿᵈ = 100
 
 # tolerance and maximum number of iterations
-tol_res = 1e-5
+res_tol = 1e-5
 tol_ddk = 1e-5
 max_it = 10
 
@@ -92,7 +92,7 @@ zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 μ = 0.01
 εᵗ = 0.5
 
-comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, res_tol, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -110,7 +110,7 @@ ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load)
 # -------------------------------------------------------------------------------------------
 
 # multifreedom constrains
-cons = T[]
+cons = nothing
 
 # Dirichlet boundary conditions: fixed positions
 ndofs = nnodes*6
@@ -150,4 +150,4 @@ conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 # -------------------------------------------------------------------------------------------
 
 params = Params(scale =2,thisDirOutputPath = "examples/output3D", SHOW_TIME_SECTIONS=true)
-solver!(nodes, allbeams, conf, comp, sdf, cons, params, T)
+solver!(nodes, beams, conf, comp, sdf, cons, params, T)

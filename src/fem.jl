@@ -451,10 +451,6 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
     Tᵏ³ = zeros(Vec3{T})
     Tᵏ⁴ = zeros(Vec3{T})
 
-    Tᵈ¹ = zeros(Vec3{T})
-    Tᵈ² = zeros(Vec3{T})
-    Tᵈ³ = zeros(Vec3{T})
-    Tᵈ⁴ = zeros(Vec3{T})
 
     M¹¹ = zeros(Mat33{T})
     M¹² = zeros(Mat33{T})
@@ -688,20 +684,20 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
             AᵨH₁¹ᵀ = Aᵨ*H₁¹'
             AᵨH₁²ᵀ = Aᵨ*H₁²'
             AᵨH₁⁴ᵀ = Aᵨ*H₁⁴'
-            Tᵏ¹G = ωᴳ * (AᵨH₁¹ᵀ*Rₑᵀü₀ + H₂¹'*ĪᵨRₑᵀẅ₀SẆ₀ĪᵨẆ₀)
-            Tᵏ²G = ωᴳ * (AᵨH₁²ᵀ*Rₑᵀü₀ + H₂²'*ĪᵨRₑᵀẅ₀SẆ₀ĪᵨẆ₀)
-            Tᵏ⁴G = ωᴳ * (AᵨH₁⁴ᵀ*Rₑᵀü₀ + H₂⁴'*ĪᵨRₑᵀẅ₀SẆ₀ĪᵨẆ₀)
 
+            Tᵏ¹G = ωᴳ * (AᵨH₁¹ᵀ*Rₑᵀü₀ + H₂¹'*ĪᵨRₑᵀẅ₀SẆ₀ĪᵨẆ₀)
             Tᵏ¹ += Tᵏ¹G
-            Tᵏ² += Tᵏ²G
+            Tᵏ² += ωᴳ * (AᵨH₁²ᵀ*Rₑᵀü₀ + H₂²'*ĪᵨRₑᵀẅ₀SẆ₀ĪᵨẆ₀)
             Tᵏ³ += -Tᵏ¹G + ωᴳ * Aᵨ * Rₑᵀü₀
-            Tᵏ⁴ += Tᵏ⁴G
+            Tᵏ⁴ += ωᴳ * (AᵨH₁⁴ᵀ*Rₑᵀü₀ + H₂⁴'*ĪᵨRₑᵀẅ₀SẆ₀ĪᵨẆ₀)
+
 
             if comp.damping>0
-                Tᵈ¹ += ωᴳ * (comp.damping * AᵨH₁¹ᵀ*h₁ + H₂¹'*Īᵨ*h₂)
-                Tᵈ² += ωᴳ * (comp.damping * AᵨH₁²ᵀ*h₁ + H₂²'*Īᵨ*h₂)
-                Tᵈ³ += -Tᵈ¹ + ωᴳ * Aᵨ * comp.damping * h₁
-                Tᵈ⁴ += ωᴳ * (comp.damping * AᵨH₁⁴ᵀ*h₁ + H₂⁴'*Īᵨ*h₂)
+                Tᵈ¹G = ωᴳ * (comp.damping * AᵨH₁¹ᵀ*h₁ + H₂¹'*Īᵨ*h₂)
+                Tᵏ¹ += Tᵈ¹G
+                Tᵏ² += ωᴳ * (comp.damping * AᵨH₁²ᵀ*h₁ + H₂²'*Īᵨ*h₂)
+                Tᵏ³ += -Tᵈ¹G + ωᴳ * Aᵨ * comp.damping * h₁
+                Tᵏ⁴ += ωᴳ * (comp.damping * AᵨH₁⁴ᵀ*h₁ + H₂⁴'*Īᵨ*h₂)
             end
 
 
@@ -1045,11 +1041,6 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
         Tᵏ⁴ = l₀2Rₑ*Tᵏ⁴
 
 
-        Tᵈ¹ = l₀2Rₑ*Tᵈ¹
-        Tᵈ² = l₀2Rₑ*Tᵈ²
-        Tᵈ³ = l₀2Rₑ*Tᵈ³
-        Tᵈ⁴ = l₀2Rₑ*Tᵈ⁴
-
 
         M¹¹ = l₀2Rₑ * M¹¹ * Rₑ'
         M¹² = l₀2Rₑ * M¹² * Rₑ'
@@ -1212,7 +1203,6 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
 
 
     Tᵏ = [Tᵏ¹; Tᵏ²; Tᵏ³; Tᵏ⁴]
-    Tᵈ = [Tᵈ¹; Tᵈ²; Tᵈ³; Tᵈ⁴]
     
     M = hcat(vcat(M¹¹, M²¹, M³¹, M⁴¹), vcat(M¹², M²², M³², M⁴²), vcat(M¹³, M²³, M³³, M⁴³), vcat(M¹⁴, M²⁴, M³⁴, M⁴⁴))
     Cᵏ = hcat(vcat(Cᵏ¹¹, Cᵏ²¹, Cᵏ³¹, Cᵏ⁴¹), vcat(Cᵏ¹², Cᵏ²², Cᵏ³², Cᵏ⁴²), vcat(Cᵏ¹³, Cᵏ²³, Cᵏ³³, Cᵏ⁴³), vcat(Cᵏ¹⁴, Cᵏ²⁴, Cᵏ³⁴, Cᵏ⁴⁴))
@@ -1223,7 +1213,7 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
     Cᶜ = hcat(vcat(Cᶜ¹¹, Cᶜ²¹, Cᶜ³¹, Cᶜ⁴¹), vcat(Cᶜ¹², Cᶜ²², Cᶜ³², Cᶜ⁴²), vcat(Cᶜ¹³, Cᶜ²³, Cᶜ³³, Cᶜ⁴³), vcat(Cᶜ¹⁴, Cᶜ²⁴, Cᶜ³⁴, Cᶜ⁴⁴))
 
 
-    return strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ, Tᵈ, Kⁱⁿᵗ, Kᶜ, M, Cᵏ, Cᶜ
+    return strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ, Kⁱⁿᵗ, Kᶜ, M, Cᵏ, Cᶜ
 
 
 
@@ -1234,84 +1224,75 @@ end
 
 
 
-function compute_K_T!(nodes, allbeams, matrices, energy, conf, sdf, comp, sol_GP, to, T=Float64) 
+Base.@propagate_inbounds function assemble!(nodes, beams, matrices, energy, conf, sdf, comp, sol_GP) 
     
-    @timeit_debug to "Initialization" begin
         
-        # initialise the matrices associate to the whole structure
-        matrices.Kⁱⁿᵗ.nzval .= 0
-        matrices.Cᵏ.nzval .= 0 
-        matrices.M.nzval .= 0
-        matrices.Kᶜ.nzval .= 0
-        matrices.Tⁱⁿᵗ .= 0
-        matrices.Tᵏ .= 0
-        matrices.Tᵈ .= 0
-        matrices.Tᶜ .= 0
-       
-        # initialise the energy values associate to the whole structure
-        energy.strain_energy = 0
-        energy.kinetic_energy = 0
-        energy.contact_energy = 0
-        
-    end
+    # initialise the matrices associate to the whole structure
+    fill!(matrices.K, 0)
+    fill!(matrices.C, 0)
+    fill!(matrices.M, 0)
+    fill!(matrices.Tⁱⁿᵗ, 0)
+    fill!(matrices.Tᵏ, 0)
+    fill!(matrices.Tᶜ, 0)
     
-    # cycle over the beams   
-    @timeit_debug to "Compute and assemble elemental contributions" begin
+    # initialise the energy values associate to the whole structure
+    energy.strain_energy = 0
+    energy.kinetic_energy = 0
+    energy.contact_energy = 0
+        
+    
 
-        for e in LazyRows(allbeams)
+    for e in LazyRows(beams)
+        
             
-            @timeit_debug to "Compute elemental contributions" begin
-                
-                # information from node 1 and 2
-                X₁, X₂ = nodes.X₀[e.node1], nodes.X₀[e.node2]
-                u₁, u₂ = nodes.u[e.node1], nodes.u[e.node2]
-                u̇₁, u̇₂ = nodes.u̇[e.node1], nodes.u̇[e.node2]
-                ü₁, ü₂ = nodes.ü[e.node1], nodes.ü[e.node2]
-                ẇ₁, ẇ₂ = nodes.ẇ[e.node1], nodes.ẇ[e.node2]
-                ẅ₁, ẅ₂ = nodes.ẅ[e.node1], nodes.ẅ[e.node2]
-                R₁, R₂ = nodes.R[e.node1], nodes.R[e.node2]
-                ΔR₁, ΔR₂ = nodes.ΔR[e.node1], nodes.ΔR[e.node2]
+        # information from node 1 and 2
+        X₁, X₂ = nodes.X₀[e.node1], nodes.X₀[e.node2]
+        u₁, u₂ = nodes.u[e.node1], nodes.u[e.node2]
+        u̇₁, u̇₂ = nodes.u̇[e.node1], nodes.u̇[e.node2]
+        ü₁, ü₂ = nodes.ü[e.node1], nodes.ü[e.node2]
+        ẇ₁, ẇ₂ = nodes.ẇ[e.node1], nodes.ẇ[e.node2]
+        ẅ₁, ẅ₂ = nodes.ẅ[e.node1], nodes.ẅ[e.node2]
+        R₁, R₂ = nodes.R[e.node1], nodes.R[e.node2]
+        ΔR₁, ΔR₂ = nodes.ΔR[e.node1], nodes.ΔR[e.node2]
 
 
-                #----------------------------------------
-                # Compute the contibution from the e beam
-                init = (;X₁, X₂, e.l₀, e.Rₑ⁰)
-                simvars = (;conf.mat, conf.geom, comp, init, sdf)
+        #----------------------------------------
+        # Compute the contibution from the e beam
+        init = (;X₁, X₂, e.l₀, e.Rₑ⁰)
+        simvars = (;conf.mat, conf.geom, comp, init, sdf)
 
-                strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ, Tᵈ, Kⁱⁿᵗ, Kᶜ, M, Cᵏ, Cᶜ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars)
-            
-            end 
+        strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ, Kⁱⁿᵗ, Kᶜ, M, Cᵏ, Cᶜ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars)
+    
 
-            @timeit_debug to "Assemble elemental contributions" begin
+        #-----------------------
+        # Assemble contributions
+        
+        
+        energy.strain_energy +=  strain_energy
+        energy.kinetic_energy += kinetic_energy
+        energy.contact_energy +=  contact_energy
 
-                #-----------------------
-                # Assemble contributions
-                
-                idof1 = nodes.idof_6[e.node1]
-                idof2 = nodes.idof_6[e.node2]
-                
-                idof = vcat(idof1, idof2)
-                
-                energy.strain_energy +=  strain_energy
-                energy.kinetic_energy += kinetic_energy
-                energy.contact_energy +=  contact_energy
-            
-                update_spmat_sum(matrices.Kⁱⁿᵗ, e.sparsity_map, Kⁱⁿᵗ)
-                update_spmat_sum(matrices.Cᵏ, e.sparsity_map, Cᵏ)#-(1+comp.α)*Cᶜ)
-                update_spmat_sum(matrices.M, e.sparsity_map, M)
-                # update_spmat_sum(matrices.Kᶜ, e.sparsity_map, Kᶜ)
+        idof1 = nodes.idof_6[e.node1]
+        idof2 = nodes.idof_6[e.node2]
+        
+        dofs = vcat(idof1, idof2)
 
-                
-                update_vec_sum(matrices.Tᵏ, idof, Tᵏ)
-                update_vec_sum(matrices.Tᵈ, idof, Tᵈ)
-                update_vec_sum(matrices.Tⁱⁿᵗ, idof, Tⁱⁿᵗ)
-                # update_vec_sum(matrices.Tᶜ, idof, Tᶜ)
-            end
-                               
+        @inbounds for (i, dof) in enumerate(dofs)
+            matrices.Tᵏ[dof] += Tᵏ[i]
+            matrices.Tⁱⁿᵗ[dof] += Tⁱⁿᵗ[i]
+            matrices.Tᶜ[dof] += Tᶜ[i]
         end
 
+        @inbounds for (i, dof) in enumerate(e.sparsity_map)
+            matrices.K[dof] += Kⁱⁿᵗ[i] - Kᶜ[i]
+            matrices.C[dof] += Cᵏ[i]-(1+comp.α)*Cᶜ[i]
+            matrices.M[dof] += M[i]
+        end
+
+                            
+    end
 
 
-    end 
+
     
 end 

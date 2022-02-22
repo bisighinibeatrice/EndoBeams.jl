@@ -9,7 +9,7 @@ struct Node{T}
     # dof: total, displacement, angular
     idof_6::Vec6{Int}
     idof_disp::Vec3{Int}
-    idof_ang::Vec3{Int}
+    idof_rot::Vec3{Int}
 
     # current configuration of the node (@n+1)
     u::Vec3{T} # displacement

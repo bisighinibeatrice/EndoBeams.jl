@@ -66,7 +66,7 @@ mat = constructor_material_properties(E, ν, ρ, rWireSection, T)
 Re_0 = read_TXT_file_ICs_matrix("examples/input_stent/Re0_positioning.txt")
 
 # beams vector
-allbeams = constructor_beams(nodes, connStent, mat, geom, nbInterpolationPoints, Re_0)
+beams = constructor_beams(nodes, connStent, mat, geom, nbInterpolationPoints, Re_0)
 
 # -------------------------------------------------------------------------------------------
 # Simulation parameters
@@ -76,7 +76,7 @@ allbeams = constructor_beams(nodes, connStent, mat, geom, nbInterpolationPoints,
 α = -0.05
 β = 0.25*(1-α)^2
 γ = 0.5*(1-2*α)
-damping = 1E10
+damping = 1000
 
 # time step and total time
 Δt = 0.01
@@ -84,9 +84,9 @@ damping = 1E10
 tᵉⁿᵈ = 1
 
 # tolerance and maximum number of iterations
-tol_res = 1e-3
-tol_ddk = 1e-3
-max_it = 20
+res_tol = 1e-6
+tol_ddk = 1e-6
+max_it = 10
 
 # Gauss points
 nG = 3
@@ -98,7 +98,7 @@ zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 μ = 0.01
 εᵗ = 0.1 #regularized parameter for friction contact
 
-comp = constructor_simulation_parameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+comp = constructor_simulation_parameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, res_tol, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -120,7 +120,7 @@ ndofs = nnodes*6
 
 # lagrange constrains
 nodespairs = read_TXT_file_conn("examples/input_stent/constr_stent.txt")
-cons = constructor_constraints(nodespairs, 1E6, 1E3)
+cons = constructor_constraints(nodespairs, 1E3, 1)
 
 # Dirichlet boundary conditions: blocked positions
 fixed_dofs = T[]
@@ -153,5 +153,5 @@ conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 # Start simulation
 # -------------------------------------------------------------------------------------------
 
-params = Params(thisDirOutputPath = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true, scale=2, SHOW_TIME_SECTIONS=false)
-solver!(nodes, allbeams, conf, comp, sdf, cons, params, T)
+params = Params(thisDirOutputPath = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true, scale=2, SHOW_TIME_SECTIONS=true)
+solver!(nodes, beams, conf, comp, sdf, cons, params, T)

@@ -19,7 +19,7 @@ struct SimulationParameters{T}
     tᵉⁿᵈ::T
     
     # tolerance and maximum number of iterations
-    tol_res::T
+    res_tol::T
     tol_ΔDk::T
     max_it::T
     
@@ -122,7 +122,7 @@ end
 # Force vectors needed at the next time step by the solver
 struct Solution{T}  
     
-    fext::Vector{T}
+    fᵉˣᵗ::Vector{T}
     Tⁱⁿᵗ::Vector{T}
     Tᵏ::Vector{T}
     Tᶜ::Vector{T}
@@ -136,15 +136,12 @@ struct NodalSolution{T}
     D::Vector{T}
     Ḋ::Vector{T}
     D̈::Vector{T}
-    DΔtⁿ::Vector{T}
     
     r::Vector{T}
-    aux1::Vector{T} #predictor
-    aux2::Vector{T} #predictor
-    Ktan::SparseMatrixCSC{T,Int}
+    Ktan_mat::SparseMatrixCSC{T,Int}
+    Ktan::Vector{Float64}
     ΔD::Vector{T}    
-    asol::Vector{T}
-    f_aux::Vector{T}
+    temp::Vector{T}
 
     r_free::Vector{Float64}
     Ktan_free::SparseMatrixCSC{Float64,Int}
@@ -156,16 +153,17 @@ end
 # Global matrices structure (sparse arrays)
 struct Matrices{T}
     
-    Kⁱⁿᵗ ::SparseMatrixCSC{T,Int}
-    Cᵏ::SparseMatrixCSC{T,Int} 
-    M::SparseMatrixCSC{T,Int}
-    Kᶜ::SparseMatrixCSC{T,Int}
-    Kᶜᵒⁿ::SparseMatrixCSC{T,Int}
-    Cᶜᵒⁿ::SparseMatrixCSC{T,Int}
+    K_mat ::SparseMatrixCSC{T,Int}
+    K::Vector{T}
+    C_mat::SparseMatrixCSC{T,Int}
+    C::Vector{T}
+    M_mat::SparseMatrixCSC{T,Int}
+    M::Vector{T}
+    Kᶜᵒⁿ::Vector{T}
+    Cᶜᵒⁿ::Vector{T}
     
     Tⁱⁿᵗ::Vector{T}
     Tᵏ::Vector{T}
-    Tᵈ::Vector{T}
     Tᶜ::Vector{T}
     Tᶜᵒⁿ::Vector{T}
     
@@ -247,7 +245,7 @@ function constructor_geometry_properties(rWireSection, T=Float64)
 end 
 
 """
-    comp = constructor_simulation_parameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T=Float64)    
+    comp = constructor_simulation_parameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, res_tol, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T=Float64)    
 
 Constructor of the structure containing the simulation parameters:
     - `α`: integration parameter;
@@ -257,7 +255,7 @@ Constructor of the structure containing the simulation parameters:
     - `Δt`: time step;
     - `Δt_plot`: time step for the saving of output files;
     - `tᵉⁿᵈ`: total time of the simulation;
-    - `tol_res`: residual tolerance for the Newton-Raphson algorithm;
+    - `res_tol`: residual tolerance for the Newton-Raphson algorithm;
     - `tol_ddk`: solution vector tolerance for the Newton-Raphson algorithm;
     - `max_it`: maximum number of iterations for the Newton-Raphson algorithm;
     - `nG`: number of Gauss points;
@@ -269,14 +267,14 @@ Constructor of the structure containing the simulation parameters:
 
 Returns a SimulationParameters structure.
 """
-function constructor_simulation_parameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T=Float64)
+function constructor_simulation_parameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, res_tol, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T=Float64)
     
-    return SimulationParameters{T}(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ)
+    return SimulationParameters{T}(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, res_tol, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ)
     
 end 
 
 """
-    fext = constructor_ext_force(flag_crimping, Fext, dof_load, T=Float64)
+    fᵉˣᵗ = constructor_ext_force(flag_crimping, Fext, dof_load, T=Float64)
 
 Constructor of the structure containing the information about the external load, if present:
 - `flag_crimping`: true if the force is defined in cylindral coordinates;
@@ -350,15 +348,15 @@ function constructor_solution(conf, T=Float64)
     ndofs = conf.ndofs
 
     # external force @t=0
-    fext_0  = zeros(ndofs)
-    get_current_external_force!(fext_0, 0, conf)
+    fᵉˣᵗ_0  = zeros(ndofs)
+    get_current_external_force!(fᵉˣᵗ_0, 0, conf)
     
     T⁰ᵢₙₜ = zeros(ndofs)
     T⁰ₖ = zeros(ndofs)
     T⁰ₜ = zeros(ndofs)
     T⁰ₓ = zeros(ndofs)
     
-    return Solution{T}(fext_0, T⁰ᵢₙₜ, T⁰ₖ, T⁰ₜ, T⁰ₓ)
+    return Solution{T}(fᵉˣᵗ_0, T⁰ᵢₙₜ, T⁰ₖ, T⁰ₜ, T⁰ₓ)
     
 end 
 
@@ -373,26 +371,25 @@ end
 # Constructor of the structure containing the preallocated variables used in the solver
 function constructor_nodal_solution(ndofs, nfreedofs, dofs_tan, dofs_free, spmap_free, T=Float64)
     
-    rows_tan, cols_tan, zval_tan = dofs_tan
-    rows_free, cols_free, zval_free = dofs_free
+    rows_tan, cols_tan, nzval_tan = dofs_tan
+    rows_free, cols_free, nzval_free = dofs_free
+
+    Ktan_mat = sparse(rows_tan, cols_tan, nzval_tan)
 
     return NodalSolution{T}(
 
     zeros(ndofs), #D
     zeros(ndofs), #Ḋ 
     zeros(ndofs), #D̈ 
-    zeros(ndofs), #DΔtⁿ  -> needed by predictor
     
-    spzeros(ndofs), #r
-    spzeros(ndofs), #res -> needed by predictor
-    spzeros(ndofs), #res -> needed by predictor
-    sparse(rows_tan, cols_tan, zval_tan), #Ktan
+    zeros(ndofs), #r
+    Ktan_mat, #Ktan_mat
+    nonzeros(Ktan_mat), #Ktan
     zeros(ndofs), #ΔD    
-    zeros(ndofs), #asol
-    zeros(ndofs), #f_aux
+    zeros(ndofs), #temp vector
 
     zeros(nfreedofs), #r_free
-    sparse(rows_free, cols_free, zval_free), #Ktan_free
+    sparse(rows_free, cols_free, nzval_free), #Ktan_free
     zeros(nfreedofs), #ΔD_free
     spmap_free)
 
@@ -401,33 +398,38 @@ end
 # Constructor of the structure containing the global matrices 
 function constructor_global_matrices(nodes, dofs_tan, T=Float64)
     
-    rows, cols, zval = dofs_tan
+    rows, cols, nzval = dofs_tan
+    ncons = length(nzval)
 
     nnodes = length(nodes)
     ndofs_per_node = 6
     ndofs = nnodes*ndofs_per_node
     
-    Kⁱⁿᵗ = sparse(rows, cols, zval)
-    Cᵏ =  sparse(rows, cols, zval)
-    M = sparse(rows, cols, zval)
-    Kᶜ =  sparse(rows, cols, zval)
-    Kᶜᵒⁿ  = sparse(rows, cols, zval)
-    Cᶜᵒⁿ  = sparse(rows, cols, zval)
+    C_mat = sparse(rows, cols, zeros(ncons))
+    C = nonzeros(C_mat)
+    
+    M_mat = sparse(rows, cols, zeros(ncons))
+    M = nonzeros(M_mat)
+
+    K_mat = sparse(rows, cols, zeros(ncons))
+    K =  nonzeros(K_mat)
+
+    Kᶜᵒⁿ  = zeros(ncons)
+    Cᶜᵒⁿ  = zeros(ncons)
 
     Tⁱⁿᵗ = zeros(ndofs)
     Tᵏ =  zeros(ndofs)
-    Tᵈ = zeros(ndofs)
     Tᶜ = zeros(ndofs)
     Tᶜᵒⁿ = zeros(ndofs)
 
-    return Matrices{T}(Kⁱⁿᵗ, Cᵏ, M, Kᶜ, Kᶜᵒⁿ, Cᶜᵒⁿ,Tⁱⁿᵗ, Tᵏ, Tᵈ, Tᶜ, Tᶜᵒⁿ)
+    return Matrices{T}(K_mat, K, C_mat, C, M_mat, M, Kᶜᵒⁿ, Cᶜᵒⁿ,Tⁱⁿᵗ, Tᵏ, Tᶜ, Tᶜᵒⁿ)
     
 end 
 
 # Constructor of the sparse matrices
-function constructor_sparse_matrices!(allbeams, nodes, pncons, conf, T=Float64)
+function constructor_sparse_matrices!(beams, nodes, pncons, conf, T=Float64)
 
-    dofs_tan, dofs_free, spmap_free = compute_sparsity!(allbeams, nodes, pncons, conf, T)
+    dofs_tan, dofs_free, spmap_free = compute_sparsity!(beams, nodes, pncons, conf, T)
     
     ndofs = length(nodes)*6
     nfreedofs = length(setdiff(1:ndofs, conf.bc.fixed_dofs))

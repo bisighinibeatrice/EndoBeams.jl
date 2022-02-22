@@ -4,7 +4,7 @@
 #----------------------------------
 
 # Write nodes info as vtk file
-function write_VTK_nodes(step, nodes, allbeams, dirOutput) 
+function write_VTK_nodes(step, nodes, beams, dirOutput) 
     
     filename=string(dirOutput * "/nodes$step.vtk");
      
@@ -26,7 +26,7 @@ function write_VTK_nodes(step, nodes, allbeams, dirOutput)
         write(fid, string.(n.X₀[3] + n.u[3])) 
     end 
     
-    numberLines = length(allbeams)
+    numberLines = length(beams)
     numberElementsPerLine = 2
     numberElements= numberLines*(numberElementsPerLine + 1)
     write(fid,"\nLINES $numberLines $numberElements\n")
@@ -36,11 +36,11 @@ function write_VTK_nodes(step, nodes, allbeams, dirOutput)
         write(fid, string.(numberElementsPerLine))
         write(fid,"\n")
 
-        node = allbeams.node1[i] -1
+        node = beams.node1[i] -1
         write(fid, string.(node)) 
         write(fid,"\n")
 
-        node = allbeams.node2[i] -1
+        node = beams.node2[i] -1
         write(fid, string.(node)) 
         write(fid,"\n")
 
@@ -63,9 +63,9 @@ function write_VTK_nodes(step, nodes, allbeams, dirOutput)
 end 
 
 # Write interpolated beam info as vtk file
-function write_VTK_beams(step, nodes, allbeams, positions, connectivity, dirOutput) 
+function write_VTK_beams(step, nodes, beams, positions, connectivity, dirOutput) 
 
-    get_centerline!(positions, connectivity, nodes, allbeams)
+    get_centerline!(positions, connectivity, nodes, beams)
     
     filename=string(dirOutput * "/beams$step.vtk");
      
@@ -205,7 +205,7 @@ function write_VTK_GP(step, sol_GP, dirOutput)
     
 end 
 
-# Write nodes as vtk file (no nodes, no allbeams)
+# Write nodes as vtk file (no nodes, no beams)
 function write_VTK_configuration(filename, X, C)
     
     fid = open(filename, "a")

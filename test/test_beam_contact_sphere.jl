@@ -69,7 +69,7 @@ function test_sphere()
     mat = Material{T}(E, G, Aᵨ, Jᵨ)
     
     # beams vector
-    allbeams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
+    beams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
     
     #-----------------------------------------------------------------------------------
     # Simulation parameters
@@ -87,7 +87,7 @@ function test_sphere()
     tᵉⁿᵈ =  2.5
     
     # tolerance and maximum number of iterations
-    tol_res = 1e-5
+    res_tol = 1e-5
     tol_ddk = 1e-5
     max_it = 10
     
@@ -101,7 +101,7 @@ function test_sphere()
     μ = 0.3
     εᵗ = 0.1
     
-    comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+    comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, res_tol, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
     
     # -------------------------------------------------------------------------------------------
     # External forces
@@ -119,7 +119,7 @@ function test_sphere()
     # -------------------------------------------------------------------------------------------
     
     # multifreedom constrains
-    cons = T[]
+    cons = nothing
     
     # number of dof (6 per node)
     ndofs = nnodes*6
@@ -167,7 +167,7 @@ function test_sphere()
     # -------------------------------------------------------------------------------------------
     
     params = ParamsTest()
-    solver!(nodes, allbeams, conf, comp, sdf, cons, params, T)         
+    solver!(nodes, beams, conf, comp, sdf, cons, params, T)         
     
     # -------------------------------------------------------------------------------------------
     # Test 

@@ -58,12 +58,12 @@ constructor_beam(ind, indGP, node1::Node{T}, node2::Node{T}, mat, geom, numberIn
 
 
 # Obtain beam centerline position by interpolation
-function get_centerline!(positions, connectivity, nodes, allbeams)
+function get_centerline!(positions, connectivity, nodes, beams)
     
     Xcount = 0
     index = 0
 
-    for e in LazyRows(allbeams)
+    for e in LazyRows(beams)
 
         i = e.ind
         
@@ -112,10 +112,10 @@ function get_centerline!(positions, connectivity, nodes, allbeams)
         N3(xi) = xi.*(1-xi/l₀).^2
         N4(xi) = -(1-xi/l₀).*(xi.^2/l₀)
         
-        dxi = l₀/allbeams.numberInterpolationPoints[i]
+        dxi = l₀/beams.numberInterpolationPoints[i]
         xi_list = 0:dxi:l₀
-        if length(xi_list) != allbeams.numberInterpolationPoints[i]+1
-            xi_list = range(0,stop=l₀,length=allbeams.numberInterpolationPoints[i]+1)
+        if length(xi_list) != beams.numberInterpolationPoints[i]+1
+            xi_list = range(0,stop=l₀,length=beams.numberInterpolationPoints[i]+1)
         end 
 
         for x_i in xi_list

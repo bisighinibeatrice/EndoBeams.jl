@@ -86,7 +86,7 @@ function test2_ring_plane()
     mat = Material{T}(E, G, Aᵨ, Jᵨ)
     
     # beams vector
-    allbeams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
+    beams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
     
     #-----------------------------------------------------------------------------------
     # Simulation parameters
@@ -104,7 +104,7 @@ function test2_ring_plane()
     tᵉⁿᵈ =  2
     
     # tolerance and maximum number of iterations
-    tol_res = 1e-5
+    res_tol = 1e-5
     tol_ddk = 1e-5
     max_it = 10
     
@@ -118,7 +118,7 @@ function test2_ring_plane()
     μ = 0
     εᵗ = 0.1
     
-    comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+    comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, res_tol, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
     
     # -------------------------------------------------------------------------------------------
     # External forces
@@ -175,7 +175,7 @@ function test2_ring_plane()
     # -------------------------------------------------------------------------------------------
     
     params = ParamsTest()
-    solver!(nodes, allbeams, conf, comp, sdf, cons, params, T)       
+    solver!(nodes, beams, conf, comp, sdf, cons, params, T)       
     
     # -------------------------------------------------------------------------------------------
     # Test
