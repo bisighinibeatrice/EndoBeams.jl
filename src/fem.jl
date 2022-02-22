@@ -1224,106 +1224,6 @@ end
 
 
 
-Base.@propagate_inbounds function assemble_mt!(nodes, beams, matrices, energy, conf, sdf, comp, sol_GP) 
-    
-        
-    # initialise the matrices associate to the whole structure
-    for i in eachindex(matrices.K_mtbufs)
-        fill!(matrices.K_mtbufs[i], 0)
-        fill!(matrices.C_mtbufs[i], 0)
-        fill!(matrices.M_mtbufs[i], 0)
-    end
-    for i in eachindex(matrices.Tⁱⁿᵗ_mtbufs)
-        fill!(matrices.Tⁱⁿᵗ_mtbufs[i], 0)
-        fill!(matrices.Tᵏ_mtbufs[i], 0)
-        fill!(matrices.Tᶜ_mtbufs[i], 0)
-    end
-    
-    # initialise the energy values associate to the whole structure
-    energy.strain_energy = 0
-    energy.kinetic_energy = 0
-    energy.contact_energy = 0
-        
-    
-
-    @Threads.threads for e in LazyRows(beams)
-        
-        tid = Threads.threadid()
-            
-        # information from node 1 and 2
-        X₁, X₂ = nodes.X₀[e.node1], nodes.X₀[e.node2]
-        u₁, u₂ = nodes.u[e.node1], nodes.u[e.node2]
-        u̇₁, u̇₂ = nodes.u̇[e.node1], nodes.u̇[e.node2]
-        ü₁, ü₂ = nodes.ü[e.node1], nodes.ü[e.node2]
-        ẇ₁, ẇ₂ = nodes.ẇ[e.node1], nodes.ẇ[e.node2]
-        ẅ₁, ẅ₂ = nodes.ẅ[e.node1], nodes.ẅ[e.node2]
-        R₁, R₂ = nodes.R[e.node1], nodes.R[e.node2]
-        ΔR₁, ΔR₂ = nodes.ΔR[e.node1], nodes.ΔR[e.node2]
-
-
-        #----------------------------------------
-        # Compute the contibution from the e beam
-        init = (;X₁, X₂, e.l₀, e.Rₑ⁰)
-        simvars = (;conf.mat, conf.geom, comp, init, sdf)
-
-        strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ, Kⁱⁿᵗ, Kᶜ, M, Cᵏ, Cᶜ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars)
-    
-
-        #-----------------------
-        # Assemble contributions
-        
-        
-        energy.strain_energy +=  strain_energy
-        energy.kinetic_energy += kinetic_energy
-        energy.contact_energy +=  contact_energy
-
-        idof1 = nodes.idof_6[e.node1]
-        idof2 = nodes.idof_6[e.node2]
-        
-        dofs = vcat(idof1, idof2)
-
-        @inbounds for (i, dof) in enumerate(dofs)
-            matrices.Tᵏ_mtbufs[tid][dof] += Tᵏ[i]
-            matrices.Tⁱⁿᵗ_mtbufs[tid][dof] += Tⁱⁿᵗ[i]
-            matrices.Tᶜ_mtbufs[tid][dof] += Tᶜ[i]
-        end
-
-        @inbounds for (i, dof) in enumerate(e.sparsity_map)
-            matrices.K_mtbufs[tid][dof] += Kⁱⁿᵗ[i] - Kᶜ[i]
-            matrices.C_mtbufs[tid][dof] += Cᵏ[i]-(1+comp.α)*Cᶜ[i]
-            matrices.M_mtbufs[tid][dof] += M[i]
-        end
-
-                            
-    end
-
-
-    @Threads.threads for j in eachindex(matrices.K)
-        matrices.K[j] = 0
-        matrices.C[j] = 0
-        matrices.M[j] = 0
-        @inbounds for i in eachindex(matrices.K_mtbufs)
-            matrices.K[j] += matrices.K_mtbufs[i][j]
-            matrices.C[j] += matrices.C_mtbufs[i][j]
-            matrices.M[j] += matrices.M_mtbufs[i][j]
-        end
-    end
-
-    @Threads.threads for j in eachindex(matrices.Tᵏ)
-        matrices.Tᵏ[j] = 0
-        matrices.Tⁱⁿᵗ[j] = 0
-        matrices.Tᶜ[j] = 0
-        @inbounds for i in eachindex(matrices.K_mtbufs)
-            matrices.Tᵏ[j] += matrices.Tᵏ_mtbufs[i][j]
-            matrices.Tⁱⁿᵗ[j] += matrices.Tⁱⁿᵗ_mtbufs[i][j]
-            matrices.Tᶜ[j] += matrices.Tᶜ_mtbufs[i][j]
-        end
-    end
-
-
-    
-end 
-
 
 
 
@@ -1345,9 +1245,9 @@ Base.@propagate_inbounds function assemble!(nodes, beams, matrices, energy, conf
     energy.kinetic_energy = 0
     energy.contact_energy = 0
         
-    
+    lk = ReentrantLock()
 
-    for e in LazyRows(beams)
+    Threads.@threads for e in LazyRows(beams)
         
             
         # information from node 1 and 2
@@ -1372,26 +1272,31 @@ Base.@propagate_inbounds function assemble!(nodes, beams, matrices, energy, conf
         #-----------------------
         # Assemble contributions
         
-        
-        energy.strain_energy +=  strain_energy
-        energy.kinetic_energy += kinetic_energy
-        energy.contact_energy +=  contact_energy
 
         idof1 = nodes.idof_6[e.node1]
         idof2 = nodes.idof_6[e.node2]
         
         dofs = vcat(idof1, idof2)
 
-        @inbounds for (i, dof) in enumerate(dofs)
-            matrices.Tᵏ[dof] += Tᵏ[i]
-            matrices.Tⁱⁿᵗ[dof] += Tⁱⁿᵗ[i]
-            matrices.Tᶜ[dof] += Tᶜ[i]
-        end
+        lock(lk) do
+        
+            energy.strain_energy +=  strain_energy
+            energy.kinetic_energy += kinetic_energy
+            energy.contact_energy +=  contact_energy
 
-        @inbounds for (i, dof) in enumerate(e.sparsity_map)
-            matrices.K[dof] += Kⁱⁿᵗ[i] - Kᶜ[i]
-            matrices.C[dof] += Cᵏ[i]-(1+comp.α)*Cᶜ[i]
-            matrices.M[dof] += M[i]
+
+            @inbounds for (i, dof) in enumerate(dofs)
+                matrices.Tᵏ[dof] += Tᵏ[i]
+                matrices.Tⁱⁿᵗ[dof] += Tⁱⁿᵗ[i]
+                matrices.Tᶜ[dof] += Tᶜ[i]
+            end
+
+            @inbounds for (i, dof) in enumerate(e.sparsity_map)
+                matrices.K[dof] += Kⁱⁿᵗ[i] - Kᶜ[i]
+                matrices.C[dof] += Cᵏ[i]-(1+comp.α)*Cᶜ[i]
+                matrices.M[dof] += M[i]
+            end
+
         end
 
                             
