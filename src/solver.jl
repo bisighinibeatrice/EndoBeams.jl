@@ -138,7 +138,7 @@ function solver!(nodes, beams, conf, comp, sdf, constraints, params, T=Float64)
                 
             end 
 
-            if ENERGY_STOP && plot_K_energy[end] < 1e-10
+            if ENERGY_STOP && plot_K_energy[end] < 1e-6
                 printstyled("Energy threshold reached! Ending simulation.\n"; color = :green) 
                 break
             end

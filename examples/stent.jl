@@ -84,8 +84,8 @@ damping = 1000
 tᵉⁿᵈ = 1
 
 # tolerance and maximum number of iterations
-res_tol = 1e-6
-tol_ddk = 1e-6
+res_tol = 1e-5
+tol_ddk = 1e-5
 max_it = 10
 
 # Gauss points
@@ -153,5 +153,5 @@ conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 # Start simulation
 # -------------------------------------------------------------------------------------------
 
-params = Params(thisDirOutputPath = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true, scale=2, SHOW_TIME_SECTIONS=true)
+params = Params(thisDirOutputPath = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true, scale=2, SHOW_TIME_SECTIONS=false)
 solver!(nodes, beams, conf, comp, sdf, cons, params, T)
