@@ -204,7 +204,7 @@ function solve_step_dynamics!(nodes, beams, constraints, tⁿ⁺¹, Δt, solⁿ,
         
     end
    
-    return k < max_it
+    return k ≤ max_it
     
 end 
 
@@ -332,7 +332,7 @@ function corrector_loop!(nodes, beams, pncons, matrices, energy, solⁿ⁺¹, so
 
     @timeit_debug "Newton solver" begin
         
-        while ((res_norm>res_tol) || (ΔD_norm>ΔD_tol)) && (k<max_it)         
+        while ( res_norm>res_tol || ΔD_norm>ΔD_tol ) && k≤max_it        
             
             @timeit_debug "Assemble element contributions" assemble!(nodes, beams, matrices, energy, conf, sdf, comp, sol_GP)  
             
@@ -387,6 +387,6 @@ function corrector_loop!(nodes, beams, pncons, matrices, energy, solⁿ⁺¹, so
     # OUTPUT
     # -------------------------------------------------------------------------------------------
     
-    return k 
+    return k
     
 end 

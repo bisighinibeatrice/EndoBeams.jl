@@ -155,20 +155,14 @@ struct Matrices{T}
     
     K_mat ::SparseMatrixCSC{T,Int}
     K::Vector{T}
-    K_mtbufs::Vector{Vector{T}}
     C_mat::SparseMatrixCSC{T,Int}
     C::Vector{T}
-    C_mtbufs::Vector{Vector{T}}
     M_mat::SparseMatrixCSC{T,Int}
     M::Vector{T}
-    M_mtbufs::Vector{Vector{T}}
     
     Tⁱⁿᵗ::Vector{T}
-    Tⁱⁿᵗ_mtbufs::Vector{Vector{T}}
     Tᵏ::Vector{T}
-    Tᵏ_mtbufs::Vector{Vector{T}}
     Tᶜ::Vector{T}
-    Tᶜ_mtbufs::Vector{Vector{T}}
     Tᶜᵒⁿ::Vector{T}
     
 end 
@@ -411,25 +405,19 @@ function constructor_global_matrices(nodes, dofs_tan, T=Float64)
     
     C_mat = sparse(rows, cols, zeros(ncons))
     C = nonzeros(C_mat)
-    C_mtbufs = [copy(C) for _ in 1:Threads.nthreads()]
     
     M_mat = sparse(rows, cols, zeros(ncons))
     M = nonzeros(M_mat)
-    M_mtbufs = [copy(M) for _ in 1:Threads.nthreads()]
 
     K_mat = sparse(rows, cols, zeros(ncons))
     K =  nonzeros(K_mat)
-    K_mtbufs = [copy(K) for _ in 1:Threads.nthreads()]
 
     Tⁱⁿᵗ = zeros(ndofs)
-    Tⁱⁿᵗ_mtbufs = [copy(Tⁱⁿᵗ) for _ in 1:Threads.nthreads()]
     Tᵏ =  zeros(ndofs)
-    Tᵏ_mtbufs = [copy(Tᵏ) for _ in 1:Threads.nthreads()]
     Tᶜ = zeros(ndofs)
-    Tᶜ_mtbufs = [copy(Tᶜ) for _ in 1:Threads.nthreads()]
     Tᶜᵒⁿ = zeros(ndofs)
 
-    return Matrices{T}(K_mat, K, K_mtbufs, C_mat, C, C_mtbufs, M_mat, M, M_mtbufs, Tⁱⁿᵗ, Tⁱⁿᵗ_mtbufs, Tᵏ, Tᵏ_mtbufs, Tᶜ, Tᶜ_mtbufs, Tᶜᵒⁿ)
+    return Matrices{T}(K_mat, K, C_mat, C, M_mat, M, Tⁱⁿᵗ, Tᵏ, Tᶜ, Tᶜᵒⁿ)
     
 end 
 
