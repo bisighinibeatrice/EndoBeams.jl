@@ -18,21 +18,21 @@ conn = read_TXT_file_conn("examples/input_net/conn_net.txt")
 # -------------------------------------------------------------------------------------------
 
 # initial conditions
-u⁰ = zeros(nnodes*3)
-u̇⁰ = zeros(nnodes*3)
+u⁰ = zeros(nnodes, 3)
+u̇⁰ = zeros(nnodes, 3)
 for i in 2:3:nnodes*3
     u̇⁰[i] = -0.001
 end
-ü⁰ = zeros(nnodes*3)
-w⁰ = zeros(nnodes*3)
-ẇ⁰ = zeros(nnodes*3)
-ẅ⁰ = zeros(nnodes*3)
+ü⁰ = zeros(nnodes, 3)
+w⁰ = zeros(nnodes, 3)
+ẇ⁰ = zeros(nnodes, 3)
+ẅ⁰ = zeros(nnodes, 3)
 
 # plane for cylindrical coordinates
 plane = fill("xy", length(X₀))
 
 # nodes StructArray
-nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, plane, nothing, T)
+nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -78,8 +78,8 @@ damping = 1e-3
 tᵉⁿᵈ = 100
 
 # tolerance and maximum number of iterations
-res_tol = 1e-5
-tol_ddk = 1e-5
+tol_res = 1e-5
+tol_ΔD = 1e-5
 max_it = 10
 
 # Gauss points
@@ -92,7 +92,7 @@ zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 μ = 0.01
 εᵗ = 0.5
 
-comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, res_tol, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -100,16 +100,16 @@ comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, t�
 
 # external force and applied dof
 flag_crimping = false
-Fext(t) = 0*t
+F(t) = 0*t
 dofs_load = Int[]
 
-ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load)
+ext_forces = constructor_ext_force(flag_crimping, F, dofs_load)
 
 # -------------------------------------------------------------------------------------------
 # Boundary conditions
 # -------------------------------------------------------------------------------------------
 
-# multifreedom constrains
+# multifreedom constraints
 cons = nothing
 
 # Dirichlet boundary conditions: fixed positions
@@ -120,12 +120,12 @@ free_dofs = setdiff(1:ndofs, fixed_dofs)
 # Dirichlet boundary conditions: moving positions
 flag_cylindrical = false
 Fdisp(t) = 0
-dofs_disp = Int[]
+disp_dofs = Int[]
 flag_disp_vector = false
-udisp = T[]
+disp_vals = T[]
 
 # boundary conditions strucutre
-bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
+bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, disp_vals, disp_dofs, T)
 
 # -------------------------------------------------------------------------------------------
 # SDF

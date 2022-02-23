@@ -28,7 +28,7 @@ function test_sphere()
     plane = fill("xy", length(X₀))
     
     # nodes StructArray
-    nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, plane, nothing, T)
+    nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
     
     # -------------------------------------------------------------------------------------------
     # Building the beams
@@ -87,8 +87,8 @@ function test_sphere()
     tᵉⁿᵈ =  2.5
     
     # tolerance and maximum number of iterations
-    res_tol = 1e-5
-    tol_ddk = 1e-5
+    tol_res = 1e-5
+    tol_ΔD = 1e-5
     max_it = 10
     
     # Gauss points
@@ -101,7 +101,7 @@ function test_sphere()
     μ = 0.3
     εᵗ = 0.1
     
-    comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, res_tol, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+    comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
     
     # -------------------------------------------------------------------------------------------
     # External forces
@@ -109,16 +109,16 @@ function test_sphere()
     
     # external force and applied dof
     flag_crimping = false
-    Fext(t) = 0
+    F(t) = 0
     dofs_load = T[]
     
-    ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load, T)
+    ext_forces = constructor_ext_force(flag_crimping, F, dofs_load, T)
     
     # -------------------------------------------------------------------------------------------
     # Boundary conditions
     # -------------------------------------------------------------------------------------------
     
-    # multifreedom constrains
+    # multifreedom constraints
     cons = nothing
     
     # number of dof (6 per node)
@@ -130,16 +130,16 @@ function test_sphere()
     
     # Dirichlet boundary conditions: moving positions
     flag_cylindrical = false
-    dofs_disp = [1]
+    disp_dofs = [1]
     dispA = 10/100
     tA = 2.5
     k = dispA/tA
     Fdisp(t) = (k*t).*(t.<=tA) .+ (-k*t .+ 2*dispA).*((t.>tA) .& (t.<=2*tA)) .+ (k*(t.-2*tA)).*((t.>2*tA) .& (t.<=3*tA)) .+ (-k*t .+ 4*dispA).*((t.>3*tA) .& (t.<=4*tA))
     flag_disp_vector = false
-    udisp = T[]
+    disp_vals = T[]
     
     # boundary conditions strucutre 
-    bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
+    bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, disp_vals, disp_dofs, T)
     
     # -------------------------------------------------------------------------------------------
     # SDF

@@ -32,20 +32,20 @@ function save_VTK(i, nodes, beams, sol_GP, int_pos, int_conn, dirOutput, SAVE_IN
 end 
 
 # Cleans folders, pre-allocate and initialise the variables used during the simulation and save the VTKs of the initial configuration
-function solver_initialisation(conf, nodes, beams, int_pos, int_conn, comp, cons, thisDirOutputPath, SAVE_INTERPOLATION_VTK = false, SAVE_GP_VTK = false, SAVE_NODES_VTK = false, T=Float64)
+function solver_initialisation(conf, nodes, beams, constraints, thisDirOutputPath, SAVE_INTERPOLATION_VTK = false, SAVE_GP_VTK = false, SAVE_NODES_VTK = false, T=Float64)
 
     clean_folders(thisDirOutputPath)
 
     solⁿ = constructor_solution(conf, T)
-    solⁿ⁺¹ = constructor_solution(conf, T)
-    sol_GP = constructor_solution_GP(length(beams), T)
+    solⁿ⁺¹ = deepcopy(solⁿ)
+    # sol_GP = constructor_solution_GP(length(beams), T)
+    sol_GP = 0
     energy = constructor_energy(T) 
-    uimp = zeros(T, length(conf.bc.fixed_dofs))
-    matrices, nodes_sol = constructor_sparse_matrices!(beams, nodes, cons, conf, T)
+    matrices, nodes_sol = constructor_sparse_matrices!(beams, nodes, constraints, conf)
 
-    save_VTK(0, nodes, beams, sol_GP, int_pos, int_conn, thisDirOutputPath, SAVE_INTERPOLATION_VTK,  SAVE_GP_VTK, SAVE_NODES_VTK)
+    #save_VTK(0, nodes, beams, thisDirOutputPath, SAVE_INTERPOLATION_VTK,  SAVE_GP_VTK, SAVE_NODES_VTK)
 
-    return solⁿ, solⁿ⁺¹, sol_GP, nodes_sol, matrices, energy, uimp
+    return solⁿ, solⁿ⁺¹, nodes_sol, matrices, energy
 
 end 
 
@@ -115,8 +115,8 @@ end
 # Replaces fᵉˣᵗ with the external force @t
 function get_current_external_force!(fᵉˣᵗ, t, conf)
 
-    for i in conf.ext_forces.dof_load
-        fᵉˣᵗ[i] = conf.ext_forces.Fext(t)     
+    for i in conf.ext_forces.loaded_dofs
+        fᵉˣᵗ[i] = conf.ext_forces.F(t)     
     end
 
 end 
@@ -129,7 +129,7 @@ function get_current_external_force_crimping!(fᵉˣᵗ, t, conf, nodes)
     for n in nodes
 
         dof_dispⁿ = n.idof_disp
-        fᵉˣᵗⁿ =  [conf.ext_forces.Fext(t), 0, 0] 
+        fᵉˣᵗⁿ =  [conf.ext_forces.F(t), 0, 0] 
         fᵉˣᵗⁿ = n.R_global_to_local' * fᵉˣᵗⁿ
         fᵉˣᵗ[dof_dispⁿ] .= fᵉˣᵗⁿ   
 
@@ -235,14 +235,14 @@ function update_current_boundary_conditions_vector!(uimp::AbstractVector{T}, t, 
     
 end 
 
-# Imposes single freedom constrains at the current step
-function apply_BCs!(nodes_sol, uimp, fixed_dofs)
+# Imposes single freedom constraints at the current step
+function apply_BCs!(nodes_sol, bcs)
     
-    @inbounds for i in eachindex(fixed_dofs)
+    @inbounds for i in eachindex(bcs.fixed_dofs)
         
         idof = fixed_dofs[i]   
         D_prev = nodes_sol.D[idof]   
-        D_imposed = uimp[i]        
+        D_imposed = bcs.disp_vals[idof]
         ΔD_imposed = D_imposed - D_prev            
         nodes_sol.ΔD[idof] = ΔD_imposed
 
@@ -325,12 +325,12 @@ function update_local_predictor!(nodes, nodes_sol, Δt, β, γ)
     
     @inbounds for i in eachindex(nodes)
 
-        dofs_disp = nodes.idof_disp[i]
+        disp_dofs = nodes.idof_disp[i]
         dofs_rot = nodes.idof_rot[i]
 
-        nodes.u[i] = nodes_sol.D[dofs_disp]
-        nodes.u̇[i] = nodes_sol.Ḋ[dofs_disp]
-        nodes.ü[i] = nodes_sol.D̈[dofs_disp]
+        nodes.u[i] = nodes_sol.D[disp_dofs]
+        nodes.u̇[i] = nodes_sol.Ḋ[disp_dofs]
+        nodes.ü[i] = nodes_sol.D̈[disp_dofs]
 
         θ̃ = nodes_sol.D[dofs_rot]
         nodes.w[i] = θ̃

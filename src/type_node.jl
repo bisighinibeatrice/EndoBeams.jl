@@ -31,8 +31,6 @@ struct Node{T}
     Rⁿ::Mat33{T}
     ΔRⁿ::Mat33{T}
 
-    R_global_to_local::Mat33{T}  # rotation matrix from global  (carthesian) to local (cylindrical) coordinates
-
 end
 
 #----------------------------------
@@ -40,7 +38,7 @@ end
 #----------------------------------
 
 """
-nodes = constructor_nodes(X, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, plane, Rₑ⁰=nothing, T=Float64) 
+nodes = constructor_nodes(X, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, Rₑ⁰=nothing, T=Float64) 
 
 Constructor of the nodes StructArray:
 - `X`: nodes StructArray (created with constructor_nodes);
@@ -50,36 +48,34 @@ Constructor of the nodes StructArray:
 - `w⁰`: initial rotations;
 - `ẇ⁰`: initial rotation velocities;
 - `ẅ⁰`: initial rotation acceleration;
-- `plane`: plane used for the conversin in cylindrical coordinates in case of BCs expressed in cylindrical coordinates.
 - `Rₑ⁰`: (not mandatory) initial rotation of the nodes.
 
 Returns a StructArray{Node}, structure containing the information of the nodes. 
 """
-function constructor_nodes(X, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, plane, Rₑ⁰=nothing, T=Float64) 
+function constructor_nodes(X, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, Rₑ⁰=nothing, T=Float64) 
 
     nodes = StructArray(Node{T}(
             i, 
-            X[i], 
-            Vec6{Int}(6*(i-1).+(1,2,3,4,5,6)),
+            X[i, :], 
+            Vec6(6*(i-1).+(1,2,3,4,5,6)),
             Vec3(6*(i-1).+(1,2,3)), 
             Vec3(6*(i-1).+(4,5,6)), 
-            Vec3(u⁰[3*(i-1)+1], u⁰[3*(i-1)+2], u⁰[3*(i-1)+3]), 
-            Vec3(u̇⁰[3*(i-1)+1], u̇⁰[3*(i-1)+2], u̇⁰[3*(i-1)+3]), 
-            Vec3(ü⁰[3*(i-1)+1], ü⁰[3*(i-1)+2], ü⁰[3*(i-1)+3]), 
-            Vec3(w⁰[3*(i-1)+1], w⁰[3*(i-1)+2], w⁰[3*(i-1)+3]), 
-            Vec3(ẇ⁰[3*(i-1)+1], ẇ⁰[3*(i-1)+2], ẇ⁰[3*(i-1)+3]), 
-            Vec3(ẅ⁰[3*(i-1)+1], ẅ⁰[3*(i-1)+2], ẅ⁰[3*(i-1)+3]), 
+            Vec3(u⁰[i,:]), 
+            Vec3(u̇⁰[i,:]), 
+            Vec3(ü⁰[i,:]), 
+            Vec3(w⁰[i,:]), 
+            Vec3(ẇ⁰[i,:]), 
+            Vec3(ẅ⁰[i,:]), 
             Rₑ⁰ isa AbstractVector ? Rₑ⁰[i] : ID3, 
             ID3,
-            Vec3(u⁰[3*(i-1)+1], u⁰[3*(i-1)+2], u⁰[3*(i-1)+3]), 
-            Vec3(u̇⁰[3*(i-1)+1], u̇⁰[3*(i-1)+2], u̇⁰[3*(i-1)+3]), 
-            Vec3(ü⁰[3*(i-1)+1], ü⁰[3*(i-1)+2], ü⁰[3*(i-1)+3]), 
-            Vec3(w⁰[3*(i-1)+1], w⁰[3*(i-1)+2], w⁰[3*(i-1)+3]), 
-            Vec3(ẇ⁰[3*(i-1)+1], ẇ⁰[3*(i-1)+2], ẇ⁰[3*(i-1)+3]), 
-            Vec3(ẅ⁰[3*(i-1)+1], ẅ⁰[3*(i-1)+2], ẅ⁰[3*(i-1)+3]), 
+            Vec3(u⁰[i,:]), 
+            Vec3(u̇⁰[i,:]), 
+            Vec3(ü⁰[i,:]), 
+            Vec3(w⁰[i,:]), 
+            Vec3(ẇ⁰[i,:]), 
+            Vec3(ẅ⁰[i,:]), 
             Rₑ⁰ isa AbstractVector ? Rₑ⁰[i] : ID3,
-            ID3,
-            compute_local_to_global_matrix(i, X, plane[i])) for i in 1:size(X,1))
+            ID3) for i in 1:size(X, 1))
 
     return nodes
 

@@ -79,13 +79,10 @@ struct SDF_Discrete{T, F}
     
     r::T
     sitp::F
-    dom::Vector{T}
+    dom::NTuple{6, Float64}
     dx::T
     dy::T
     dz::T
-    gₙ::T
-    ∂gₙ∂x::Vector{T}
-    ∂²gₙ∂x²::Matrix{T}
     
 end 
 
@@ -93,16 +90,16 @@ end
 # CONSTRUCTOR DISCRETE SDF
 #----------------------------------
 """
-    sdf = constructor_discrete_sdf(filename, rWireSection, inside,  T=Float64)
+    sdf = constructor_discrete_sdf(filename, radius, inside,  T=Float64)
 
 Constructor of the discrete SDF from a vtk file.
 - `filename`: sdf file (all files with extensions .vtk are accepted);
-- `rWireSection`: cylinder radius;
+- `radius`: cylinder radius;
 - `inside`: true if the sdf is negative inside.
 
 Returns a structure containing the information of the created sdf. 
 """
-function constructor_discrete_sdf(filename, rWireSection, inside,  T=Float64)
+function constructor_discrete_sdf(filename, radius, inside, T=Float64)
     
     # Read sdf from file
     npx, npy, npz, dx, dy, dz, dom, sdf = read_VTK_sdf(filename)
@@ -131,12 +128,7 @@ function constructor_discrete_sdf(filename, rWireSection, inside,  T=Float64)
     # Scale the interpolation on the defined coordinate grid
     sitp = scale(itp, x, y, z)  
 
-    # initialise sdf variables
-    gₙ = 0
-    ∂gₙ∂x = zeros(3)
-    ∂²gₙ∂x² = zeros(3,3)
-
-    return SDF_Discrete{T, typeof(sitp)}(rWireSection, sitp, dom, dx, dy, dz, gₙ, ∂gₙ∂x, ∂²gₙ∂x²)  
+    return SDF_Discrete{T, typeof(sitp)}(radius, sitp, dom, dx, dy, dz)  
 
 end 
 

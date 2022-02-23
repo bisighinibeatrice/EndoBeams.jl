@@ -1229,7 +1229,7 @@ end
 
 
 
-Base.@propagate_inbounds function assemble!(nodes, beams, matrices, energy, conf, sdf, comp, sol_GP) 
+function assemble!(nodes, beams, matrices, energy, conf, sdf, comp) 
     
         
     # initialise the matrices associate to the whole structure
@@ -1247,7 +1247,7 @@ Base.@propagate_inbounds function assemble!(nodes, beams, matrices, energy, conf
         
     lk = ReentrantLock()
 
-    Threads.@threads for e in LazyRows(beams)
+    for e in LazyRows(beams)
         
             
         # information from node 1 and 2
@@ -1278,26 +1278,27 @@ Base.@propagate_inbounds function assemble!(nodes, beams, matrices, energy, conf
         
         dofs = vcat(idof1, idof2)
 
-        lock(lk) do
+
+        # lock(lk) do
         
             energy.strain_energy +=  strain_energy
             energy.kinetic_energy += kinetic_energy
             energy.contact_energy +=  contact_energy
 
 
-            @inbounds for (i, dof) in enumerate(dofs)
+            for (i, dof) in enumerate(dofs)
                 matrices.Tᵏ[dof] += Tᵏ[i]
                 matrices.Tⁱⁿᵗ[dof] += Tⁱⁿᵗ[i]
                 matrices.Tᶜ[dof] += Tᶜ[i]
             end
 
-            @inbounds for (i, dof) in enumerate(e.sparsity_map)
+            for (i, dof) in enumerate(e.sparsity_map)
                 matrices.K[dof] += Kⁱⁿᵗ[i] - Kᶜ[i]
                 matrices.C[dof] += Cᵏ[i]-(1+comp.α)*Cᶜ[i]
                 matrices.M[dof] += M[i]
             end
 
-        end
+        # end
 
                             
     end

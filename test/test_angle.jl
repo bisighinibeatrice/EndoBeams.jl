@@ -19,18 +19,18 @@ function test_angle()
     nnodes = size(X₀,1)
 
     # initial conditions
-    u⁰ = zeros(nnodes*3)
-    u̇⁰ = zeros(nnodes*3)
-    ü⁰ = zeros(nnodes*3)
-    w⁰ = zeros(nnodes*3)
-    ẇ⁰ = zeros(nnodes*3)
-    ẅ⁰ = zeros(nnodes*3)
+    u⁰ = zeros(nnodes, 3)
+    u̇⁰ = zeros(nnodes, 3)
+    ü⁰ = zeros(nnodes, 3)
+    w⁰ = zeros(nnodes, 3)
+    ẇ⁰ = zeros(nnodes, 3)
+    ẅ⁰ = zeros(nnodes, 3)
 
     # plane for cylindrical coordinates
     plane = fill("xy", length(X₀))
 
     # nodes StructArray
-    nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, plane, nothing, T)
+    nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
 
     # -------------------------------------------------------------------------------------------
     # Building the beams
@@ -85,8 +85,8 @@ function test_angle()
     tᵉⁿᵈ = 150
 
     # tolerance and maximum number of iterations
-    res_tol = 1e-5
-    tol_ddk = 1e-5
+    tol_res = 1e-5
+    tol_ΔD = 1e-5
     max_it = 10
 
     # Gauss points
@@ -99,7 +99,7 @@ function test_angle()
     μ = 0
     εᵗ = 0.1
 
-    comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, res_tol, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+    comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
 
     # -------------------------------------------------------------------------------------------
     # External forces
@@ -107,17 +107,17 @@ function test_angle()
 
     # external force and applied dof
     flag_crimping = false
-    Fext(t) = 1*(t.<=1).*(50*t) .+1*((t.>1) .& (t.<=2)).*(-50*t.+100).+(t.>2).*0
+    F(t) = 1*(t.<=1).*(50*t) .+1*((t.>1) .& (t.<=2)).*(-50*t.+100).+(t.>2).*0
     dofs_load = Int[]
     push!(dofs_load, 6*size((0:dx:L),1)-3)
 
-    ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load, T)
+    ext_forces = constructor_ext_force(flag_crimping, F, dofs_load, T)
 
     # -------------------------------------------------------------------------------------------
     # Boundary conditions
     # -------------------------------------------------------------------------------------------
 
-    # multifreedom constrains
+    # multifreedom constraints
     cons = nothing
 
     # Dirichlet boundary conditions: fixed positions
@@ -128,12 +128,12 @@ function test_angle()
     # Dirichlet boundary conditions: moving positions
     flag_cylindrical = false
     Fdisp(t) = 0
-    dofs_disp = Int[]
+    disp_dofs = Int[]
     flag_disp_vector = false
-    udisp = T[]
+    disp_vals = T[]
 
     # boundary conditions strucutre 
-    bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
+    bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, disp_vals, disp_dofs, T)
 
     # -------------------------------------------------------------------------------------------
     # SDF

@@ -2,7 +2,7 @@
 # STRUCTURE
 #----------------------------------
 
-struct MyConstraint{T}
+struct Constraint{T}
     node1::Int # index of node 1   
     node2::Int # index of node 2
     stiffness::T
@@ -17,7 +17,7 @@ end
 "Constructor of the constraints StructArray"
 function constructor_constraints(connectivity, stiffness, damping)
     
-    constraints = StructArray(constructor_constraint(connectivity[i][1], connectivity[i][2], stiffness, damping) for i in eachindex(connectivity))
+    constraints = StructArray(constructor_constraint(connectivity[i, 1], connectivity[i, 2], stiffness, damping) for i in 1:size(connectivity, 1))
     
     return constraints
     
@@ -26,7 +26,7 @@ end
 # Constructor of one Constraint structure
 function constructor_constraint(node1, node2, stiffness, damping, T=Float64)
     
-    return MyConstraint{T}(node1, node2, stiffness, damping, zeros(Int, 144))
+    return Constraint{T}(node1, node2, stiffness, damping, zeros(Int, 144))
    
 end 
 
@@ -36,11 +36,11 @@ end
 #------------------------------------------
 
 # Imposes multi freedom constraints at the current step
-function constraints!(matrices, nodes, allconstraints)
+function constraints!(matrices, nodes, constraints)
 
     fill!(matrices.Tᶜᵒⁿ, 0)
     
-    for c in LazyRows(allconstraints)
+    for c in LazyRows(constraints)
 
         k = c.stiffness
         α = c.damping
@@ -99,4 +99,4 @@ end
 
 
 
-constraints!(matrices, nodes, allconstraints::Nothing) = nothing
+constraints!(matrices, nodes, constraints::Nothing) = nothing

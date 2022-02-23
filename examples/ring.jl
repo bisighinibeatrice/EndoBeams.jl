@@ -44,7 +44,7 @@ ẅ⁰ = zeros(size(X₀,1)*3)
 plane = fill("xy", length(X₀))
 
 # nodes StructArray
-nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, plane, nothing, T)
+nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -104,8 +104,8 @@ damping = 0
 tᵉⁿᵈ = 20
 
 # tolerance and maximum number of iterations
-res_tol = 1e-5
-tol_ddk = 1e-5
+tol_res = 1e-5
+tol_ΔD = 1e-5
 max_it = 10
 
 # Gauss points
@@ -118,7 +118,7 @@ zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 μ = 0.3
 εᵗ = 0.5
 
-comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, res_tol, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -126,16 +126,16 @@ comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, t�
 
 # external force and applied dof
 flag_crimping = false
-Fext(t) = 0
+F(t) = 0
 dofs_load = T[]
 
-ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load, T)
+ext_forces = constructor_ext_force(flag_crimping, F, dofs_load, T)
 
 # -------------------------------------------------------------------------------------------
 # Boundary conditions
 # -------------------------------------------------------------------------------------------
 
-# multifreedom constrains
+# multifreedom constraints
 cons = Int[]
 
 # number of dof (6 per node)
@@ -147,13 +147,13 @@ free_dofs = setdiff(1:ndofs, fixed_dofs)
 
 # Dirichlet boundary conditions: moving positions
 flag_cylindrical = false
-dofs_disp = Int[]
+disp_dofs = Int[]
 Fdisp(t) = 0
 flag_disp_vector = false
-udisp = T[]
+disp_vals = T[]
 
 # boundary conditions strucutre 
-bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
+bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, disp_vals, disp_dofs, T)
 
 # -------------------------------------------------------------------------------------------
 # SDF

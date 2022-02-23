@@ -3,60 +3,51 @@
 #------------------------------------------
 
 # Compute a structure where we associated to each node the nodes that share a common beam
-function compute_connected_nodes!(connected_nodes, allconstraints, beams, nnodes)
+compute_connected_nodes(constraints, beams, nnodes) = [connections(n, beams, constraints) for n in 1:nnodes]
+
+
+function connections(n, beams, constraints)
+
+    connected_nodes_i = Int[]
     
-    for n in 1:nnodes 
+    for b in LazyRows(beams) 
         
-        connected_nodes_i = Int[]
+        i1 = b.node1
+        i2 = b.node2
         
-        push!(connected_nodes_i, n)
+        if i1 == n 
+            push!(connected_nodes_i, i2)
+        elseif i2 == n
+            push!(connected_nodes_i, i1)
+        end
         
-        for b in beams 
+    end
+    
+    if !isnothing(constraints)
+        for c in LazyRows(constraints)
             
-            i1 = b.node1
-            i2 = b.node2
+            i1 = c.node1
+            i2 = c.node2
             
             if i1 == n 
-                
                 push!(connected_nodes_i, i2)
-                
             elseif i2 == n
-                
                 push!(connected_nodes_i, i1)
                 
             end
-            
-        end
-        
-        if !isnothing(allconstraints)
-            for c in allconstraints
-                
-                i1 = c.node1
-                i2 = c.node2
-                
-                if i1 == n 
-                    
-                    push!(connected_nodes_i, i2)
-                    
-                elseif i2 == n
-                    
-                    push!(connected_nodes_i, i1)
-                    
-                end
-            end 
-        end
-        
-        sort!(connected_nodes_i)
-        push!(connected_nodes, connected_nodes_i)
-        
-    end 
+        end 
+    end
     
-end
+    sort!(connected_nodes_i)
+
+    return connected_nodes_i
+    
+end 
 
 # Compute the sparsity map for the beams
 function compute_beams_sparsity_map!(beams, nodes, N, cols, rows)
     
-    for b in beams
+    for b in LazyRows(beams)
         
         i1 = b.node1
         i2 = b.node2
@@ -69,7 +60,7 @@ function compute_beams_sparsity_map!(beams, nodes, N, cols, rows)
         
         idof = vcat(idof1, idof2)
         
-        cnt = 0
+        k = 0
         for n in 1:N
             
             col = cols[n]
@@ -77,8 +68,8 @@ function compute_beams_sparsity_map!(beams, nodes, N, cols, rows)
             
             if col in idof && row in idof
                 
-                cnt += 1
-                b.sparsity_map[cnt] = n
+                k += 1
+                b.sparsity_map[k] = n
                 
             end 
         end     
@@ -88,9 +79,9 @@ function compute_beams_sparsity_map!(beams, nodes, N, cols, rows)
 end 
 
 # Compute the sparsity map for the constraints
-function compute_constraints_sparsity_map!(allconstraints, nodes, N, cols, rows)
+function compute_constraints_sparsity_map!(constraints, nodes, N, cols, rows)
     
-    for c in allconstraints
+    for c in constraints
         
         i1 = c.node1
         i2 = c.node2
@@ -103,7 +94,7 @@ function compute_constraints_sparsity_map!(allconstraints, nodes, N, cols, rows)
         
         idof = vcat(idof1, idof2)
         
-        cnt = 0
+        k = 0
         for n in 1:N
             
             col = cols[n]
@@ -111,8 +102,8 @@ function compute_constraints_sparsity_map!(allconstraints, nodes, N, cols, rows)
             
             if col in idof && row in idof
                 
-                cnt += 1
-                c.sparsity_map[cnt] = n
+                k += 1
+                c.sparsity_map[k] = n
                 
             end 
         end     
@@ -121,7 +112,7 @@ function compute_constraints_sparsity_map!(allconstraints, nodes, N, cols, rows)
     
 end 
 
-compute_constraints_sparsity_map!(allconstraints::Nothing, nodes, N, cols, rows) = nothing
+compute_constraints_sparsity_map!(constraints::Nothing, nodes, N, cols, rows) = nothing
 
 #------------------------------------------
 # FUNCTIONS TO COMPUTE SPARSITY PATTERN
@@ -208,10 +199,10 @@ function compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs_all, nn
     cols_free = Int[]
     zvals_free  = T[]
 
-    cnt = 0
+    k = 0
     for i in 1:nrows_free 
         for j in 1:ncols_free
-            cnt+=1
+            k+=1
             if mat_free[i,j] != 0
                 push!(rows_free, i)
                 push!(cols_free, j)
@@ -228,13 +219,13 @@ function compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs_all, nn
     #-------------------------------------------------
     
     spmap_free = Int[]
-    cnt = 0 
+    k = 0 
     for n in 1:length(rows)
         i = rows[n]
         j = cols[n]
-        cnt+=1
+        k+=1
         if mat[i,j] != 0 && i in free_dofs_all && j in free_dofs_all
-            push!(spmap_free, cnt)
+            push!(spmap_free, k)
         end
     end 
        
@@ -243,19 +234,14 @@ function compute_sparsity_pattern_free!(ntot, connected_nodes, free_dofs_all, nn
 end 
 
 # Compute the sparsity pattern which allows to preallocate the sparse matrices and the sparsity map of the beams and constraints (for the assemby)
-function compute_sparsity!(beams, nodes, pncons, conf, T=Float64)
+function compute_sparsity!(beams, nodes, constraints, conf)
     
-    # initialization
-    free_dofs = conf.bc.free_dofs
 
-    nnodes = length(nodes)
-    ndofs_per_node = 6
-    ndofs = conf.ndofs 
-    ntot = ndofs 
+
+    @infiltrate
 
     # compute linked nodes from connectivity 
-    connected_nodes = Vector{Vector{Int}}() #TODO: chack if there's another way to do this with less allocations
-    compute_connected_nodes!(connected_nodes, pncons, beams, nnodes)
+    connected_nodes = compute_connected_nodes(constraints, beams, nnodes)
     
     # tangent matrix
     (rows_tan, cols_tan, zval_tan) = compute_sparsity_pattern_tan!(ndofs_per_node, nnodes, connected_nodes)
@@ -266,8 +252,62 @@ function compute_sparsity!(beams, nodes, pncons, conf, T=Float64)
 
     # compute beam sparsity map 
     compute_beams_sparsity_map!(beams, nodes, n_tan, cols_tan, rows_tan)
-    compute_constraints_sparsity_map!(pncons, nodes, n_tan, cols_tan, rows_tan)
+    compute_constraints_sparsity_map!(constraints, nodes, n_tan, cols_tan, rows_tan)
     
     return (rows_tan, cols_tan, zval_tan), (rows_free, cols_free, zvals_free), spmap_free 
     
 end 
+
+
+function sparsity(nodes, beams, constraints)
+
+    beam_ndofs = 12
+    N = length(beams)*beam_ndofs^2 + length(constraints)*beam_ndofs^2
+    I = Vector{Int}(undef, N)
+    J = Vector{Int}(undef, N)
+    infos = Vector{Vector{Vec3{Int}}}(undef, N)
+    k = 1
+    for bi in eachindex(beams)
+        n1 = beams.node1[bi]
+        n2 = beams.node2[bi]
+        dofs = vcat(nodes.idof_6[n1], nodes.idof_6[n2])
+        local_dof = 1
+        for j in dofs, i in dofs
+            I[k] = i
+            J[k] = j
+            infos[k] = [Vec3(1, bi, local_dof)]
+            k += 1
+            local_dof += 1
+        end
+    end
+
+    for ci in eachindex(constraints)
+        n1 = constraints.node1[ci]
+        n2 = constraints.node2[ci]
+        dofs = vcat(nodes.idof_6[n1], nodes.idof_6[n2])
+        local_dof = 1
+        for j in dofs, i in dofs
+            I[k] = i
+            J[k] = j
+            infos[k] = [Vec3(2, ci, local_dof)]
+            k += 1
+            local_dof += 1
+        end
+    end
+
+    A = sparse(I, J, infos, maximum(I), maximum(J), vcat)
+
+    for (i, infos) in enumerate(A.nzval)
+        for (type, idx, local_dof) in infos
+            if type==1
+                beams.sparsity_map[idx][local_dof] = i
+            elseif type==2
+                constraints.sparsity_map[idx][local_dof] = i
+            end
+        end
+    end
+
+    return I, J
+end
+
+

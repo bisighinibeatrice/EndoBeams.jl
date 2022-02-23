@@ -9,30 +9,23 @@ const T = Float64
 # positions
 dx = 2.5; L = 10
 
-X₀ =  Vec3{T}[]
-for x in 0:dx:L
-    push!(X₀, Vec3(0, x, 0))
-end
-for x in dx:dx:L
-    push!(X₀, Vec3(-x,  L, 0))
-end
+X₀ = reduce(vcat, [0 x 0] for x in 0:dx:L)
+X₀ = [X₀; reduce(vcat, [0 x 0] for x in dx:dx:L)]
 
 # total number of nodes
 nnodes = size(X₀,1)
 
 # initial conditions
-u⁰ = zeros(nnodes*3)
-u̇⁰ = zeros(nnodes*3)
-ü⁰ = zeros(nnodes*3)
-w⁰ = zeros(nnodes*3)
-ẇ⁰ = zeros(nnodes*3)
-ẅ⁰ = zeros(nnodes*3)
+u⁰ = zeros(nnodes, 3)
+u̇⁰ = zeros(nnodes, 3)
+ü⁰ = zeros(nnodes, 3)
+w⁰ = zeros(nnodes, 3)
+ẇ⁰ = zeros(nnodes, 3)
+ẅ⁰ = zeros(nnodes, 3)
 
-# plane for cylindrical coordinates
-plane = fill("xy", length(X₀))
 
 # nodes StructArray
-nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, plane, nothing, T)
+nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -56,7 +49,7 @@ nbInterpolationPoints = 30
 # geometric and material properties
 E = 1e6
 G = 1e6
-Jᵨ = Mat33(20, 0, 0, 0, 10, 0, 0, 0, 10)
+Jᵨ = EndoBeams.Diagonal(Vec3(20, 10, 10))
 Aᵨ = 1
 A = 1
 I₂₂ = 1e-3
@@ -66,7 +59,7 @@ Iᵣᵣ = 0
 J = 1e-3
 
 geom = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
-mat = Material{T}(E, G, Aᵨ, Jᵨ)
+mat = Material{T, typeof(Jᵨ)}(E, G, Aᵨ, Jᵨ)
 
 # beams vector
 beams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
@@ -87,8 +80,8 @@ damping = 0
 tᵉⁿᵈ = 30
 
 # tolerance and maximum number of iterations
-res_tol = 1e-5
-tol_ddk = 1e-5
+tol_res = 1e-5
+tol_ΔD = 1e-5
 max_it = 10
 
 # Gauss points
@@ -101,7 +94,7 @@ zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 μ = 0
 εᵗ = 0.1
 
-comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, res_tol, tol_ddk, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -109,17 +102,17 @@ comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, t�
 
 # external force and applied dof
 flag_crimping = false
-Fext(t) = 1*(t.<=1).*(50*t) .+1*((t.>1) .& (t.<=2)).*(-50*t.+100).+(t.>2).*0
+F(t) = 1*(t.<=1).*(50*t) .+1*((t.>1) .& (t.<=2)).*(-50*t.+100).+(t.>2).*0
 dofs_load = Int[]
 push!(dofs_load, 6*size((0:dx:L),1)-3)
 
-ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load, T)
+ext_forces = constructor_ext_force(flag_crimping, F, dofs_load, T)
 
 # -------------------------------------------------------------------------------------------
 # Boundary conditions
 # -------------------------------------------------------------------------------------------
 
-# multifreedom constrains
+# multifreedom constraints
 cons = nothing
 
 # Dirichlet boundary conditions: fixed positions
@@ -130,12 +123,12 @@ free_dofs = setdiff(1:ndofs, fixed_dofs)
 # Dirichlet boundary conditions: moving positions
 flag_cylindrical = false
 Fdisp(t) = 0
-dofs_disp = Int[]
+disp_dofs = Int[]
 flag_disp_vector = false
-udisp = T[]
+disp_vals = T[]
 
 # boundary conditions strucutre 
-bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, udisp, dofs_disp, T)
+bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, disp_vals, disp_dofs, T)
 
 # -------------------------------------------------------------------------------------------
 # SDF

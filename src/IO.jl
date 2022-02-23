@@ -371,7 +371,7 @@ function read_VTK_sdf(filename)
     xend = x0 + (nnodex-1)*dx
     yend = y0 + (nnodey-1)*dy
     zend = z0 + (nnodez-1)*dz
-    dom = [x0, xend, y0, yend, z0, zend]
+    dom = (x0, xend, y0, yend, z0, zend)
     
     curr_line = split(readline(fid))
     nnode = parse(Int, curr_line[2])
@@ -395,7 +395,6 @@ function read_VTK_sdf(filename)
         for j in ini:iend
             sdf[j] = parse(Float64, curr_line[index]) 
             index +=1
-            
         end 
         
         i = iend
