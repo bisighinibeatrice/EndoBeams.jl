@@ -15,23 +15,6 @@ function clean_folders(output_dir)
     
 end 
 
-# Calls the functions saving the VTKs related to the nodes and beams positions i-snapshot
-function save_VTK(i, nodes, beams, sol_GP, int_pos, int_conn, dirOutput, SAVE_INTERPOLATION_VTK = false, SAVE_GP_VTK = false, SAVE_NODES_VTK = false)
-    
-    if SAVE_INTERPOLATION_VTK    
-        write_VTK_beams(i, nodes, beams, int_pos, int_conn, dirOutput)
-    end 
-    
-    if SAVE_GP_VTK 
-        write_VTK_GP(i, sol_GP, dirOutput) 
-    end 
-    
-    if SAVE_NODES_VTK 
-        write_VTK_nodes(i, nodes, beams, dirOutput)
-    end 
-
-end 
-
 # Cleans folders, pre-allocate and initialise the variables used during the simulation and save the VTKs of the initial configuration
 function solver_initialisation(conf, nodes, beams, constraints, sdf, output_dir, T=Float64)
 
@@ -115,22 +98,6 @@ end
 # FUNCTIONS USED IN THE CORRECTOR AND PREDICTOR
 #------------------------------------------------
 
-# At the beginning of the corrector, updates the NodalSolution global vectors with the current Configuration local vectors
-function update_global_corrector!(nodes_sol, nodes, disp_dof)
-    
-    @inbounds for n in nodes
-
-        nodes_sol.D[n.idof_disp] .= n.u
-        nodes_sol.Ḋ[n.idof_disp] .= n.u̇
-        nodes_sol.D̈[n.idof_disp] .= n.ü
-        nodes_sol.D[n.idof_rot] .= n.w
-        nodes_sol.Ḋ[n.idof_rot] .= n.ẇ
-        nodes_sol.D̈[n.idof_rot] .= n.ẅ
-
-    end
-    
-end 
-
 
 
 # At the end of the corrector, updates the Configuration local vectors with the NodalSolution global vectors computed during the current iteration
@@ -186,44 +153,8 @@ function update_local_predictor!(nodes, nodes_sol, Δt, β, γ)
     
 end 
 
-# Update the displacement vectors with the solution of the linear system in the corrector
-function update_nodal_solutions_corrector!(nodes_sol, disp_dof, γ, β, Δt)
-    
-    @inbounds for i in disp_dof
-        nodes_sol.D[i]  =  nodes_sol.D[i]  + nodes_sol.ΔD[i]
-        nodes_sol.Ḋ[i] =  nodes_sol.Ḋ[i] + (γ/(β*Δt))*nodes_sol.ΔD[i]
-        nodes_sol.D̈[i] = nodes_sol.D̈[i] + (1/(β*Δt^2))*nodes_sol.ΔD[i]
-    end 
-    
-end 
 
-# Update the displacement vectors with the solution of the linear system in the predictor
-function update_nodal_solutions_predictor!(nodes_sol, β, γ, Δt)
 
-    @inbounds for i in eachindex(nodes_sol.D)
-
-        nodes_sol.Ḋⁿ[i] = nodes_sol.Ḋ[i] # need to save the last velocity vector 
-        nodes_sol.D[i] = nodes_sol.D[i] + nodes_sol.ΔD[i]
-        nodes_sol.Ḋ[i] = nodes_sol.Ḋ[i] + (γ/(β*Δt))*nodes_sol.ΔD[i] - (γ/β)*nodes_sol.Ḋ[i] + (Δt*(2*β-γ)/(2*β))*nodes_sol.D̈[i]
-        nodes_sol.D̈[i] = nodes_sol.D̈[i] + (1/(β*Δt^2))*(nodes_sol.ΔD[i] - Δt*nodes_sol.Ḋⁿ[i] - (Δt^2)/2*nodes_sol.D̈[i])
-
-    end 
-        
-end 
-
-# Update current solutions in the correct loop
-function update_current_solution_corrector!(solⁿ⁺¹, ndofs, matrices)
-    
-    @inbounds for i in 1:ndofs
-
-        solⁿ⁺¹.Tⁱⁿᵗ[i] = matrices.Tⁱⁿᵗ[i]
-        solⁿ⁺¹.Tᵏ[i] =  matrices.Tᵏ[i]
-        solⁿ⁺¹.Tᶜ[i] =  matrices.Tᶜ[i]   
-        solⁿ⁺¹.Tᶜᵒⁿ[i] =  matrices.Tᶜᵒⁿ[i]   
-
-    end 
-    
-end 
 
 # Compute residual and increment vector residual in the corrector loop
 function compute_norms_corrector(k, solⁿ⁺¹, nodes_sol, matrices, SHOW_COMP_TIME = false)

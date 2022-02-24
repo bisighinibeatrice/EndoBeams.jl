@@ -113,31 +113,3 @@ function constructor_nodes(X::AbstractVector, u⁰::AbstractVector, u̇⁰::Abst
 end
 
 
-#----------------------------------
-# UTILS 
-#----------------------------------
-
-#  Compute rotation matrix from cylindrical to carthesian coordinates
-function compute_local_to_global_matrix(i, X, plane)
-
-    if plane == "xy"
-
-        Xi = X[i]
-        Θi = atan(Xi[2], Xi[1])  
-        return Mat33(cos(Θi), -sin(Θi), 0,  sin(Θi), cos(Θi), 0, 0, 0, 1)
-
-    elseif plane == "yz"
-
-        Xi = X[i]
-        Θi = atan(Xi[3], Xi[2])
-        return Mat33(1, 0, 0, 0, cos(Θi), -sin(Θi), 0, sin(Θi), cos(Θi))
-    
-    elseif plane == "xz"
-
-        Xi = X[i]
-        Θi = atan(Xi[3], Xi[1])
-        return Mat33(cos(Θi), 0, -sin(Θi), 0, 1, 0, sin(Θi), 0, cos(Θi))
-
-    end 
-    
-end
