@@ -254,7 +254,7 @@ end
 # Quadratically regulise penalty
 @inline function quadratically_regularized_penalty(gₙ::T, εᶜ, r) where T
     
-    ḡₙ = r/10 
+    ḡₙ = r/2 
     p̄ₙ = εᶜ*ḡₙ/2
     
     pₙ = zero(T)
@@ -262,13 +262,13 @@ end
     Πₑ = zero(T)
     
     # eq[111] in [2]
-    if gₙ<=0
+    if gₙ≤0
 
         pₙ = p̄ₙ - εᶜ*gₙ
         p′ₙ = -εᶜ
         Πₑ = (εᶜ/2)*gₙ^2 - p̄ₙ*gₙ + (εᶜ*ḡₙ^2)/6
         
-    elseif ḡₙ>=gₙ && gₙ>0
+    elseif gₙ≤ḡₙ
         
         aux = (εᶜ*ḡₙ-p̄ₙ)/(ḡₙ^2)
         pₙ =  aux*gₙ^2 - εᶜ*gₙ + p̄ₙ

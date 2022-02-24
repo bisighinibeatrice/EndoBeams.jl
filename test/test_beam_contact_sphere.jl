@@ -101,7 +101,7 @@ function test_sphere()
     μ = 0.3
     εᵗ = 0.1
     
-    comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+    comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
     
     # -------------------------------------------------------------------------------------------
     # External forces
@@ -112,7 +112,7 @@ function test_sphere()
     F(t) = 0
     dofs_load = T[]
     
-    ext_forces = constructor_ext_force(flag_crimping, F, dofs_load, T)
+    ext_forces = ExternalForces(flag_crimping, F, dofs_load, T)
     
     # -------------------------------------------------------------------------------------------
     # Boundary conditions
@@ -139,7 +139,7 @@ function test_sphere()
     disp_vals = T[]
     
     # boundary conditions strucutre 
-    bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, disp_vals, disp_dofs, T)
+    bcs = BoundaryConditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, disp_vals, disp_dofs, T)
     
     # -------------------------------------------------------------------------------------------
     # SDF
@@ -160,7 +160,7 @@ function test_sphere()
     # -------------------------------------------------------------------------------------------
     
     # configuration: mesh, external forces and boundary conditions
-    conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
+    conf = Configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
     
     # -------------------------------------------------------------------------------------------
     # Solve

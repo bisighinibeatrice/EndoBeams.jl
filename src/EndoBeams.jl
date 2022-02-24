@@ -16,6 +16,6 @@ include("params.jl")
 include("rotations.jl")
 include("IO.jl")
 
-export Params, ParamsTest, constructor_constraints, solver!, constructor_beams, constructor_nodes, constructor_material_properties, constructor_geometry_properties, constructor_simulation_parameters, constructor_ext_force, constructor_boundary_conditions, constructor_configuration, Vec3, Vec2, Mat33, Geometry, Material, SDF_Plane_z, SDF_Plane_y, SDF_Sphere, SDF_Cylinder, constructor_discrete_sdf, read_TXT_file_pos, read_TXT_file_conn, read_TXT_file_ICs_array, read_TXT_file_ICs_matrix
+export Params, ParamsTest, constructor_constraints, solver!, constructor_beams, constructor_nodes, Material, Geometry, SimulationParameters, ExternalForces, BoundaryConditions, Configuration, Vec3, Vec2, Mat33, Geometry, Material, SDF_Plane_z, SDF_Plane_y, SDF_Sphere, SDF_Cylinder, constructor_discrete_sdf, read_TXT_file_pos, read_TXT_file_conn, read_TXT_file_ICs_array, read_TXT_file_ICs_matrix
 
 end

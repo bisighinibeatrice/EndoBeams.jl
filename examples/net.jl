@@ -1,4 +1,6 @@
 using EndoBeams
+using DelimitedFiles
+using LinearAlgebra
 
 const T = Float64
 
@@ -7,11 +9,11 @@ const T = Float64
 # -------------------------------------------------------------------------------------------
 
 # positions
-X₀ =  read_TXT_file_pos("examples/input_net/pos_net.txt")
-nnodes = length(X₀)
+X₀ =  readdlm("examples/input_net/pos_net.txt")
+nnodes = size(X₀, 1)
 
 # connectivity
-conn = read_TXT_file_conn("examples/input_net/conn_net.txt")
+connectivity = readdlm("examples/input_net/conn_net.txt", Int)
 
 #-------------------------------------------------------------------------------------------
 # Building the nodes
@@ -20,16 +22,14 @@ conn = read_TXT_file_conn("examples/input_net/conn_net.txt")
 # initial conditions
 u⁰ = zeros(nnodes, 3)
 u̇⁰ = zeros(nnodes, 3)
-for i in 2:3:nnodes*3
-    u̇⁰[i] = -0.001
+for i in 1:nnodes
+    u̇⁰[i, 2] = -0.001
 end
 ü⁰ = zeros(nnodes, 3)
 w⁰ = zeros(nnodes, 3)
 ẇ⁰ = zeros(nnodes, 3)
 ẅ⁰ = zeros(nnodes, 3)
 
-# plane for cylindrical coordinates
-plane = fill("xy", length(X₀))
 
 # nodes StructArray
 nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
@@ -38,8 +38,6 @@ nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, noth
 # Building the beams
 # -------------------------------------------------------------------------------------------
 
-# interpolation points per beam
-nbInterpolationPoints = 30
 
 # geometric and material properties
 r = 0.2/1000
@@ -53,14 +51,14 @@ I₃₃ = 0.25*pi*r^4
 Iₒ = I₂₂+I₃₃
 Iᵣᵣ = I₂₂+I₃₃
 J = I₂₂+I₃₃
-Jᵨ = Mat33(ρ*J, 0, 0, 0, ρ*I₂₂, 0, 0, 0, ρ*I₃₃)
+Jᵨ = ρ*Diagonal(Vec3(J, I₂₂, I₃₃))
 Aᵨ = ρ*A
 
 geom = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
-mat = Material{T}(E, G, Aᵨ, Jᵨ)
+mat = Material{T, typeof(Jᵨ)}(E, G, Aᵨ, Jᵨ)
 
 # beams vector
-beams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
+beams = constructor_beams(nodes, connectivity, mat, geom, nothing)
     
 #-----------------------------------------------------------------------------------
 # Simulation parameters
@@ -92,18 +90,17 @@ zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 μ = 0.01
 εᵗ = 0.5
 
-comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
 # -------------------------------------------------------------------------------------------
 
 # external force and applied dof
-flag_crimping = false
-F(t) = 0*t
-dofs_load = Int[]
+loaded_dofs = Int[]
+force(t, node_idx) = 0
 
-ext_forces = constructor_ext_force(flag_crimping, F, dofs_load)
+ext_forces = ExternalForces(force, loaded_dofs)
 
 # -------------------------------------------------------------------------------------------
 # Boundary conditions
@@ -112,20 +109,20 @@ ext_forces = constructor_ext_force(flag_crimping, F, dofs_load)
 # multifreedom constraints
 cons = nothing
 
+
 # Dirichlet boundary conditions: fixed positions
 ndofs = nnodes*6
-fixed_dofs = T[]
-free_dofs = setdiff(1:ndofs, fixed_dofs)
+fixed_dofs = Int[]
+free_dofs = 1:ndofs
 
-# Dirichlet boundary conditions: moving positions
-flag_cylindrical = false
-Fdisp(t) = 0
+
+# Dirichlet dof (x6)
 disp_dofs = Int[]
-flag_disp_vector = false
 disp_vals = T[]
+disp(t, node_idx) = 0
 
-# boundary conditions strucutre
-bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, disp_vals, disp_dofs, T)
+# boundary conditions strucutre 
+bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
 
 # -------------------------------------------------------------------------------------------
 # SDF
@@ -143,11 +140,11 @@ sdf = SDF_Sphere{T}(r, 0.05, 0, 0, 0)
 # -------------------------------------------------------------------------------------------
 
 # configuration: mesh, external forces and boundary conditions
-conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
+conf = Configuration(mat, geom, ndofs, ext_forces, bcs, T)
 
 # -------------------------------------------------------------------------------------------
 # Solve
 # -------------------------------------------------------------------------------------------
 
-params = Params(scale =2,thisDirOutputPath = "examples/output3D", SHOW_TIME_SECTIONS=true)
+params = Params(scale =2,output_dir = "examples/output3D", SHOW_TIME_SECTIONS=true)
 solver!(nodes, beams, conf, comp, sdf, cons, params, T)

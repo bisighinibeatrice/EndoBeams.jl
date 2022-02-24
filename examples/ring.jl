@@ -118,7 +118,7 @@ zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 μ = 0.3
 εᵗ = 0.5
 
-comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -129,7 +129,7 @@ flag_crimping = false
 F(t) = 0
 dofs_load = T[]
 
-ext_forces = constructor_ext_force(flag_crimping, F, dofs_load, T)
+ext_forces = ExternalForces(flag_crimping, F, dofs_load, T)
 
 # -------------------------------------------------------------------------------------------
 # Boundary conditions
@@ -153,7 +153,7 @@ flag_disp_vector = false
 disp_vals = T[]
 
 # boundary conditions strucutre 
-bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, disp_vals, disp_dofs, T)
+bcs = BoundaryConditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, disp_vals, disp_dofs, T)
 
 # -------------------------------------------------------------------------------------------
 # SDF
@@ -170,11 +170,11 @@ sdf = SDF_Plane_z{T}(r, z0)
 
 
 # configuration: mesh, external forces and boundary conditions
-conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
+conf = Configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 
 # -------------------------------------------------------------------------------------------
 # Solve
 # -------------------------------------------------------------------------------------------
 
-params = Params(scale = 2, thisDirOutputPath = "examples/output3D")
+params = Params(scale = 2, output_dir = "examples/output3D")
 solver!(nodes, beams, conf, comp, sdf, cons, params, T)                                        

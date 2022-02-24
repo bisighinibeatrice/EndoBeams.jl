@@ -253,10 +253,8 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
     # Superscript ³ means matrix or vector associated to u₂
     # Superscript ⁴ means matrix or vector associated to Θ₂
 
-    (;X₁, X₂, l₀, Rₑ⁰) = simvars.init
-    geom = simvars.geom
-    comp = simvars.comp
-    mat = simvars.mat
+    mat, geom, comp, init, sdf = simvars
+    X₁, X₂, l₀, Rₑ⁰ = init
     
 
     x₁ =  X₁ + u₁
@@ -535,7 +533,7 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
 
 
     
-    contact = !isnothing(simvars.sdf)
+    contact = !isnothing(sdf)
         
     if dynamics
         
@@ -776,9 +774,9 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
             if contact
 
                 xᴳ = N₁*x₁ + N₂*x₂ + Rₑ*uᵗ
-                pₙ, p′ₙ, Πₑ, gₙ, ∂gₙ∂x, ∂²gₙ∂x² =  contact_gap(xᴳ, comp.εᶜ, simvars.sdf)
+                pₙ, p′ₙ, Πₑ, gₙ, ∂gₙ∂x, ∂²gₙ∂x² =  contact_gap(xᴳ, comp.εᶜ, sdf)
         
-                if pₙ ≉ 0 
+                if pₙ > 0 
         
                     I∂gₙ∂x = ID3 - ∂gₙ∂x*∂gₙ∂x'
                     ġₜ = I∂gₙ∂x*u̇₀
@@ -1245,26 +1243,26 @@ function assemble!(nodes, beams, matrices, energy, conf, sdf, comp)
     energy.kinetic_energy = 0
     energy.contact_energy = 0
         
-    lk = ReentrantLock()
+    #lk = ReentrantLock()
 
-    for e in LazyRows(beams)
+    @batch for b in LazyRows(beams)
         
             
         # information from node 1 and 2
-        X₁, X₂ = nodes.X₀[e.node1], nodes.X₀[e.node2]
-        u₁, u₂ = nodes.u[e.node1], nodes.u[e.node2]
-        u̇₁, u̇₂ = nodes.u̇[e.node1], nodes.u̇[e.node2]
-        ü₁, ü₂ = nodes.ü[e.node1], nodes.ü[e.node2]
-        ẇ₁, ẇ₂ = nodes.ẇ[e.node1], nodes.ẇ[e.node2]
-        ẅ₁, ẅ₂ = nodes.ẅ[e.node1], nodes.ẅ[e.node2]
-        R₁, R₂ = nodes.R[e.node1], nodes.R[e.node2]
-        ΔR₁, ΔR₂ = nodes.ΔR[e.node1], nodes.ΔR[e.node2]
+        X₁, X₂ = nodes.X₀[b.node1], nodes.X₀[b.node2]
+        u₁, u₂ = nodes.u[b.node1], nodes.u[b.node2]
+        u̇₁, u̇₂ = nodes.u̇[b.node1], nodes.u̇[b.node2]
+        ü₁, ü₂ = nodes.ü[b.node1], nodes.ü[b.node2]
+        ẇ₁, ẇ₂ = nodes.ẇ[b.node1], nodes.ẇ[b.node2]
+        ẅ₁, ẅ₂ = nodes.ẅ[b.node1], nodes.ẅ[b.node2]
+        R₁, R₂ = nodes.R[b.node1], nodes.R[b.node2]
+        ΔR₁, ΔR₂ = nodes.ΔR[b.node1], nodes.ΔR[b.node2]
 
 
         #----------------------------------------
         # Compute the contibution from the e beam
-        init = (;X₁, X₂, e.l₀, e.Rₑ⁰)
-        simvars = (;conf.mat, conf.geom, comp, init, sdf)
+        init = (X₁, X₂, b.l₀, b.Rₑ⁰)
+        simvars = (conf.mat, conf.geom, comp, init, sdf)
 
         strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ, Kⁱⁿᵗ, Kᶜ, M, Cᵏ, Cᶜ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars)
     
@@ -1273,8 +1271,8 @@ function assemble!(nodes, beams, matrices, energy, conf, sdf, comp)
         # Assemble contributions
         
 
-        idof1 = nodes.idof_6[e.node1]
-        idof2 = nodes.idof_6[e.node2]
+        idof1 = nodes.idof_6[b.node1]
+        idof2 = nodes.idof_6[b.node2]
         
         dofs = vcat(idof1, idof2)
 
@@ -1286,13 +1284,13 @@ function assemble!(nodes, beams, matrices, energy, conf, sdf, comp)
             energy.contact_energy +=  contact_energy
 
 
-            for (i, dof) in enumerate(dofs)
+            @inbounds for (i, dof) in enumerate(dofs)
                 matrices.Tᵏ[dof] += Tᵏ[i]
                 matrices.Tⁱⁿᵗ[dof] += Tⁱⁿᵗ[i]
                 matrices.Tᶜ[dof] += Tᶜ[i]
             end
 
-            for (i, dof) in enumerate(e.sparsity_map)
+            @inbounds for (i, dof) in enumerate(b.sparsity_map)
                 matrices.K[dof] += Kⁱⁿᵗ[i] - Kᶜ[i]
                 matrices.C[dof] += Cᵏ[i]-(1+comp.α)*Cᶜ[i]
                 matrices.M[dof] += M[i]

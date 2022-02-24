@@ -48,8 +48,8 @@ E = 225*1e3
 ν = 0.33
 ρ = 9.13*1e-6
 radius = 0.065
-geom =  constructor_geometry_properties(radius, T)
-mat = constructor_material_properties(E, ν, ρ, radius, T)
+geom =  Geometry(radius, T)
+mat = Material(E, ν, ρ, radius, T)
 
 # read initial rotations for the beams
 Re₀ = readdlm("examples/input_stent/Re0_positioning.txt")
@@ -83,11 +83,11 @@ nG = 3
 zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 
 # contact parameters
-εᶜ = 500 #penalty parameter
+εᶜ = 10 #penalty parameter
 μ = 0.01
 εᵗ = 0.1 #regularized parameter for friction contact
 
-comp = constructor_simulation_parameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+comp = SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -97,7 +97,7 @@ comp = constructor_simulation_parameters(α, β, γ, damping, Δt, Δt_plot, t�
 loaded_dofs = T[]
 force(t, node_idx) = 0
 
-ext_forces = constructor_ext_force(force, loaded_dofs)
+ext_forces = ExternalForces(force, loaded_dofs)
 
 # -------------------------------------------------------------------------------------------
 # Boundary conditions
@@ -115,13 +115,13 @@ fixed_dofs = T[]
 free_dofs = setdiff(1:ndofs, fixed_dofs)
 
 # Dirichlet dof (x6)
-disp_dofs = T[]
+disp_dofs = Int[]
 disp_vals = T[]
 disp(t, node_idx) = 0
 
 
 # boundary conditions strucutre
-bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
+bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
 
 # -------------------------------------------------------------------------------------------
 # SDF
@@ -134,11 +134,11 @@ sdf = constructor_discrete_sdf("examples/input_stent/arcStretchObj.vtk", radius,
 # -------------------------------------------------------------------------------------------
 
 # configuration: mesh, external forces and boundary conditions
-conf = constructor_configuration(mat, geom, ndofs, ext_forces, bcs, T)
+conf = Configuration(mat, geom, ndofs, ext_forces, bcs, T)
 
 # -------------------------------------------------------------------------------------------
 # Start simulation
 # -------------------------------------------------------------------------------------------
 
-params = Params(thisDirOutputPath = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true, scale=2, SHOW_TIME_SECTIONS=false)
+params = Params(output_dir = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true, scale=2, SHOW_TIME_SECTIONS=false)
 solver!(nodes, beams, conf, comp, sdf, cons, params, T)

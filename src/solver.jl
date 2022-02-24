@@ -5,7 +5,7 @@ function solver!(nodes, beams, conf, comp, sdf, constraints, params, T=Float64)
     # INITIALISATION
     # -------------------------------------------------------------------------------------------
   
-    @unpack scale, ENERGY_STOP, SHOW_COMP_TIME, SHOW_TIME_SECTIONS, SAVE_NODES_VTK, SAVE_ENERGY, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, thisDirOutputPath = params
+    @unpack scale, ENERGY_STOP, SHOW_COMP_TIME, SHOW_TIME_SECTIONS, SAVE_NODES_VTK, SAVE_ENERGY, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, output_dir = params
 
     if SHOW_TIME_SECTIONS
         TimerOutputs.enable_debug_timings(@__MODULE__)
@@ -13,28 +13,22 @@ function solver!(nodes, beams, conf, comp, sdf, constraints, params, T=Float64)
     end 
 
     @timeit_debug "Solver initialization" begin
-
-        # vectors to save energy evolution
-        plot_Phi_energy  = T[]
-        plot_K_energy = T[]
-        plot_contact_energy = T[]
         
         # initialization of time loop variables
         t = 0.
         start = time()
-        write_counter = 1
+        write_counter = 0
         Δt = comp.Δt
         Δt_plot = comp.Δt_plot 
         fact_div = 1.   
         successive_convergence = 0
         step = 1
-
-        # # preallocated vectors for beam interpolation
-        # int_pos = zeros(T, (beams.numberInterpolationPoints[1]+1)*length(beams), 3)
-        # int_conn = zeros(Int, beams.numberInterpolationPoints[1]+1, length(beams))
         
         # preallocation of the vectors and matrices used in the computaion
-        solⁿ, solⁿ⁺¹, nodes_sol, matrices, energy = solver_initialisation(conf, nodes, beams, constraints, thisDirOutputPath, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, SAVE_NODES_VTK, T)
+        solⁿ, solⁿ⁺¹, nodes_sol, matrices, energy, vtkdata = solver_initialisation(conf, nodes, beams, constraints, sdf, output_dir, T)
+
+        write_VTK(write_counter, 0, t, nodes, beams, energy, conf, sdf, comp, vtkdata)
+        write_counter += 1
         
         # Linear solver
         ps = MKLPardisoSolver()
@@ -113,32 +107,26 @@ function solver!(nodes, beams, conf, comp, sdf, constraints, params, T=Float64)
                 
                 # save VTK with frequency 1/Δt_plot: 
                 if  tⁿ⁺¹ > write_counter*Δt_plot  ||  tⁿ⁺¹ ≈ write_counter*Δt_plot
-                    save_VTK(write_counter, nodes, beams, sol_GP, int_pos, int_conn, thisDirOutputPath, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, SAVE_NODES_VTK)
+                    write_VTK(write_counter, step, tⁿ⁺¹, nodes, beams, energy, conf, sdf, comp, vtkdata)
                     write_counter += 1
                 end
-
-                # save the energy values at the current step
-                push!(plot_Phi_energy, energy.strain_energy)
-                push!(plot_K_energy, energy.kinetic_energy)
-                push!(plot_contact_energy, energy.contact_energy)
-                
-                if SAVE_ENERGY
-                    save_energy(plot_Phi_energy, plot_K_energy, plot_contact_energy, thisDirOutputPath)           
-                end        
+ 
                 
             end 
             
             @timeit_debug "Update variables" begin
                 
                 # update variables after the step
-                solⁿ = deepcopy(solⁿ⁺¹)
+                for f in fieldnames(typeof(solⁿ⁺¹))
+                    getfield(solⁿ, f) .= getfield(solⁿ⁺¹, f)
+                end
                 update_nodes_converged!(nodes, solⁿ, matrices)
                 t = tⁿ⁺¹
                 step += 1
                 
             end 
 
-            if ENERGY_STOP && plot_K_energy[end] < 1e-6
+            if ENERGY_STOP && energy.kinetic_energy < 1e-6
                 printstyled("Energy threshold reached! Ending simulation.\n"; color = :green) 
                 break
             end
@@ -151,6 +139,8 @@ function solver!(nodes, beams, conf, comp, sdf, constraints, params, T=Float64)
     if SHOW_TIME_SECTIONS
         print_timer()
     end 
+
+    vtk_save(vtkdata.VTKcollection)
     
 end
 
@@ -252,7 +242,7 @@ function predictor!(nodes, beams, pencons, matrices, energy, solⁿ⁺¹, solⁿ
     @timeit_debug "Compute free tangent matrix and residual" begin
 
         @views nodes_sol.r_free .= nodes_sol.r[free_dofs]              
-        nodes_sol.Ktan_free.nzval .= nodes_sol.Ktan_mat[free_dofs, free_dofs].nzval
+        @views nodes_sol.Ktan_free.nzval .= nodes_sol.Ktan[matrices.sparsity_free]
 
     end 
     
@@ -288,7 +278,7 @@ function corrector_loop!(nodes, beams, constraints, matrices, energy, solⁿ⁺�
         
         # tollerances
         tol_res = comp.tol_res
-        ΔD_tol = comp.tol_ΔDk
+        ΔD_tol = comp.tol_ΔD
         max_it = comp.max_it
         
         # dofs
@@ -340,7 +330,7 @@ function corrector_loop!(nodes, beams, constraints, matrices, energy, solⁿ⁺�
                 
             @timeit_debug "Compute free tangent matrix and residual" begin
                 @views nodes_sol.r_free .= nodes_sol.r[free_dofs]               
-                nodes_sol.Ktan_free.nzval .= nodes_sol.Ktan_mat[free_dofs, free_dofs].nzval
+                @views nodes_sol.Ktan_free.nzval .= nodes_sol.Ktan[matrices.sparsity_free]
             end 
             
             @timeit_debug "Linear solve" solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)

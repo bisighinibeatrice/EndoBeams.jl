@@ -15,9 +15,9 @@ end
 #----------------------------------
 
 "Constructor of the constraints StructArray"
-function constructor_constraints(connectivity, stiffness, damping)
+function constructor_constraints(connectivity, stiffness, damping, T=Float64)
     
-    constraints = StructArray(constructor_constraint(connectivity[i, 1], connectivity[i, 2], stiffness, damping) for i in 1:size(connectivity, 1))
+    constraints = StructArray(constructor_constraint(connectivity[i, 1], connectivity[i, 2], stiffness, damping, T) for i in 1:size(connectivity, 1))
     
     return constraints
     

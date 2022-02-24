@@ -259,13 +259,16 @@ function compute_sparsity!(beams, nodes, constraints, conf)
 end 
 
 
-function sparsity(nodes, beams, constraints)
+function sparsity(nodes, beams, constraints, fixed_dofs)
 
     beam_ndofs = 12
-    N = length(beams)*beam_ndofs^2 + length(constraints)*beam_ndofs^2
+    N = length(beams)*beam_ndofs^2
+    if !isnothing(constraints)
+        N += length(constraints)*beam_ndofs^2
+    end
     I = Vector{Int}(undef, N)
     J = Vector{Int}(undef, N)
-    infos = Vector{Vector{Vec3{Int}}}(undef, N)
+    infos = Vector{Vector{Vec4{Int}}}(undef, N)
     k = 1
     for bi in eachindex(beams)
         n1 = beams.node1[bi]
@@ -275,29 +278,36 @@ function sparsity(nodes, beams, constraints)
         for j in dofs, i in dofs
             I[k] = i
             J[k] = j
-            infos[k] = [Vec3(1, bi, local_dof)]
+            infos[k] = [Vec4(1, bi, local_dof, i in fixed_dofs || j in fixed_dofs)]
             k += 1
             local_dof += 1
         end
     end
 
-    for ci in eachindex(constraints)
-        n1 = constraints.node1[ci]
-        n2 = constraints.node2[ci]
-        dofs = vcat(nodes.idof_6[n1], nodes.idof_6[n2])
-        local_dof = 1
-        for j in dofs, i in dofs
-            I[k] = i
-            J[k] = j
-            infos[k] = [Vec3(2, ci, local_dof)]
-            k += 1
-            local_dof += 1
+    if !isnothing(constraints)
+        for ci in eachindex(constraints)
+            n1 = constraints.node1[ci]
+            n2 = constraints.node2[ci]
+            dofs = vcat(nodes.idof_6[n1], nodes.idof_6[n2])
+            local_dof = 1
+            for j in dofs, i in dofs
+                I[k] = i
+                J[k] = j
+                infos[k] = [Vec4(2, ci, local_dof, i in fixed_dofs || j in fixed_dofs)]
+                k += 1
+                local_dof += 1
+            end
         end
     end
 
-    A = sparse(I, J, infos, maximum(I), maximum(J), vcat)
 
-    for (i, infos) in enumerate(A.nzval)
+    K = sparse(I, J, infos, maximum(I), maximum(J), vcat)
+
+    sparsity_free = Vector{Int}(undef, length(K.nzval))
+
+    ksf = 0
+
+    for (i, infos) in enumerate(K.nzval)
         for (type, idx, local_dof) in infos
             if type==1
                 beams.sparsity_map[idx][local_dof] = i
@@ -305,9 +315,15 @@ function sparsity(nodes, beams, constraints)
                 constraints.sparsity_map[idx][local_dof] = i
             end
         end
+        if infos[1][4] == 0
+            ksf += 1
+            sparsity_free[ksf] = i
+        end
     end
 
-    return I, J
+    resize!(sparsity_free, ksf)
+
+    return I, J, sparsity_free
 end
 
 

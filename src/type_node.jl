@@ -52,7 +52,7 @@ Constructor of the nodes StructArray:
 
 Returns a StructArray{Node}, structure containing the information of the nodes. 
 """
-function constructor_nodes(X, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, Rₑ⁰=nothing, T=Float64) 
+function constructor_nodes(X::AbstractMatrix, u⁰::AbstractMatrix, u̇⁰::AbstractMatrix, ü⁰::AbstractMatrix, w⁰::AbstractMatrix, ẇ⁰::AbstractMatrix, ẅ⁰::AbstractMatrix, Rₑ⁰=nothing, T=Float64) 
 
     nodes = StructArray(Node{T}(
             i, 
@@ -66,7 +66,7 @@ function constructor_nodes(X, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, Rₑ�
             Vec3(w⁰[i,:]), 
             Vec3(ẇ⁰[i,:]), 
             Vec3(ẅ⁰[i,:]), 
-            Rₑ⁰ isa AbstractVector ? Rₑ⁰[i] : ID3, 
+            Rₑ⁰ isa AbstractMatrix ? Rₑ⁰[i,:] : ID3, 
             ID3,
             Vec3(u⁰[i,:]), 
             Vec3(u̇⁰[i,:]), 
@@ -74,13 +74,43 @@ function constructor_nodes(X, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, Rₑ�
             Vec3(w⁰[i,:]), 
             Vec3(ẇ⁰[i,:]), 
             Vec3(ẅ⁰[i,:]), 
-            Rₑ⁰ isa AbstractVector ? Rₑ⁰[i] : ID3,
+            Rₑ⁰ isa AbstractMatrix ? Rₑ⁰[i,:] : ID3,
             ID3) for i in 1:size(X, 1))
 
     return nodes
 
 end
 
+
+function constructor_nodes(X::AbstractVector, u⁰::AbstractVector, u̇⁰::AbstractVector, ü⁰::AbstractVector, w⁰::AbstractVector, ẇ⁰::AbstractVector, ẅ⁰::AbstractVector, Rₑ⁰=nothing, T=Float64) 
+
+    nnodes = length(X)
+    nodes = StructArray{Node{T}}((
+            1:nnodes, 
+            convert(Vector{Vec3{T}}, X), 
+            [Vec6(6*(i-1).+(1,2,3,4,5,6)) for i in 1:nnodes],
+            [Vec3(6*(i-1).+(1,2,3)) for i in 1:nnodes],
+            [Vec3(6*(i-1).+(4,5,6)) for i in 1:nnodes],
+            convert(Vector{Vec3{T}}, u⁰),  
+            convert(Vector{Vec3{T}}, u̇⁰),  
+            convert(Vector{Vec3{T}}, ü⁰),  
+            convert(Vector{Vec3{T}}, w⁰),  
+            convert(Vector{Vec3{T}}, ẇ⁰),  
+            convert(Vector{Vec3{T}}, ẅ⁰),  
+            Rₑ⁰ isa AbstractVector ? convert(Vector{Mat33{T}}, Rₑ⁰) : [Mat33{T}(ID3) for i in 1:nnodes], 
+            [Mat33{T}(ID3) for i in 1:nnodes],
+            convert(Vector{Vec3{T}}, u⁰), 
+            convert(Vector{Vec3{T}}, u̇⁰), 
+            convert(Vector{Vec3{T}}, ü⁰), 
+            convert(Vector{Vec3{T}}, w⁰), 
+            convert(Vector{Vec3{T}}, ẇ⁰), 
+            convert(Vector{Vec3{T}}, ẅ⁰), 
+            Rₑ⁰ isa AbstractVector ? convert(Vector{Mat33{T}}, Rₑ⁰) : [Mat33{T}(ID3) for i in 1:nnodes],
+            [Mat33{T}(ID3) for i in 1:nnodes]))
+
+    return nodes
+
+end
 
 
 #----------------------------------

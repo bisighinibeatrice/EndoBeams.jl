@@ -9,19 +9,19 @@ const T = Float64
 # positions
 dx = 2.5; L = 10
 
-X₀ = reduce(vcat, [0 x 0] for x in 0:dx:L)
-X₀ = [X₀; reduce(vcat, [0 x 0] for x in dx:dx:L)]
+X₀ = [Vec3(0,x,0) for x in 0:dx:L]
+append!(X₀, [Vec3(-x,L,0) for x in dx:dx:L] )
 
 # total number of nodes
-nnodes = size(X₀,1)
+nnodes = length(X₀)
 
 # initial conditions
-u⁰ = zeros(nnodes, 3)
-u̇⁰ = zeros(nnodes, 3)
-ü⁰ = zeros(nnodes, 3)
-w⁰ = zeros(nnodes, 3)
-ẇ⁰ = zeros(nnodes, 3)
-ẅ⁰ = zeros(nnodes, 3)
+u⁰ = zeros(Vec3, nnodes)
+u̇⁰ = zeros(Vec3, nnodes)
+ü⁰ = zeros(Vec3, nnodes)
+w⁰ = zeros(Vec3, nnodes)
+ẇ⁰ = zeros(Vec3, nnodes)
+ẅ⁰ = zeros(Vec3, nnodes)
 
 
 # nodes StructArray
@@ -34,17 +34,8 @@ nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, noth
 # total number of beams
 nbeams = nnodes-1
 
-# conn
-conn = Vec2{Int}[]
-aux1 =  1:nnodes-1
-aux2 =  2:nnodes
+connectivity = [Vec2(i, i+1) for i in 1:nbeams]
 
-for i in 1:nbeams
-    push!(conn, (aux1[i], aux2[i])) 
-end
-
-# interpolation points per beam
-nbInterpolationPoints = 30
 
 # geometric and material properties
 E = 1e6
@@ -62,7 +53,7 @@ geom = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
 mat = Material{T, typeof(Jᵨ)}(E, G, Aᵨ, Jᵨ)
 
 # beams vector
-beams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
+beams = constructor_beams(nodes, connectivity, mat, geom, nothing)
 
 #-----------------------------------------------------------------------------------
 # Simulation parameters
@@ -94,19 +85,17 @@ zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 μ = 0
 εᵗ = 0.1
 
-comp = constructor_simulation_parameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
 # -------------------------------------------------------------------------------------------
 
 # external force and applied dof
-flag_crimping = false
-F(t) = 1*(t.<=1).*(50*t) .+1*((t.>1) .& (t.<=2)).*(-50*t.+100).+(t.>2).*0
-dofs_load = Int[]
-push!(dofs_load, 6*size((0:dx:L),1)-3)
+loaded_dofs = [6*length(0:dx:L)-3]
+force(t, node_idx) = 1*(t.<=1).*(50*t) .+1*((t.>1) .& (t.<=2)).*(-50*t.+100).+(t.>2).*0
 
-ext_forces = constructor_ext_force(flag_crimping, F, dofs_load, T)
+ext_forces = ExternalForces(force, loaded_dofs)
 
 # -------------------------------------------------------------------------------------------
 # Boundary conditions
@@ -120,15 +109,14 @@ ndofs = nnodes*6
 fixed_dofs = 1:6
 free_dofs = setdiff(1:ndofs, fixed_dofs)
 
-# Dirichlet boundary conditions: moving positions
-flag_cylindrical = false
-Fdisp(t) = 0
+
+# Dirichlet dof (x6)
 disp_dofs = Int[]
-flag_disp_vector = false
 disp_vals = T[]
+disp(t, node_idx) = 0
 
 # boundary conditions strucutre 
-bcs = constructor_boundary_conditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, disp_vals, disp_dofs, T)
+bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
 
 # -------------------------------------------------------------------------------------------
 # SDF
@@ -142,11 +130,11 @@ sdf = nothing
 # -------------------------------------------------------------------------------------------
 
 # configuration: mesh, external forces and boundary conditions
-conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
+conf = Configuration(mat, geom, ndofs, ext_forces, bcs, T)
 
 # -------------------------------------------------------------------------------------------
 # Solve
 # -------------------------------------------------------------------------------------------
 
-params = Params(thisDirOutputPath = "examples/output3D", SHOW_TIME_SECTIONS=false)
+params = Params(output_dir = "examples/output3D", SHOW_TIME_SECTIONS=false)
 solver!(nodes, beams, conf, comp, sdf, cons, params, T)       

@@ -1,340 +1,115 @@
 
-#----------------------------------
-# WRITE VTK FILES
-#----------------------------------
-
-# Write nodes info as vtk file
-function write_VTK_nodes(step, nodes, beams, dirOutput) 
-    
-    filename=string(dirOutput * "/nodes$step.vtk");
-     
-    fid = open(filename, "a")
-
-    write(fid,"# vtk DataFile Version 3.0")
-    write(fid,"\n vtk output")
-    write(fid,"\nASCII")
-    write(fid,"\nDATASET POLYDATA")
-    
-    numberPoints = length(nodes)
-    write(fid,"\nPOINTS $numberPoints float")  
-    for n in nodes
-        write(fid,"\n")
-        write(fid, string.(n.X₀[1] + n.u[1])) 
-        write(fid," ")
-        write(fid, string.(n.X₀[2] + n.u[2])) 
-        write(fid," ")
-        write(fid, string.(n.X₀[3] + n.u[3])) 
-    end 
-    
-    numberLines = length(beams)
-    numberElementsPerLine = 2
-    numberElements= numberLines*(numberElementsPerLine + 1)
-    write(fid,"\nLINES $numberLines $numberElements\n")
-    
-    for i in 1:numberLines
-
-        write(fid, string.(numberElementsPerLine))
-        write(fid,"\n")
-
-        node = beams.node1[i] -1
-        write(fid, string.(node)) 
-        write(fid,"\n")
-
-        node = beams.node2[i] -1
-        write(fid, string.(node)) 
-        write(fid,"\n")
-
-    end 
-
-    write(fid, "\n POINT_DATA $numberPoints")
-    write(fid, "\n SCALARS u float 3")
-    write(fid, "\n LOOKUP_TABLE default");
-    for n in nodes
-        write(fid,"\n")
-        write(fid, string.(n.u[1])) 
-        write(fid," ")
-        write(fid, string.(n.u[2])) 
-        write(fid," ")
-        write(fid, string.(n.u[3])) 
-    end
-
-    close(fid)
-    
-end 
 
 # Write interpolated beam info as vtk file
-function write_VTK_beams(step, nodes, beams, positions, connectivity, dirOutput) 
+function write_VTK(write_counter, step, t, nodes, beams, energy, conf, sdf, comp, vtkdata) 
 
-    get_centerline!(positions, connectivity, nodes, beams)
-    
-    filename=string(dirOutput * "/beams$step.vtk");
-     
-    fid = open(filename, "a")
+    fill!(vtkdata.normal_contact_force, zero(eltype(vtkdata.normal_contact_force)))
+    fill!(vtkdata.incontact, 0)
 
-    write(fid,"# vtk DataFile Version 3.0")
-    write(fid,"\nvtk output")
-    write(fid,"\nASCII")
-    write(fid,"\nDATASET POLYDATA")
-    
-    numberPoints = size(positions, 1)
-    write(fid,"\nPOINTS $numberPoints float")  
-    for i in 1: numberPoints
-        write(fid,"\n")
-        write(fid, string.(positions[i,1])) 
-        write(fid," ")
-        write(fid, string.(positions[i,2])) 
-        write(fid," ")
-        write(fid, string.(positions[i,3])) 
-    end 
-    
-    numberLines = size(connectivity, 2)
-    numberElementsPerLine= size(connectivity, 1)
-    numberElements= numberLines*(numberElementsPerLine+1)
-    write(fid,"\nLINES $numberLines $numberElements\n")
-    
-    for i in 1:numberLines
+    recompute_at_gausspts!(vtkdata, nodes, beams, conf.mat, sdf, comp)
 
-        write(fid, string.(numberElementsPerLine))
-        write(fid,"\n")
+    output_dir = vtkdata.output_dir
 
-        for j in 1:numberElementsPerLine
-            node = connectivity[j,i] - 1
-            write(fid, string.(node)) 
-            write(fid,"\n")
+    vtk_grid("$output_dir/data_$write_counter", vtkdata.interpolated_points, vtkdata.interpolated_lines; compress = false) do vtk
+
+        vtk["Stress", VTKPointData()] = vtkdata.stress
+        vtk["Strain", VTKPointData()] = vtkdata.strain
+
+        if !isnothing(sdf)
+            vtk["Contact gap", VTKPointData()] = vtkdata.contact_distance
+            vtk["Normal contact force", VTKPointData()] = vtkdata.normal_contact_force
+            vtk["In contact?", VTKPointData()] = vtkdata.incontact
         end
 
-    end 
+        vtk["Displacement", VTKPointData()] = vtkdata.displacement
+        vtk["Velocity", VTKPointData()] = vtkdata.velocity
 
-    close(fid)
+        vtk["Contact Energy", VTKFieldData()] = energy.contact_energy
+        vtk["Kinetic Energy", VTKFieldData()] = energy.kinetic_energy
+        vtk["Strain Energy", VTKFieldData()] = energy.strain_energy
+
+        # vtk["time", VTKFieldData()] = t
+        # vtk["step", VTKFieldData()] = step
+
+        vtkdata.VTKcollection[t] = vtk 
+
+    end
+
+     
     
 end 
 
-function get_connectivity_centerline(pos_cl)
 
-    conn = Vec2{Int}[]
-    aux1 = 1:size(pos_cl,1)-1
-    aux2 = 2:size(pos_cl,1)
-    for i in 1:size(pos_cl,1)-1
-        push!(conn, (aux1[i], aux2[i])) 
-    end
+function recompute_at_gausspts!(vtkdata, nodes, beams, mat, sdf, comp)
 
-    return conn
+    @batch for bi in eachindex(beams)
 
-end 
+        n1 = beams.node1[bi]
+        n2 = beams.node2[bi]
 
-# Write Gauss points info as vtk file
-function write_VTK_GP(step, sol_GP, dirOutput) 
-    
-    filename = string(dirOutput * "/GP$step.vtk");
-    fid = open(filename, "a")
+        X₁, X₂ = nodes.X₀[n1], nodes.X₀[n2]
+        u₁, u₂ = nodes.u[n1], nodes.u[n2]
+        u̇₁, u̇₂ = nodes.u̇[n1], nodes.u̇[n2]
+        R₁, R₂ = nodes.R[n1], nodes.R[n2]
+        l₀ = beams.l₀[bi]
+        Rₑ⁰ = beams.Rₑ⁰[bi]
 
-    write(fid,"# vtk DataFile Version 3.0")
-    write(fid,"\nvtk output")
-    write(fid,"\nASCII")
-    write(fid,"\nDATASET POLYDATA")
-    
-    numberPoints = length(sol_GP.xGP)
-    write(fid,"\nPOINTS $numberPoints float")  
-    for i in 1: numberPoints
-        write(fid,"\n")
-        write(fid, string.(sol_GP.xGP[i][1])) 
-        write(fid," ")
-        write(fid, string.(sol_GP.xGP[i][2])) 
-        write(fid," ")
-        write(fid, string.(sol_GP.xGP[i][3])) 
-    end 
-    
-    conn = get_connectivity_centerline(sol_GP.xGP)
 
-    numberLines = size(conn, 1)
-    numberElementsPerLine = 2
-    numberElements= numberLines*(numberElementsPerLine+1)
-    write(fid,"\nLINES $numberLines $numberElements\n")
-    
-    for i in 1:numberLines
-
-        write(fid, string.(numberElementsPerLine))
-        write(fid,"\n")
-        node1 = conn[i][1] - 1
-        write(fid, string.(node1)) 
-        write(fid,"\n")
-        node2 = conn[i][2] - 1
-        write(fid, string.(node2)) 
-        write(fid,"\n")
-    end
-
-    write(fid,"\nPOINT_DATA $numberPoints")
-    write(fid,"\nSCALARS fN float 3")
-    write(fid,"\nLOOKUP_TABLE default")
-    for i in 1: numberPoints
-        write(fid,"\n")
-        write(fid, string.(sol_GP.fGP_N[i][1])) 
-        write(fid,"\n")
-        write(fid, string.(sol_GP.fGP_N[i][2]))
-        write(fid,"\n") 
-        write(fid, string.(sol_GP.fGP_N[i][3])) 
-    end 
-
-    write(fid,"\nSCALARS fT float 3")
-    write(fid,"\nLOOKUP_TABLE default")
-    write(fid,"\n")
-    for i in 1: numberPoints
-        write(fid,"\n")
-        write(fid, string.(sol_GP.fGP_T[i][1])) 
-        write(fid,"\n")
-        write(fid, string.(sol_GP.fGP_T[i][2]))
-        write(fid,"\n") 
-        write(fid, string.(sol_GP.fGP_T[i][3])) 
-    end
-
-    write(fid,"\nSCALARS g float 1")
-    write(fid,"\nLOOKUP_TABLE default")
-    for i in 1: numberPoints
-        write(fid,"\n")
-        write(fid, string.(sol_GP.gGP[i][1])) 
-    end
-
-    write(fid,"\nSCALARS status float 1")
-    write(fid,"\nLOOKUP_TABLE default")
-    for i in 1: numberPoints
-        write(fid,"\n")
-        write(fid, string.(sol_GP.status[i][1])) 
-    end
-
-    close(fid)
-    
-end 
-
-# Write nodes as vtk file (no nodes, no beams)
-function write_VTK_configuration(filename, X, C)
-    
-    fid = open(filename, "a")
-    
-    write(fid,"# vtk DataFile Version 3.0")
-    write(fid,"\nvtk output")
-    write(fid,"\nASCII")
-    write(fid,"\nDATASET POLYDATA")
-    
-    numberPoints = length(X)
-    write(fid,"\nPOINTS $numberPoints float")  
-    for n in X
-        write(fid,"\n")
-        write(fid, string.(n[1]))
-        write(fid," ")
-        write(fid, string.(n[2]))
-        write(fid," ")
-        write(fid, string.(n[3])) 
-    end 
-    
-    numberLines = length(C)
-    numberElementsPerLine = 2
-    numberElements= numberLines*(numberElementsPerLine + 1)
-    write(fid,"\nLINES $numberLines $numberElements\n")
-    
-    for i in 1:numberLines
+        x₁ =  X₁ + u₁
+        x₂ =  X₂ + u₂
         
-        write(fid, string.(numberElementsPerLine))
-        write(fid,"\n")
+        lₙ = norm(x₂ - x₁)
+
+        Rₑ, _, _, _, _, _, _, _, _ = local_Rₑ_and_aux(x₁, x₂, R₁, R₂, Rₑ⁰[:,2], lₙ)
+
+        R̅₁ = Rₑ' * R₁ * Rₑ⁰
+        R̅₂ = Rₑ' * R₂ * Rₑ⁰
+
+        Θ̅₁ = toangle(R̅₁)
+        Θ̅₂ = toangle(R̅₂)
+
         
-        node = C[i][1] -1
-        write(fid, string.(node)) 
-        write(fid,"\n")
-        
-        node = C[i][2] -1
-        write(fid, string.(node)) 
-        write(fid,"\n")
-        
-    end 
-    
-    close(fid)
-    
-end 
+        @inbounds for (i, zᴳ) in enumerate(range(-1, 1, length=vtkdata.intermediate_points))
 
-#----------------------------------
-# READ TXT  FILES
-#----------------------------------
+            k = vtkdata.intermediate_points * (bi-1) + i 
 
-"""
-    X₀ = read_TXT_file_pos(filename)
+            ξ = l₀*(zᴳ+1)/2
 
-Read a .txt file as a Vec3{T}[], used for positions and displacements. 
-"""
-function read_TXT_file_pos(filename, T=Float64)
+            # Shape functions
+            N₁ = 1-ξ/l₀
+            N₂ = 1-N₁
+            N₃ = ξ*(1-ξ/l₀)^2
+            N₄ = -(1-ξ/l₀)*((ξ^2)/l₀)
 
-    Xpc = Vec3{T}[]
-    xpc = readdlm(filename)
+            uᵗ = @SVector [0, N₃*Θ̅₁[3] + N₄*Θ̅₂[3], -N₃*Θ̅₁[2] + -N₄*Θ̅₂[2]]
+            xᴳ = N₁*x₁ + N₂*x₂ + Rₑ*uᵗ
 
-    for i in 1:size(xpc,1)
-        push!(Xpc, Vec3(xpc[i,1], xpc[i,2], xpc[i,3]))
+            vtkdata.interpolated_points[k] = xᴳ
+
+            vtkdata.displacement[k] = N₁*u₁ + N₂*u₂
+            vtkdata.velocity[k] = N₁*u̇₁ + N₂*u̇₂
+
+            vtkdata.strain[k] = 1-lₙ/l₀
+            vtkdata.stress[k] = mat.E*(1-lₙ/l₀)
+
+            if !isnothing(sdf)
+                pₙ, _, _, gₙ, ∂gₙ∂x, _ =  contact_gap(xᴳ, comp.εᶜ, sdf)
+                vtkdata.contact_distance[k] = gₙ
+                if pₙ > 0 
+                    vtkdata.normal_contact_force[k] = pₙ*∂gₙ∂x
+                    vtkdata.incontact[k] = 1
+                end
+            end
+
+            k += 1
+
+        end
+
     end
-
-    return Xpc
-
-end 
-
-"""
-    conn = read_TXT_file_pos(filename)
-
-Read a .txt file as a Vector{Vec2{T}}, used for connectivity. 
-"""
-function read_TXT_file_conn(filename)
-
-    Xpc = Vec2{Int}[]
-    xpc = readdlm(filename)
-
-    for i in 1:size(xpc,1)
-        if xpc[i,1] < xpc[i,2]
-            push!(Xpc, Vec2{Int}(xpc[i,1], xpc[i,2]))
-        else 
-            push!(Xpc, Vec2{Int}(xpc[i,2], xpc[i,1]))
-        end 
-    end
-
-    return Xpc
-
-end 
-
-"""
-    Ics_vec = read_TXT_file_ICs_array(filename)
-
-Read a .txt file as a T[], used for displacement, velocity and acceleration initial conditions. 
-"""
-function read_TXT_file_ICs_array(filename, T=Float64)
-
-    X = readdlm(filename)
-    nnodes3 = size(X,1)*size(X,2)
-    x = zeros(T, nnodes3)
-
-    j = 1
-    for i in 1:3:nnodes3
-        x[i] = X[j,1]
-        x[i+1] = X[j,2]
-        x[i+2] = X[j,3]
-        j = j+1
-    end
-
-    return x
 
 end
 
-"""
-    Ics_mat = read_TXT_file_ICs_matrix(filename)
 
-Read a .txt file as a Mat33{T}[], used for the rotation matrix (nodes and beam elements) initial conditions.
-"""
-function read_TXT_file_ICs_matrix(filename, T=Float64)
-
-    X = readdlm(filename)
-    nnodes = size(X,1)
-    x = Mat33{T}[]
-
-    for i in 1:nnodes
-       push!(x, Mat33(X[i,:]))
-    end
-
-    return x
-
-end
 
 #----------------------------------
 # READ TXT  FILES
@@ -406,16 +181,3 @@ function read_VTK_sdf(filename)
 end 
 
 
-
-function read_ICs(fname, T=Float64)
-
-    Xpc = Vector{Vec3{T}}()
-    xpc = readdlm(fname, '\t', T)
-
-    for i in 1:size(xpc,1)
-        push!(Xpc, Vec3{T}(xpc[i,1], xpc[i,2], xpc[i,3]))
-    end
-
-    return Xpc
-
-end 

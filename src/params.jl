@@ -8,7 +8,7 @@
     SAVE_ENERGY::Bool = false
     SAVE_INTERPOLATION_VTK::Bool = true
     SAVE_GP_VTK::Bool = false
-    thisDirOutputPath::String = "output3D"
+    output_dir::String = "output3D"
 
 end 
 
@@ -22,6 +22,6 @@ end
     SAVE_NODES_VTK::Bool = false
     SAVE_INTERPOLATION_VTK::Bool = false
     SAVE_GP_VTK::Bool = false
-    thisDirOutputPath::String = ""
+    output_dir::String = ""
 
 end 
