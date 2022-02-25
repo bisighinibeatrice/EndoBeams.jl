@@ -1057,17 +1057,17 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
             ĪᵨC₂⁴C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂⁴ = Īᵨ*(C₂⁴ + C₄⁴) + SẆ₀ĪᵨmSĪᵨẆ₀ * H₂⁴
 
 
-            Cᵏ¹¹G = ωᴳ * (H₁¹'*AᵨC₁¹C₃¹ + H₂¹'* ĪᵨC₂¹C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂¹ ) 
-            Cᵏ¹²G = ωᴳ * (H₁¹'*AᵨC₁¹C₃² + H₂¹'* ĪᵨC₂²C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂² ) 
-            Cᵏ¹⁴G = ωᴳ * (H₁¹'*AᵨC₁¹C₃⁴ + H₂¹'* ĪᵨC₂⁴C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂⁴ ) 
-
-            Cᵏ²¹G = ωᴳ * (H₁²'*AᵨC₁¹C₃¹ + H₂²'* ĪᵨC₂¹C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂¹ ) 
-            Cᵏ²²G = ωᴳ * (H₁²'*AᵨC₁¹C₃² + H₂²'* ĪᵨC₂²C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂² ) 
-            Cᵏ²⁴G = ωᴳ * (H₁²'*AᵨC₁¹C₃⁴ + H₂²'* ĪᵨC₂⁴C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂⁴ ) 
-
-            Cᵏ⁴¹G = ωᴳ * (H₁⁴'*AᵨC₁¹C₃¹ + H₂⁴'* ĪᵨC₂¹C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂¹ ) 
-            Cᵏ⁴²G = ωᴳ * (H₁⁴'*AᵨC₁¹C₃² + H₂⁴'* ĪᵨC₂²C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂² ) 
-            Cᵏ⁴⁴G = ωᴳ * (H₁⁴'*AᵨC₁¹C₃⁴ + H₂⁴'* ĪᵨC₂⁴C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂⁴ ) 
+            Cᵏ¹¹G = ωᴳ * ( H₁¹'*AᵨC₁¹C₃¹ + H₂¹'* ĪᵨC₂¹C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂¹ ) 
+            Cᵏ¹²G = ωᴳ * ( H₁¹'*AᵨC₁¹C₃² + H₂¹'* ĪᵨC₂²C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂² ) 
+            Cᵏ¹⁴G = ωᴳ * ( H₁¹'*AᵨC₁¹C₃⁴ + H₂¹'* ĪᵨC₂⁴C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂⁴ ) 
+ 
+            Cᵏ²¹G = ωᴳ * ( H₁²'*AᵨC₁¹C₃¹ + H₂²'* ĪᵨC₂¹C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂¹ ) 
+            Cᵏ²²G = ωᴳ * ( H₁²'*AᵨC₁¹C₃² + H₂²'* ĪᵨC₂²C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂² ) 
+            Cᵏ²⁴G = ωᴳ * ( H₁²'*AᵨC₁¹C₃⁴ + H₂²'* ĪᵨC₂⁴C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂⁴ ) 
+ 
+            Cᵏ⁴¹G = ωᴳ * ( H₁⁴'*AᵨC₁¹C₃¹ + H₂⁴'* ĪᵨC₂¹C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂¹ ) 
+            Cᵏ⁴²G = ωᴳ * ( H₁⁴'*AᵨC₁¹C₃² + H₂⁴'* ĪᵨC₂²C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂² ) 
+            Cᵏ⁴⁴G = ωᴳ * ( H₁⁴'*AᵨC₁¹C₃⁴ + H₂⁴'* ĪᵨC₂⁴C₄¹SẆ₀ĪᵨmSĪᵨẆ₀H₂⁴ ) 
 
 
             Cᵏ¹¹ += Cᵏ¹¹G
@@ -1392,7 +1392,26 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
 
 
 
-        kinetic_energy = l₀2* kinetic_energy
+        kinetic_energy = l₀2*kinetic_energy
+
+        if comp.damping>0
+            Cᵏ¹¹ += comp.damping*M¹¹
+            Cᵏ¹² += comp.damping*M¹²
+            Cᵏ¹³ += comp.damping*M¹³
+            Cᵏ¹⁴ += comp.damping*M¹⁴
+            Cᵏ²¹ += comp.damping*M¹²'
+            Cᵏ²² += comp.damping*M²²
+            Cᵏ²³ += comp.damping*M²³
+            Cᵏ²⁴ += comp.damping*M²⁴
+            Cᵏ³¹ += comp.damping*M¹³'
+            Cᵏ³² += comp.damping*M²³'
+            Cᵏ³³ += comp.damping*M³³
+            Cᵏ³⁴ += comp.damping*M³⁴
+            Cᵏ⁴¹ += comp.damping*M¹⁴'
+            Cᵏ⁴² += comp.damping*M²⁴'
+            Cᵏ⁴³ += comp.damping*M³⁴'
+            Cᵏ⁴⁴ += comp.damping*M⁴⁴
+        end
 
 
 
@@ -1435,24 +1454,7 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
 
         end
 
-        if comp.damping>0
-            Cᵏ¹¹ += comp.damping*M¹¹
-            Cᵏ¹² += comp.damping*M¹²
-            Cᵏ¹³ += comp.damping*M¹³
-            Cᵏ¹⁴ += comp.damping*M¹⁴
-            Cᵏ²¹ += comp.damping*M²¹
-            Cᵏ²² += comp.damping*M²²
-            Cᵏ²³ += comp.damping*M²³
-            Cᵏ²⁴ += comp.damping*M²⁴
-            Cᵏ³¹ += comp.damping*M³¹
-            Cᵏ³² += comp.damping*M³²
-            Cᵏ³³ += comp.damping*M³³
-            Cᵏ³⁴ += comp.damping*M³⁴
-            Cᵏ⁴¹ += comp.damping*M⁴¹
-            Cᵏ⁴² += comp.damping*M⁴²
-            Cᵏ⁴³ += comp.damping*M⁴³
-            Cᵏ⁴⁴ += comp.damping*M⁴⁴
-        end
+
 
 
         if contact

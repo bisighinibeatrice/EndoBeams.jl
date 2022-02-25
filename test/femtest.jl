@@ -1,11 +1,9 @@
 using LinearAlgebra
 using StaticArrays
-using Infiltrator
 using BenchmarkTools
 using FiniteDiff
 using Test
 using EndoBeams: SDF_Sphere, SDF_Plane_z, contact_gap, local_R⁰, rotation_matrix, compute, ID3, Tₛ⁻¹
-
 
 
 
@@ -46,7 +44,7 @@ R₂ = rotation_matrix(Θ₂)
 ΔR₂ = 1. *ID3
 mat = (E = 1., G = 0.1, Jᵨ = Diagonal(@SVector [20, 10, 10]), Aᵨ = 0.01)
 geom = (A = 0.01, J = 0.01, I₃₃ = 0.01, I₂₂ = 0.01)
-comp = (nᴳ = 3, zᴳ = @SVector[-sqrt(3/5), 0, sqrt(3/5)], ωᴳ = @SVector[5/9, 8/9, 5/9], εᶜ = 10., μ = 0.3, εᵗ = 0.1, damping=0)
+comp = (nᴳ = 3, zᴳ = @SVector[-sqrt(3/5), 0, sqrt(3/5)], ωᴳ = @SVector[5/9, 8/9, 5/9], εᶜ = 10., μ = 0.3, εᵗ = 0.1, damping=0.)
 
 
 init = (;X₁, X₂, l₀, Rₑ⁰)
@@ -59,9 +57,13 @@ simvars_contact = (;mat, geom, comp, init, sdf)
 function compare(test, correct, disp=true)
     m = maximum(abs.(correct))
     if disp
+        println("-------------------------------------------------------------------------")
         display(test)
+        println()
         display(correct)
+        println()
         display(test - correct)
+        println()
     end
     return maximum(abs.(test - correct))/m
 end
@@ -77,8 +79,8 @@ function finitediff_statics(exact=true)
 
     x₀ = [u₁..., Θ₁..., u₂..., Θ₂...]
 
-    _, _, _, ftest, _, _, _, Ktest, _, _, _, _ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars, exact, false)
-    
+    _, _, _, ftest, _, _, Ktest, _, _, _, _ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars, exact, false)
+
     fun(x) = compute(x[1:3], x[7:9], rotation_matrix(x[4:6]), rotation_matrix(x[10:12]), ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars, true, false)
 
     F = FiniteDiff.finite_difference_gradient(x->fun(HH*x)[1], x₀)
@@ -92,7 +94,7 @@ function finitediff_dynamic(exact=true)
 
     x₀ = [u̇₁..., ẇ₁..., u̇₂..., ẇ₂...]
 
-    _, _, _, _, ftest, _, _, _, _, Mtest, Ctest, _ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars, exact, true)
+    _, _, _, _, ftest, _, _, _, Mtest, Ctest, _ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars, exact, true)
     
     funC(x) = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, x[1:3], x[7:9], x[4:6], x[10:12], ü₁, ü₂, ẅ₁, ẅ₂, simvars, true, true)
 
@@ -115,12 +117,12 @@ function finitediff_contact(exact=true)
 
     x₀ = [u₁..., Θ₁..., u₂..., Θ₂...]
 
-    _, _, _, _, _, _, _, _, Ktest, _, _, Ctest = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars_contact, exact, true)
+    _, _, _, _, _, _, _, Ktest, _, _, Ctest = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars_contact, exact, true)
 
     comp = (nᴳ = 3, zᴳ = @SVector[-sqrt(3/5), 0, sqrt(3/5)], ωᴳ = @SVector[5/9, 8/9, 5/9], εᶜ = 10., μ = 0., εᵗ = 0.1, damping=0)
     simvars_contact_frictionless = (;mat, geom, comp, init, sdf)
 
-    _, _, _, _, _, ftest, _, _, _, _, _, _ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars_contact_frictionless, exact, true)
+    _, _, _, _, _, ftest, _, _, _, _, _ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars_contact_frictionless, exact, true)
 
 
     funK(x) = compute(x[1:3], x[7:9], rotation_matrix(x[4:6]), rotation_matrix(x[10:12]), ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars_contact, true, true)
