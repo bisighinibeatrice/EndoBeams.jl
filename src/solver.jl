@@ -320,7 +320,7 @@ function corrector_loop!(nodes, beams, constraints, matrices, energy, solⁿ⁺�
         
         while ( res_norm>tol_res || ΔD_norm>ΔD_tol ) && k≤max_it        
             
-            @timeit_debug "Assemble element contributions" assemble!(nodes, beams, matrices, energy, conf, sdf, comp)  
+            @timeit_debug "Assemble element contributions" assemble!(nodes, beams, matrices, energy, conf, sdf, comp)
             
             @timeit_debug "Compute constraints contributions" constraints!(matrices, nodes, constraints)             
                 
@@ -338,12 +338,7 @@ function corrector_loop!(nodes, beams, constraints, matrices, energy, solⁿ⁺�
             @timeit_debug "Update global and local variables" begin
     
                 # fill whole dofs solution vector with free dofs solution
-                nodes_sol.ΔD[free_dofs] .= nodes_sol.ΔD_free  
-                
-                # if necessary, return to cartesian coordinates        
-                # if conf.bc.flag_cylindrical == 1   
-                #     dirichlet_local_to_global!(nodes_sol,  nodes)            
-                # end     
+                nodes_sol.ΔD[free_dofs] .= nodes_sol.ΔD_free   
                 
                 # update global displacement variables
                 @inbounds for i in disp_dofs
@@ -352,12 +347,9 @@ function corrector_loop!(nodes, beams, constraints, matrices, energy, solⁿ⁺�
                     nodes_sol.D̈[i] += (1/(β*Δt^2))*nodes_sol.ΔD[i]
                 end
 
-                
                 # update the nodes displacement, velocity, acceleration and rotation
                 update_local_corrector!(nodes, nodes_sol, Δt, β, γ)
                 
-
-
             end 
             
             @timeit_debug "Compute norms" res_norm, ΔD_norm = compute_norms_corrector(k, solⁿ⁺¹, nodes_sol, matrices, SHOW_COMP_TIME)

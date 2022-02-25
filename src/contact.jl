@@ -251,6 +251,7 @@ end
 end 
 
 
+
 # Quadratically regulise penalty
 @inline function quadratically_regularized_penalty(gₙ::T, εᶜ, r) where T
     

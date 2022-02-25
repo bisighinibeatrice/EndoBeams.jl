@@ -9,7 +9,6 @@ using TimerOutputs
 using Parameters
 # using SignedDistanceField
 using Infiltrator
-# using MKL
 using Pardiso
 using Cthulhu
 using Printf
