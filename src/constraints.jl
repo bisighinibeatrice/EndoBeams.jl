@@ -7,7 +7,7 @@ struct Constraint{T}
     node2::Int # index of node 2
     stiffness::T
     damping::T
-    sparsity_map::Vector{Int} 
+    sparsity_map::SVector{144, Int} 
 end
 
 #----------------------------------
@@ -83,15 +83,13 @@ function constraints!(matrices, nodes, constraints)
         pkindices = @SVector [i+12*(mod1(i+6, 12)-1) for i in [7,8,9,1,2,3]]
 
 
-        @inbounds for dof in c.sparsity_map[mkindices]
-            matrices.K[dof] += k
-            matrices.C[dof] += α*k
-        end
+        dofs = c.sparsity_map[mkindices]
+        matrices.K[dofs] .+= k
+        matrices.C[dofs] .+= α*k
 
-        @inbounds for dof in c.sparsity_map[pkindices]
-            matrices.K[dof] -= k
-            matrices.C[dof] -= α*k
-        end
+        dofs = c.sparsity_map[pkindices]
+        matrices.K[dofs] .-= k
+        matrices.C[dofs] .-= α*k
 
     end 
 

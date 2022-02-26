@@ -10,7 +10,7 @@ struct Beam{T, Tᵏ}
     l₀::T # initial beam length
     Rₑ⁰::Mat33{T} # initial beam rotation matrix
     K̄ⁱⁿᵗ::Tᵏ # beam internal matrix
-    sparsity_map::Vector{Int} # sparsity map from local indices (beam matrix) to global indices (gloabl sparse matrix) -> computed in the constructor of the sparse matrices
+    sparsity_map::SVector{144, Int} # sparsity map from local indices (beam matrix) to global indices (gloabl sparse matrix) -> computed in the constructor of the sparse matrices
 
 end
 

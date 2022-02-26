@@ -51,12 +51,17 @@ function sparsity(nodes, beams, constraints, fixed_dofs)
 
     ksf = 0
 
+    beams_spmap = [MVector{144, Int}(undef) for _ in 1:length(beams)]
+    if !isnothing(constraints)
+        constraints_spmap = [MVector{144, Int}(undef) for _ in 1:length(constraints)]
+    end
+
     for (i, infos) in enumerate(K.nzval)
         for (type, idx, local_dof) in infos
             if type==1
-                beams.sparsity_map[idx][local_dof] = i
-            elseif type==2
-                constraints.sparsity_map[idx][local_dof] = i
+                beams_spmap[idx][local_dof] = i
+            elseif type==2 && !isnothing(constraints)
+                constraints_spmap[idx][local_dof] = i
             end
         end
         if infos[1][4] == 0
@@ -66,6 +71,15 @@ function sparsity(nodes, beams, constraints, fixed_dofs)
     end
 
     resize!(sparsity_free, ksf)
+
+    for i in eachindex(beams)
+        beams.sparsity_map[i] = beams_spmap[i]
+    end
+    if !isnothing(constraints)
+        for i in eachindex(constraints)
+            constraints.sparsity_map[i] = constraints_spmap[i]
+        end
+    end
 
     return I, J, sparsity_free
 end

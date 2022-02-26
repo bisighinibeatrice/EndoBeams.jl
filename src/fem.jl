@@ -1639,18 +1639,19 @@ function assemble!(nodes, beams, matrices, energy, conf, sdf, comp)
         
     lk = Threads.SpinLock()
 
-    Threads.@threads for b in LazyRows(beams)
+    @batch for b in LazyRows(beams)
         
-            
+        n1 = b.node1
+        n2 = b.node2
         # information from node 1 and 2
-        X₁, X₂ = nodes.X₀[b.node1], nodes.X₀[b.node2]
-        u₁, u₂ = nodes.u[b.node1], nodes.u[b.node2]
-        u̇₁, u̇₂ = nodes.u̇[b.node1], nodes.u̇[b.node2]
-        ü₁, ü₂ = nodes.ü[b.node1], nodes.ü[b.node2]
-        ẇ₁, ẇ₂ = nodes.ẇ[b.node1], nodes.ẇ[b.node2]
-        ẅ₁, ẅ₂ = nodes.ẅ[b.node1], nodes.ẅ[b.node2]
-        R₁, R₂ = nodes.R[b.node1], nodes.R[b.node2]
-        ΔR₁, ΔR₂ = nodes.ΔR[b.node1], nodes.ΔR[b.node2]
+        X₁, X₂ = nodes.X₀[n1], nodes.X₀[n2]
+        u₁, u₂ = nodes.u[n1], nodes.u[n2]
+        u̇₁, u̇₂ = nodes.u̇[n1], nodes.u̇[n2]
+        ü₁, ü₂ = nodes.ü[n1], nodes.ü[n2]
+        ẇ₁, ẇ₂ = nodes.ẇ[n1], nodes.ẇ[n2]
+        ẅ₁, ẅ₂ = nodes.ẅ[n1], nodes.ẅ[n2]
+        R₁, R₂ = nodes.R[n1], nodes.R[n2]
+        ΔR₁, ΔR₂ = nodes.ΔR[n1], nodes.ΔR[n2]
 
 
         #----------------------------------------
@@ -1660,36 +1661,35 @@ function assemble!(nodes, beams, matrices, energy, conf, sdf, comp)
 
         strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ, Kⁱⁿᵗ, Kᶜ, M, Cᵏ, Cᶜ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars)
     
+        K = Kⁱⁿᵗ - Kᶜ
+        C = Cᵏ-(1+comp.α)*Cᶜ
 
         #-----------------------
         # Assemble contributions
         
 
-        idof1 = nodes.idof_6[b.node1]
-        idof2 = nodes.idof_6[b.node2]
+        idof1 = nodes.idof_6[n1]
+        idof2 = nodes.idof_6[n2]
         
         dofs = vcat(idof1, idof2)
 
 
-        lock(lk) do
-        
+        lock(lk)
+        try
             energy.strain_energy +=  strain_energy
             energy.kinetic_energy += kinetic_energy
-            energy.contact_energy +=  contact_energy
+            energy.contact_energy += contact_energy
 
+            matrices.Tᵏ[dofs] += Tᵏ
+            matrices.Tⁱⁿᵗ[dofs] += Tⁱⁿᵗ
+            matrices.Tᶜ[dofs] += Tᶜ
 
-            @inbounds for (i, dof) in enumerate(dofs)
-                matrices.Tᵏ[dof] += Tᵏ[i]
-                matrices.Tⁱⁿᵗ[dof] += Tⁱⁿᵗ[i]
-                matrices.Tᶜ[dof] += Tᶜ[i]
-            end
+            matrices.K[b.sparsity_map] += vec(K)
+            matrices.C[b.sparsity_map] += vec(C)
+            matrices.M[b.sparsity_map] += vec(M)
 
-            @inbounds for (i, dof) in enumerate(b.sparsity_map)
-                matrices.K[dof] += Kⁱⁿᵗ[i] - Kᶜ[i]
-                matrices.C[dof] += Cᵏ[i]-(1+comp.α)*Cᶜ[i]
-                matrices.M[dof] += M[i]
-            end
-
+        finally
+            unlock(lk)
         end
 
                             
