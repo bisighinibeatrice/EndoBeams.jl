@@ -33,7 +33,7 @@ Returns a StructArray{Beam}, structure containing the information of the beam el
 
 function constructor_beams(nodes, connectivity::AbstractMatrix, mat, geom, Rₑ⁰=nothing)
     
-    beams = StructArray(constructor_beam(i, nodes[connectivity[i, 1]], nodes[connectivity[i, 2]], mat, geom, Rₑ⁰ isa AbstractMatrix ? Rₑ⁰[i,:] : Rₑ⁰) for i in 1:size(connectivity, 1))
+    beams = StructArray(Beam(i, nodes[connectivity[i, 1]], nodes[connectivity[i, 2]], mat, geom, Rₑ⁰ isa AbstractMatrix ? Rₑ⁰[i,:] : Rₑ⁰) for i in 1:size(connectivity, 1))
 
     return beams
     
@@ -41,7 +41,7 @@ end
 
 function constructor_beams(nodes, connectivity::AbstractVector, mat, geom, Rₑ⁰=nothing)
     
-    beams = StructArray(constructor_beam(i, nodes[connectivity[i][1]], nodes[connectivity[i][2]], mat, geom, Rₑ⁰ isa AbstractVector ? Rₑ⁰[i] : Rₑ⁰) for i in 1:length(connectivity))
+    beams = StructArray(Beam(i, nodes[connectivity[i][1]], nodes[connectivity[i][2]], mat, geom, Rₑ⁰ isa AbstractVector ? Rₑ⁰[i] : Rₑ⁰) for i in 1:length(connectivity))
 
     return beams
     
@@ -49,7 +49,7 @@ end
 
     
 # Constructor of the one beam (Beam) given initial rotation
-function constructor_beam(ind, node1::Node{T}, node2::Node{T}, mat, geom, Rₑ⁰) where T
+function Beam(ind, node1::Node{T}, node2::Node{T}, mat, geom, Rₑ⁰) where T
     
     i1 = node1.i   
     i2 = node2.i  
@@ -60,5 +60,5 @@ function constructor_beam(ind, node1::Node{T}, node2::Node{T}, mat, geom, Rₑ�
     
 end 
 
-constructor_beam(ind, node1::Node{T}, node2::Node{T}, mat, geom, Rₑ⁰::Nothing) where T = constructor_beam(ind, node1, node2, mat, geom, local_R⁰(node1.X₀, node2.X₀))
+Beam(ind, node1::Node{T}, node2::Node{T}, mat, geom, Rₑ⁰::Nothing) where T = Beam(ind, node1, node2, mat, geom, local_R⁰(node1.X₀, node2.X₀))
 
