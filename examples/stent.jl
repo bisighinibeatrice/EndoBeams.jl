@@ -65,7 +65,7 @@ beams = constructor_beams(nodes, connectivity, mat, geom, Re₀)
 α = -0.05
 β = 0.25*(1-α)^2
 γ = 0.5*(1-2*α)
-damping = 1e4
+damping = 1e3
 
 # time step and total time
 Δt = 0.01
@@ -73,8 +73,8 @@ damping = 1e4
 tᵉⁿᵈ = 1
 
 # tolerance and maximum number of iterations
-tol_res = 1e-5
-tol_ΔD = 1e-5
+tol_res = 1e-3
+tol_ΔD = 1e-3
 max_it = 10
 
 # Gauss points
@@ -85,8 +85,8 @@ zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 # contact parameters
 εᶜ = 1 #penalty parameter
 μ = 0.3
-εᵗ = 0.1 #regularized parameter for friction contact
-γᵈᵃᵐᵖ = 100
+εᵗ = 10 #regularized parameter for friction contact
+γᵈᵃᵐᵖ = 10
 
 comp = SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, γ, T)
 
@@ -141,5 +141,5 @@ conf = Configuration(mat, geom, ndofs, ext_forces, bcs, T)
 # Start simulation
 # -------------------------------------------------------------------------------------------
 
-params = Params(output_dir = "examples/output3D", ENERGY_STOP = true, SAVE_ENERGY = true, scale=2, SHOW_TIME_SECTIONS=false)
+params = Params(output_dir = "examples/output3D", ENERGY_STOP = true, scale=2, SHOW_TIME_SECTIONS=false)
 solver!(nodes, beams, conf, comp, sdf, cons, params, T)

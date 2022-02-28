@@ -568,7 +568,7 @@ end
 
 
 
-Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars, exact=true, dynamics=true) where T
+Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars, exact=false, dynamics=true) where T
 
     # Superscript ¹ means matrix or vector associated to u₁
     # Superscript ² means matrix or vector associated to Θ₁

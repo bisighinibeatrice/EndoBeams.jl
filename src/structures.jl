@@ -412,13 +412,14 @@ struct VTKData{T}
 
     contact_distance::Vector{T}
     normal_contact_force::Vector{Vec3{T}}
+    tangential_contact_force::Vector{Vec3{T}}
     incontact::Vector{Int}
 
 end
 
 function VTKData(nbeams, output_dir, sdf, T)
 
-    intermediate_points = 10
+    intermediate_points = 5
 
     interpolated_points = zeros(Vec3{T}, nbeams*intermediate_points)
     interpolated_lines = [MeshCell(VTKCellTypes.VTK_LINE, ((i-1)*intermediate_points+j, (i-1)*intermediate_points+(j+1))) for i in 1:nbeams for j in 1:intermediate_points-1]
@@ -432,10 +433,12 @@ function VTKData(nbeams, output_dir, sdf, T)
     if !isnothing(sdf)
         contact_distance = zeros(T, length(interpolated_points))
         normal_contact_force = zeros(Vec3{T}, length(interpolated_points))
+        tangential_contact_force = zeros(Vec3{T}, length(interpolated_points))
         incontact = zeros(Int, length(interpolated_points))
     else
         contact_distance = T[]
         normal_contact_force = Vec3{T}[]
+        tangential_contact_force = Vec3{T}[]
         incontact = Int[]
     end
 
@@ -444,7 +447,7 @@ function VTKData(nbeams, output_dir, sdf, T)
 
     collection = paraview_collection("$output_dir/simulation")
 
-    return VTKData{T}(collection, output_dir, intermediate_points, interpolated_points, interpolated_lines, stress, strain, displacement, velocity, contact_distance, normal_contact_force, incontact)
+    return VTKData{T}(collection, output_dir, intermediate_points, interpolated_points, interpolated_lines, stress, strain, displacement, velocity, contact_distance, normal_contact_force, tangential_contact_force, incontact)
 
 end
 

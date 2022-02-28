@@ -68,7 +68,7 @@ beams = constructor_beams(nodes, connectivity, mat, geom, nothing)
 α = -0.05
 β = 0.25*(1-α)^2
 γ = 0.5*(1-2*α)
-damping = 0
+damping = 1e-3
 
 # time step and total time
 Δt = 0.5
@@ -89,7 +89,7 @@ zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 εᶜ = 0.01
 μ = 0.01
 εᵗ = 0.5
-γᵈᵃᵐᵖ = 100
+γᵈᵃᵐᵖ = 1e3
 
 comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, γᵈᵃᵐᵖ, T)
 

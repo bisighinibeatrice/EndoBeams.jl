@@ -4,6 +4,7 @@
 function write_VTK(write_counter, step, t, nodes, beams, energy, conf, sdf, comp, vtkdata) 
 
     fill!(vtkdata.normal_contact_force, zero(eltype(vtkdata.normal_contact_force)))
+    fill!(vtkdata.tangential_contact_force, zero(eltype(vtkdata.tangential_contact_force)))
     fill!(vtkdata.incontact, 0)
 
     recompute_at_gausspts!(vtkdata, nodes, beams, conf.mat, sdf, comp)
@@ -18,6 +19,7 @@ function write_VTK(write_counter, step, t, nodes, beams, energy, conf, sdf, comp
         if !isnothing(sdf)
             vtk["Contact gap", VTKPointData()] = vtkdata.contact_distance
             vtk["Normal contact force", VTKPointData()] = vtkdata.normal_contact_force
+            vtk["Tangential contact force", VTKPointData()] = vtkdata.tangential_contact_force
             vtk["In contact?", VTKPointData()] = vtkdata.incontact
         end
 
@@ -50,6 +52,7 @@ function recompute_at_gausspts!(vtkdata, nodes, beams, mat, sdf, comp)
         X₁, X₂ = nodes.X₀[n1], nodes.X₀[n2]
         u₁, u₂ = nodes.u[n1], nodes.u[n2]
         u̇₁, u̇₂ = nodes.u̇[n1], nodes.u̇[n2]
+        ẇ₁, ẇ₂ = nodes.ẇ[n1], nodes.ẇ[n2]
         R₁, R₂ = nodes.R[n1], nodes.R[n2]
         l₀ = beams.l₀[bi]
         Rₑ⁰ = beams.Rₑ⁰[bi]
@@ -60,7 +63,7 @@ function recompute_at_gausspts!(vtkdata, nodes, beams, mat, sdf, comp)
         
         lₙ = norm(x₂ - x₁)
 
-        Rₑ, _, _, _, _, _, _, _, _ = local_Rₑ_and_aux(x₁, x₂, R₁, R₂, Rₑ⁰[:,2], lₙ)
+        Rₑ, _, _, _, Gᵀ¹, Gᵀ², Gᵀ³, Gᵀ⁴, _ = local_Rₑ_and_aux(x₁, x₂, R₁, R₂, Rₑ⁰[:,2], lₙ)
 
         R̅₁ = Rₑ' * R₁ * Rₑ⁰
         R̅₂ = Rₑ' * R₂ * Rₑ⁰
@@ -96,7 +99,30 @@ function recompute_at_gausspts!(vtkdata, nodes, beams, mat, sdf, comp)
                 pₙ, _, _, gₙ, ∂gₙ∂x, _ =  contact_gap(xᴳ, comp.εᶜ, sdf)
                 vtkdata.contact_distance[k] = gₙ
                 if pₙ > 0 
-                    vtkdata.normal_contact_force[k] = pₙ*∂gₙ∂x
+                    U̇₁ = Rₑ' * u̇₁
+                    U̇₂ = Rₑ' * u̇₂
+                    Ẇ₁ = Rₑ' * ẇ₁
+                    Ẇ₂ = Rₑ' * ẇ₂
+                    Suᵗ = skew(uᵗ)
+                    N₇ = N₃+N₄
+                    N₇lₙ = N₇/lₙ
+                    P₁P¹ = @SMatrix [0 0 0; 0 N₇lₙ 0;0 0 N₇lₙ]
+                    P₁P² = @SMatrix [0 0 0; 0 0 N₃;0 -N₃ 0]
+                    P₁P³ = -P₁P¹
+                    P₁P⁴ = @SMatrix [0 0 0; 0 0 N₄;0 -N₄ 0]
+                    H₁¹ = N₁*ID3 + P₁P¹ - Suᵗ*Gᵀ¹
+                    H₁² =          P₁P² - Suᵗ*Gᵀ²
+                    H₁³ = N₂*ID3 + P₁P³ - Suᵗ*Gᵀ³
+                    H₁⁴ =          P₁P⁴ - Suᵗ*Gᵀ⁴
+                    h₁ = H₁¹ * U̇₁ + H₁² * Ẇ₁ + H₁³ * U̇₂ + H₁⁴ * Ẇ₂
+                    u̇₀ = Rₑ * h₁
+                    ġₙ = dot(u̇₀, ∂gₙ∂x)*∂gₙ∂x
+                    ġₜ = u̇₀ - ġₙ
+                    ġₜ² = dot(ġₜ, ġₜ)
+                    γᵈᵃᵐᵖ = comp.γᵈᵃᵐᵖ
+                    μʳᵉᵍ = comp.μ/sqrt(ġₜ²+comp.εᵗ)
+                    vtkdata.normal_contact_force[k] = pₙ*∂gₙ∂x - γᵈᵃᵐᵖ * pₙ * ġₙ
+                    vtkdata.tangential_contact_force[k] = -μʳᵉᵍ * pₙ * ġₜ
                     vtkdata.incontact[k] = 1
                 end
             end

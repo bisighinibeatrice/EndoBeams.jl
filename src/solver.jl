@@ -5,7 +5,7 @@ function solver!(nodes, beams, conf, comp, sdf, constraints, params, T=Float64)
     # INITIALISATION
     # -------------------------------------------------------------------------------------------
   
-    @unpack scale, ENERGY_STOP, SHOW_COMP_TIME, SHOW_TIME_SECTIONS, SAVE_NODES_VTK, SAVE_ENERGY, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, output_dir = params
+    @unpack scale, ENERGY_STOP, SHOW_COMP_TIME, SHOW_TIME_SECTIONS, output_dir = params
 
     if SHOW_TIME_SECTIONS
         TimerOutputs.enable_debug_timings(@__MODULE__)
