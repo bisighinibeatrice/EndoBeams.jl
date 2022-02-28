@@ -161,7 +161,7 @@ function test1_ring_plane()
     
     r = 0.5
     z0 = -10.1
-    sdf = SDF_Plane_z{T}(r, z0)
+    sdf = Plane_z_SDF{T}(r, z0)
     
     # -------------------------------------------------------------------------------------------
     # Configuration

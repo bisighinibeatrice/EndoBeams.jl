@@ -3,7 +3,7 @@ using StaticArrays
 using BenchmarkTools
 using FiniteDiff
 using Test
-using EndoBeams: SDF_Sphere, SDF_Plane_z, contact_gap, local_R⁰, rotation_matrix, compute, ID3, Tₛ⁻¹
+using EndoBeams: Sphere_SDF, Plane_z_SDF, contact_gap, local_R⁰, rotation_matrix, compute, ID3, Tₛ⁻¹
 
 
 
@@ -44,14 +44,14 @@ R₂ = rotation_matrix(Θ₂)
 ΔR₂ = 1. *ID3
 mat = (E = 1., G = 0.1, Jᵨ = Diagonal(@SVector [20, 10, 10]), Aᵨ = 0.01)
 geom = (A = 0.01, J = 0.01, I₃₃ = 0.01, I₂₂ = 0.01)
-comp = (nᴳ = 3, zᴳ = @SVector[-sqrt(3/5), 0, sqrt(3/5)], ωᴳ = @SVector[5/9, 8/9, 5/9], εᶜ = 10., μ = 0.3, εᵗ = 0.1, damping=0.)
+comp = (nᴳ = 3, zᴳ = @SVector[-sqrt(3/5), 0, sqrt(3/5)], ωᴳ = @SVector[5/9, 8/9, 5/9], εᶜ = 10., μ = 0.3, εᵗ = 0.1, γᵈᵃᵐᵖ = 10., damping=0.1)
 
 
 init = (;X₁, X₂, l₀, Rₑ⁰)
 
 simvars = (;mat, geom, comp, init, sdf=nothing)
 
-sdf = SDF_Sphere{Float64}(1., 1., 0, 0, 0)
+sdf = Sphere_SDF{Float64}(1., 1., 0, 0, 0)
 simvars_contact = (;mat, geom, comp, init, sdf)
 
 function compare(test, correct, disp=true)
@@ -117,17 +117,16 @@ function finitediff_contact(exact=true)
 
     x₀ = [u₁..., Θ₁..., u₂..., Θ₂...]
 
-    _, _, _, _, _, _, _, Ktest, _, _, Ctest = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars_contact, exact, true)
-
-    comp = (nᴳ = 3, zᴳ = @SVector[-sqrt(3/5), 0, sqrt(3/5)], ωᴳ = @SVector[5/9, 8/9, 5/9], εᶜ = 10., μ = 0., εᵗ = 0.1, damping=0)
-    simvars_contact_frictionless = (;mat, geom, comp, init, sdf)
-
+    # frictionless
+    newcomp = (comp..., μ = 0., γᵈᵃᵐᵖ = 0., μʳᵉᵍ = 0.)
+    simvars_contact_frictionless = (;mat, geom, comp=newcomp, init, sdf)
     _, _, _, _, _, ftest, _, _, _, _, _ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars_contact_frictionless, exact, true)
+    funK_frictionless(x) = compute(x[1:3], x[7:9], rotation_matrix(x[4:6]), rotation_matrix(x[10:12]), ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars_contact_frictionless, true, true)
+    F = FiniteDiff.finite_difference_gradient(x->funK_frictionless(HH*x)[3], x₀)
 
-
+    # with friction
+    _, _, _, _, _, _, _, Ktest, _, _, Ctest = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars_contact, exact, true)
     funK(x) = compute(x[1:3], x[7:9], rotation_matrix(x[4:6]), rotation_matrix(x[10:12]), ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars_contact, true, true)
-
-    F = FiniteDiff.finite_difference_gradient(x->funK(HH*x)[3], x₀)
     H = FiniteDiff.finite_difference_jacobian(x->funK(HH*x)[6], x₀)
 
 
@@ -152,4 +151,4 @@ end
 
 @inferred compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars_contact, true, true)
 
-@btime compute($u₁, $u₂, $R₁, $R₂, $ΔR₁, $ΔR₂, $u̇₁, $u̇₂, $ẇ₁, $ẇ₂, $ü₁, $ü₂, $ẅ₁, $ẅ₂, $simvars_contact, $true, $true)
+# @btime compute($u₁, $u₂, $R₁, $R₂, $ΔR₁, $ΔR₂, $u̇₁, $u̇₂, $ẇ₁, $ẇ₂, $ü₁, $ü₂, $ẅ₁, $ẅ₂, $simvars_contact, $true, $true)

@@ -153,7 +153,7 @@ function test_sphere()
     # sphere radius
     R = 0.04
     
-    sdf = SDF_Sphere{T}(r, R, x0, y0, z0)
+    sdf = Sphere_SDF{T}(r, R, x0, y0, z0)
     
     # -------------------------------------------------------------------------------------------
     # Configuration

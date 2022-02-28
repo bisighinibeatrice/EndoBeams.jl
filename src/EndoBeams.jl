@@ -14,7 +14,7 @@ include("fem.jl")
 include("params.jl")
 include("IO.jl")
 
-export constructor_nodes, constructor_beams, constructor_constraints, Params, ParamsTest, solver!, Material, Geometry, SimulationParameters, ExternalForces, BoundaryConditions, Configuration, Vec3, Vec2, Mat33, SDF_Plane_z, SDF_Plane_y, SDF_Sphere, SDF_Cylinder
+export constructor_nodes, constructor_beams, constructor_constraints, Params, ParamsTest, solver!, Material, Geometry, SimulationParameters, ExternalForces, BoundaryConditions, Configuration, Vec3, Vec2, Mat33, Discrete_SDF, Plane_z_SDF, Plane_y_SDF, Sphere_SDF, Cylinder_SDF
 
 
 include("precompile/precompiles.jl")

@@ -32,6 +32,7 @@ struct SimulationParameters{T, NG}
     εᶜ::T
     μ::T
     εᵗ::T
+    γᵈᵃᵐᵖ::T
     
 end
 
@@ -56,12 +57,13 @@ Constructor of the structure containing the simulation parameters:
     - `εᶜ`: penalty coefficient for the contact normal contributions;
     - `μ`: friction coefficient;
     - `εᵗ`: regularisation coefficient for the contact tangential contributions.
+    - `γᵈᵃᵐᵖ`: contact normal damping parameter
 
 Returns a SimulationParameters structure.
 """
-function SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T=Float64)
+function SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, γᵈᵃᵐᵖ, T=Float64)
     
-    return SimulationParameters{T, nG}(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ)
+    return SimulationParameters{T, nG}(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, γᵈᵃᵐᵖ)
     
 end 
 

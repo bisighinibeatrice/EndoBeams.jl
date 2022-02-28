@@ -68,7 +68,7 @@ beams = constructor_beams(nodes, connectivity, mat, geom, nothing)
 α = -0.05
 β = 0.25*(1-α)^2
 γ = 0.5*(1-2*α)
-damping = 1e-3
+damping = 0
 
 # time step and total time
 Δt = 0.5
@@ -89,8 +89,9 @@ zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 εᶜ = 0.01
 μ = 0.01
 εᵗ = 0.5
+γᵈᵃᵐᵖ = 100
 
-comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, γᵈᵃᵐᵖ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -129,11 +130,11 @@ bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
 # -------------------------------------------------------------------------------------------
 
 # analytical SDF
-sdf = SDF_Sphere{T}(r, 0.05, 0, 0, 0)
+sdf = Sphere_SDF{T}(r, 0.05, 0, 0, 0)
 
 # discrete SDF
 # inside = true
-# sdf = constructor_discrete_sdf("examples/input_net/sdf_sphere_20.vtk", r, inside)
+# sdf = Discrete_SDF("examples/input_net/sdf_sphere_20.vtk", r, inside)
 
 # -------------------------------------------------------------------------------------------
 # Configuration

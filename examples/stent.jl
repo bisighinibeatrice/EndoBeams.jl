@@ -65,7 +65,7 @@ beams = constructor_beams(nodes, connectivity, mat, geom, Re₀)
 α = -0.05
 β = 0.25*(1-α)^2
 γ = 0.5*(1-2*α)
-damping = 1000
+damping = 1e4
 
 # time step and total time
 Δt = 0.01
@@ -83,11 +83,12 @@ nG = 3
 zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 
 # contact parameters
-εᶜ = 10 #penalty parameter
-μ = 0.01
+εᶜ = 1 #penalty parameter
+μ = 0.3
 εᵗ = 0.1 #regularized parameter for friction contact
+γᵈᵃᵐᵖ = 100
 
-comp = SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+comp = SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, γ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -127,7 +128,7 @@ bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
 # SDF
 # -------------------------------------------------------------------------------------------
 
-sdf = constructor_discrete_sdf("examples/input_stent/arcStretchObj.vtk", radius, false)
+sdf = Discrete_SDF("examples/input_stent/arcStretchObj.vtk", radius, false)
 
 # -------------------------------------------------------------------------------------------
 # Final configuration

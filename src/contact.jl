@@ -4,7 +4,7 @@
 #----------------------------------
 
 """
-    sdf = struct SDF_Plane_z{T}
+    sdf = struct Plane_z_SDF{T}
 
 Constructor of the structure containing the properties of the analytical SDF of a z-normal plane:
 - `r`: beam radius;
@@ -12,7 +12,7 @@ Constructor of the structure containing the properties of the analytical SDF of 
 
 Returns a structure containing the information of the created sdf. 
 """
-struct SDF_Plane_z{T}
+struct Plane_z_SDF{T}
     
     r::T  # beams radius
     z0::T # plane position 
@@ -20,7 +20,7 @@ struct SDF_Plane_z{T}
 end 
 
 """
-    sdf = struct SDF_Plane_y{T}
+    sdf = struct Plane_y_SDF{T}
 
 Constructor of the structure containing the properties  of the analytical SDF of a y-normal plane.
 - `r`: beam radius;
@@ -28,7 +28,7 @@ Constructor of the structure containing the properties  of the analytical SDF of
 
 Returns a structure containing the information of the created sdf.  
 """
-struct SDF_Plane_y{T}
+struct Plane_y_SDF{T}
     
     r::T  # beams radius
     y0::T # plane position 
@@ -36,7 +36,7 @@ struct SDF_Plane_y{T}
 end 
 
 """
-    sdf = struct SDF_Sphere{T}
+    sdf = struct Sphere_SDF{T}
 
 Constructor of the structure containing the properties  of the analytical SDF of a sphere.
 - `r`: beam radius;
@@ -47,7 +47,7 @@ Constructor of the structure containing the properties  of the analytical SDF of
     
 Returns a structure containing the information of the created sdf. 
 """
-struct SDF_Sphere{T}
+struct Sphere_SDF{T}
     
     r::T # beams radius
     R::T # sphere radius
@@ -58,7 +58,7 @@ struct SDF_Sphere{T}
 end 
 
 """
-    sdf = struct SDF_Cylinder{T}
+    sdf = struct Cylinder_SDF{T}
 
 Constructor of the structure containing the properties of the analytical SDF of an infinite cylinder oriented along z.
 - `r`: beam radius;
@@ -66,7 +66,7 @@ Constructor of the structure containing the properties of the analytical SDF of 
     
 Returns a structure containing the information of the created sdf. 
 """
-struct SDF_Cylinder{T}
+struct Cylinder_SDF{T}
     
     r::T # beams radius
     R::T # cylinder radius
@@ -75,7 +75,7 @@ struct SDF_Cylinder{T}
 end  
 
 # Properties of a discrete SDF
-struct SDF_Discrete{T, F}
+struct Discrete_SDF{T, F}
     
     r::T
     sitp::F
@@ -90,7 +90,7 @@ end
 # CONSTRUCTOR DISCRETE SDF
 #----------------------------------
 """
-    sdf = constructor_discrete_sdf(filename, radius, inside,  T=Float64)
+    sdf = Discrete_SDF(filename, radius, inside,  T=Float64)
 
 Constructor of the discrete SDF from a vtk file.
 - `filename`: sdf file (all files with extensions .vtk are accepted);
@@ -99,7 +99,7 @@ Constructor of the discrete SDF from a vtk file.
 
 Returns a structure containing the information of the created sdf. 
 """
-function constructor_discrete_sdf(filename, radius, inside, T=Float64)
+function Discrete_SDF(filename, radius, inside, T=Float64)
     
     # Read sdf from file
     npx, npy, npz, dx, dy, dz, dom, sdf = read_VTK_sdf(filename)
@@ -128,7 +128,7 @@ function constructor_discrete_sdf(filename, radius, inside, T=Float64)
     # Scale the interpolation on the defined coordinate grid
     sitp = scale(itp, x, y, z)  
 
-    return SDF_Discrete{T, typeof(sitp)}(radius, sitp, dom, dx, dy, dz)  
+    return Discrete_SDF{T, typeof(sitp)}(radius, sitp, dom, dx, dy, dz)  
 
 end 
 
@@ -184,7 +184,7 @@ end
     
     gₙ = norm_aux - sdf.R + sdf.r
     ∂gₙ∂x = invnorm * aux
-    ∂²gₙ∂x² = invnorm*ID3 + (invnorm^3)*(aux*aux')
+    ∂²gₙ∂x² = invnorm*ID3 - (invnorm^3)*(aux*aux')
     
     return -gₙ, -∂gₙ∂x, -∂²gₙ∂x²
     
@@ -234,11 +234,11 @@ end
 #----------------------------------
 
 # Get contact at point point
-@inline contact_gap_specialize(point, sdf::SDF_Plane_z) = get_SDF_at_P_analitycal_plane_z(point, sdf)
-@inline contact_gap_specialize(point, sdf::SDF_Sphere) = get_SDF_at_P_analitycal_sphere(point, sdf)
-@inline contact_gap_specialize(point, sdf::SDF_Cylinder) = get_SDF_at_P_analitycal_cylinder(point, sdf)
-@inline contact_gap_specialize(point, sdf::SDF_Plane_y) = get_SDF_at_P_analitycal_plane_y(point, sdf)
-@inline contact_gap_specialize(point, sdf::SDF_Discrete) = get_SDF_at_P_discrete(point, sdf)
+@inline contact_gap_specialize(point, sdf::Plane_z_SDF) = get_SDF_at_P_analitycal_plane_z(point, sdf)
+@inline contact_gap_specialize(point, sdf::Sphere_SDF) = get_SDF_at_P_analitycal_sphere(point, sdf)
+@inline contact_gap_specialize(point, sdf::Cylinder_SDF) = get_SDF_at_P_analitycal_cylinder(point, sdf)
+@inline contact_gap_specialize(point, sdf::Plane_y_SDF) = get_SDF_at_P_analitycal_plane_y(point, sdf)
+@inline contact_gap_specialize(point, sdf::Discrete_SDF) = get_SDF_at_P_discrete(point, sdf)
     
 @inline function contact_gap(point, εᶜ, sdf)
         
@@ -255,7 +255,7 @@ end
 # Quadratically regulise penalty
 @inline function quadratically_regularized_penalty(gₙ::T, εᶜ, r) where T
     
-    ḡₙ = r/2 
+    ḡₙ = r/4
     p̄ₙ = εᶜ*ḡₙ/2
     
     pₙ = zero(T)

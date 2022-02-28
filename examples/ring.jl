@@ -162,7 +162,7 @@ bcs = BoundaryConditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vect
 r = 0.5
 z0 = -12
 
-sdf = SDF_Plane_z{T}(r, z0)
+sdf = Plane_z_SDF{T}(r, z0)
 
 # -------------------------------------------------------------------------------------------
 # Configuration
