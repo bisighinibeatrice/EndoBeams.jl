@@ -243,332 +243,11 @@ end
 
 
 
-Base.@propagate_inbounds function compute_forces(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars, exact=true, dynamics=true) where T
 
-    # Superscript ¹ means matrix or vector associated to u₁
-    # Superscript ² means matrix or vector associated to Θ₁
-    # Superscript ³ means matrix or vector associated to u₂
-    # Superscript ⁴ means matrix or vector associated to Θ₂
 
-    mat, geom, comp, init, sdf = simvars
-    X₁, X₂, l₀, Rₑ⁰ = init
-    
 
-    x₁ =  X₁ + u₁
-    x₂ =  X₂ + u₂
-    
-    lₙ = norm(x₂ - x₁)
 
-    ū = lₙ - l₀
-
-    Rₑ, r¹, r³, η, Gᵀ¹, Gᵀ², Gᵀ³, Gᵀ⁴, D₃ = local_Rₑ_and_aux(x₁, x₂, R₁, R₂, Rₑ⁰[:,2], lₙ)
-
-
-    R̅₁ = Rₑ' * R₁ * Rₑ⁰
-    R̅₂ = Rₑ' * R₂ * Rₑ⁰
-
-    Θ̅₁ = toangle(R̅₁)
-    Θ̅₂ = toangle(R̅₂)
-
-    if exact
-        Tₛ⁻¹Θ̅₁ = Tₛ⁻¹(Θ̅₁)
-        Tₛ⁻¹Θ̅₂ = Tₛ⁻¹(Θ̅₂)
-    end
-
-
-    P¹¹ = -Gᵀ¹ 
-    P²¹ = P¹¹
-    P¹² = ID3-Gᵀ²
-    P²² = -Gᵀ²
-    P¹⁴ = -Gᵀ⁴
-    P²⁴ = ID3-Gᵀ⁴
-
-
-    # B̄⁺ = [r; PEᵀ]
-    B̄⁺¹ = r¹
-    B̄⁺¹¹ = P¹¹ * Rₑ'
-    B̄⁺²¹ = B̄⁺¹¹
-    B̄⁺¹² = P¹² * Rₑ'
-    B̄⁺²² = P²² * Rₑ'
-    B̄⁺¹⁴ = P¹⁴ * Rₑ'
-    B̄⁺²⁴ = P²⁴ * Rₑ'
-
-    
-    # B = B̄B̄⁺
-    B¹ = B̄⁺¹
-    B¹¹ = exact ?  Tₛ⁻¹Θ̅₁ * B̄⁺¹¹ : B̄⁺¹¹
-    B¹² = exact ?  Tₛ⁻¹Θ̅₁ * B̄⁺¹² : B̄⁺¹²
-    B¹⁴ = exact ?  Tₛ⁻¹Θ̅₁ * B̄⁺¹⁴ : B̄⁺¹⁴
-    B²¹ = exact ?  Tₛ⁻¹Θ̅₂ * B̄⁺²¹ : B̄⁺²¹
-    B²² = exact ?  Tₛ⁻¹Θ̅₂ * B̄⁺²² : B̄⁺²²
-    B²⁴ = exact ?  Tₛ⁻¹Θ̅₂ * B̄⁺²⁴ : B̄⁺²⁴
-
-    
-
-    K̄ⁱⁿᵗū, K̄ⁱⁿᵗΘ̅, K̄ⁱⁿᵗΘ̅Θ̅ = K̄ⁱⁿᵗ_beam(mat, geom, l₀)
-
-    # T̄ⁱⁿᵗ = K̄ⁱⁿᵗ D̄
-    T̄ⁱⁿᵗū  = K̄ⁱⁿᵗū  * ū
-    T̄ⁱⁿᵗΘ̅₁ = K̄ⁱⁿᵗΘ̅  * Θ̅₁ + K̄ⁱⁿᵗΘ̅Θ̅ * Θ̅₂
-    T̄ⁱⁿᵗΘ̅₂ = K̄ⁱⁿᵗΘ̅Θ̅ * Θ̅₁ + K̄ⁱⁿᵗΘ̅  * Θ̅₂
-
-    strain_energy = (ū*T̄ⁱⁿᵗū + dot(Θ̅₁, T̄ⁱⁿᵗΘ̅₁) + dot(Θ̅₂, T̄ⁱⁿᵗΘ̅₂))/2
-
-
-    # Tⁱⁿᵗ = Bᵀ T̄ⁱⁿᵗ
-    Tⁱⁿᵗ¹ = B¹'*T̄ⁱⁿᵗū + B¹¹'*T̄ⁱⁿᵗΘ̅₁ + B²¹'*T̄ⁱⁿᵗΘ̅₂
-    Tⁱⁿᵗ² =             B¹²'*T̄ⁱⁿᵗΘ̅₁ + B²²'*T̄ⁱⁿᵗΘ̅₂
-    Tⁱⁿᵗ³ = -Tⁱⁿᵗ¹
-    Tⁱⁿᵗ⁴ =             B¹⁴'*T̄ⁱⁿᵗΘ̅₁ + B²⁴'*T̄ⁱⁿᵗΘ̅₂
-
-
-
-    # Force
-    Tⁱⁿᵗ = [Tⁱⁿᵗ¹; Tⁱⁿᵗ²; Tⁱⁿᵗ³; Tⁱⁿᵗ⁴]
-
-
-    kinetic_energy = zero(T)
-
-    Tᵏ¹ = zeros(Vec3{T})
-    Tᵏ² = zeros(Vec3{T})
-    Tᵏ³ = zeros(Vec3{T})
-    Tᵏ⁴ = zeros(Vec3{T})
-
-    contact_energy = zero(T)
-        
-    Tᶜ¹ = zeros(Vec3{T})
-    Tᶜ² = zeros(Vec3{T})
-    Tᶜ³ = zeros(Vec3{T})
-    Tᶜ⁴ = zeros(Vec3{T})
-
-    
-    contact = !isnothing(sdf)
-        
-    if dynamics
-        
-        U̇₁ = Rₑ' * u̇₁
-        U̇₂ = Rₑ' * u̇₂
-        Ẇ₁ = Rₑ' * ẇ₁
-        Ẇ₂ = Rₑ' * ẇ₂
-        
-        Ü₁ = Rₑ' * ü₁
-        Ü₂ = Rₑ' * ü₂
-        Ẅ₁ = Rₑ' * ẅ₁
-        Ẅ₂ = Rₑ' * ẅ₂
-
-        Ẇᵉ = Gᵀ¹ * U̇₁ + Gᵀ² * Ẇ₁ + Gᵀ³ * U̇₂ + Gᵀ⁴ * Ẇ₂
-        SẆᵉ = skew(Ẇᵉ)
-
-        rḋ = dot(r¹, u̇₁) + dot(r³, u̇₂)
-
-        # cycle among the Gauss positions
-        for iG in 1:comp.nᴳ
-
-            zᴳ = comp.zᴳ[iG]
-            ωᴳ = comp.ωᴳ[iG]
-
-            ξ = l₀*(zᴳ+1)/2
-
-            # Shape functions
-            N₁ = 1-ξ/l₀
-            N₂ = 1-N₁
-            N₃ = ξ*(1-ξ/l₀)^2
-            N₄ = -(1-ξ/l₀)*((ξ^2)/l₀)
-            N₅ = (1-3*ξ/l₀)*(1-ξ/l₀)
-            N₆ = (3*ξ/l₀-2)*(ξ/l₀)
-            N₇ = N₃+N₄
-            N₈ = N₅+N₆-1
-
-
-            uᵗ = @SVector [0, N₃*Θ̅₁[3] + N₄*Θ̅₂[3], -N₃*Θ̅₁[2] + -N₄*Θ̅₂[2]]
-            Θ̄  = @SVector [N₁*Θ̅₁[1] + N₂*Θ̅₂[1], N₅*Θ̅₁[2] + N₆*Θ̅₂[2], N₅*Θ̅₁[3] + N₆*Θ̅₂[3]]
-
-            Suᵗ = skew(uᵗ)
-            SΘ̄ = skew(Θ̄)
-
-            R̄ = ID3 + SΘ̄
-
-            Īᵨ = R̄*mat.Jᵨ*R̄'
-            Aᵨ = mat.Aᵨ
-
-            N₇lₙ = N₇/lₙ
-            N₇lₙ² = N₇lₙ/lₙ
-            N₈lₙ = N₈/lₙ
-            N₈lₙ² = N₈lₙ/lₙ
-
-            P₁P¹ = @SMatrix [0 0 0; 0 N₇lₙ 0;0 0 N₇lₙ]
-            P₁P² = @SMatrix [0 0 0; 0 0 N₃;0 -N₃ 0]
-            P₁P³ = -P₁P¹
-            P₁P⁴ = @SMatrix [0 0 0; 0 0 N₄;0 -N₄ 0]
-
-            H₁¹ = N₁*ID3 + P₁P¹ - Suᵗ*Gᵀ¹
-            H₁² =          P₁P² - Suᵗ*Gᵀ²
-            H₁³ = N₂*ID3 + P₁P³ - Suᵗ*Gᵀ³
-            H₁⁴ =          P₁P⁴ - Suᵗ*Gᵀ⁴
-
-            H₂¹ = @SMatrix [0 0 0; 0  0 -N₈lₙ;0 N₈lₙ 0]
-            H₂² = Diagonal(@SVector [N₁, N₅, N₅])
-            H₂³ = -H₂¹
-            H₂⁴ = Diagonal(@SVector [N₂, N₆, N₆])
-
-
-            u̇ᵗ =  P₁P¹ * U̇₁ +  P₁P² * Ẇ₁ + P₁P³ * U̇₂ + P₁P² * Ẇ₂
-
-            Su̇ᵗ = skew(u̇ᵗ)
-            
-            N₇rḋ = N₇lₙ² * rḋ
-            Ḣ₁¹ = Diagonal(@SVector [0, -N₇rḋ, -N₇rḋ]) - Su̇ᵗ * Gᵀ¹
-            Ḣ₁² =                                      - Su̇ᵗ * Gᵀ²
-            Ḣ₁⁴ =                                      - Su̇ᵗ * Gᵀ⁴
-
-            N₈rḋ = N₈lₙ² * rḋ
-            Ḣ₂¹ = @SMatrix [0 0 0; 0 0 N₈rḋ; 0 -N₈rḋ 0]
-
-            h₁ = H₁¹ * U̇₁ + H₁² * Ẇ₁ + H₁³ * U̇₂ + H₁⁴ * Ẇ₂
-            h₂ = H₂¹ * U̇₁ + H₂² * Ẇ₁ + H₂³ * U̇₂ + H₂⁴ * Ẇ₂
-
-            C₁¹ = SẆᵉ * H₁¹ + Ḣ₁¹ - H₁¹ * SẆᵉ
-            C₁² = SẆᵉ * H₁² + Ḣ₁² - H₁² * SẆᵉ
-            C₁³ = -C₁¹
-            C₁⁴ = SẆᵉ * H₁⁴ + Ḣ₁⁴ - H₁⁴ * SẆᵉ
-
-            C₂¹ = SẆᵉ * H₂¹ + Ḣ₂¹ - H₂¹ * SẆᵉ
-            C₂² = SẆᵉ * H₂²       - H₂² * SẆᵉ
-            C₂³ = -C₂¹
-            C₂⁴ = SẆᵉ * H₂⁴       - H₂⁴ * SẆᵉ
-
-            u̇₀ = Rₑ * h₁
-
-            H₁Eᵀd̈ = H₁¹ * Ü₁ + H₁² * Ẅ₁ + H₁³ * Ü₂ + H₁⁴ * Ẅ₂
-            C₁Eᵀḋ = C₁¹ * U̇₁ + C₁² * Ẇ₁ + C₁³ * U̇₂ + C₁⁴ * Ẇ₂
-            Rₑᵀü₀ = H₁Eᵀd̈ + C₁Eᵀḋ
-
-            Ẇ₀ = h₂
-            ẇ₀ = Rₑ * Ẇ₀
-
-            H₂Eᵀd̈ = H₂¹ * Ü₁ + H₂² * Ẅ₁ + H₂³ * Ü₂ + H₂⁴ * Ẅ₂
-            C₂Eᵀḋ = C₂¹ * U̇₁ + C₂² * Ẇ₁ + C₂³ * U̇₂ + C₂⁴ * Ẇ₂
-            Rₑᵀẅ₀ = H₂Eᵀd̈ + C₂Eᵀḋ
-
-            SẆ₀ = skew(Ẇ₀)
-            ĪᵨRₑᵀẅ₀ = Īᵨ*Rₑᵀẅ₀
-            SẆ₀Īᵨ = SẆ₀*Īᵨ
-            SẆ₀ĪᵨẆ₀ = SẆ₀Īᵨ*Ẇ₀
-            ĪᵨRₑᵀẅ₀SẆ₀ĪᵨẆ₀ = ĪᵨRₑᵀẅ₀ + SẆ₀ĪᵨẆ₀
-            AᵨH₁¹ᵀ = Aᵨ*H₁¹'
-            AᵨH₁²ᵀ = Aᵨ*H₁²'
-            AᵨH₁⁴ᵀ = Aᵨ*H₁⁴'
-
-            Tᵏ¹G = ωᴳ * (AᵨH₁¹ᵀ*Rₑᵀü₀ + H₂¹'*ĪᵨRₑᵀẅ₀SẆ₀ĪᵨẆ₀)
-            Tᵏ¹ += Tᵏ¹G
-            Tᵏ² += ωᴳ * (AᵨH₁²ᵀ*Rₑᵀü₀ + H₂²'*ĪᵨRₑᵀẅ₀SẆ₀ĪᵨẆ₀)
-            Tᵏ³ += -Tᵏ¹G + ωᴳ * Aᵨ * Rₑᵀü₀
-            Tᵏ⁴ += ωᴳ * (AᵨH₁⁴ᵀ*Rₑᵀü₀ + H₂⁴'*ĪᵨRₑᵀẅ₀SẆ₀ĪᵨẆ₀)
-
-
-            if comp.damping>0
-                Tᵈ¹G = ωᴳ * (comp.damping * AᵨH₁¹ᵀ*h₁ + H₂¹'*Īᵨ*h₂)
-                Tᵏ¹ += Tᵈ¹G
-                Tᵏ² += ωᴳ * (comp.damping * AᵨH₁²ᵀ*h₁ + H₂²'*Īᵨ*h₂)
-                Tᵏ³ += -Tᵈ¹G + ωᴳ * Aᵨ * comp.damping * h₁
-                Tᵏ⁴ += ωᴳ * (comp.damping * AᵨH₁⁴ᵀ*h₁ + H₂⁴'*Īᵨ*h₂)
-            end
-
-
-            # kinetic energy
-            Īᵨᵍ = Rₑ*Īᵨ*Rₑ'
-            kinetic_energy += ωᴳ/2 * (Aᵨ*u̇₀'*u̇₀ + ẇ₀'*Īᵨᵍ*ẇ₀)
-
-
-
-            if contact
-
-                xᴳ = N₁*x₁ + N₂*x₂ + Rₑ*uᵗ
-                pₙ, _, Πₑ, _, ∂gₙ∂x, _ =  contact_gap(xᴳ, comp.εᶜ, sdf)
-        
-                if pₙ > 0 
-        
-                    I∂gₙ∂x = ID3 - ∂gₙ∂x*∂gₙ∂x'
-                    ġₜ = I∂gₙ∂x*u̇₀
-                    ġₜ² = dot(ġₜ, ġₜ)
-        
-                    contact_energy -= ωᴳ*Πₑ
-                    
-                    𝓖ₙ = ∂gₙ∂x
-                    μʳᵉᵍ = comp.μ/sqrt(ġₜ²+comp.εᵗ)
-                    𝓖ₜ = -μʳᵉᵍ*ġₜ
-                    
-        
-                    𝓖 = 𝓖ₙ + 𝓖ₜ
-                    𝓯ᶜ = pₙ * 𝓖
-        
-                    𝓕ᶜ = Rₑ' * 𝓯ᶜ
-        
-                    RₑH₁ᵀ¹ = Rₑ * H₁¹'
-                    RₑH₁ᵀ² = Rₑ * H₁²'
-                    RₑH₁ᵀ³ = Rₑ * H₁³'
-                    RₑH₁ᵀ⁴ = Rₑ * H₁⁴'
-        
-                    Tᶜ¹ += ωᴳ * (RₑH₁ᵀ¹ * 𝓕ᶜ)
-                    Tᶜ² += ωᴳ * (RₑH₁ᵀ² * 𝓕ᶜ)
-                    Tᶜ³ += ωᴳ * (RₑH₁ᵀ³ * 𝓕ᶜ)
-                    Tᶜ⁴ += ωᴳ * (RₑH₁ᵀ⁴ * 𝓕ᶜ)
-
-    
-        
-                end
-            
-            
-            end
-
-
-            
-        end
-
-        l₀2 = l₀/2
-        l₀2Rₑ = l₀2 * Rₑ
-
-
-        Tᵏ¹ = l₀2Rₑ*Tᵏ¹
-        Tᵏ² = l₀2Rₑ*Tᵏ²
-        Tᵏ³ = l₀2Rₑ*Tᵏ³
-        Tᵏ⁴ = l₀2Rₑ*Tᵏ⁴
-
-
-        kinetic_energy = l₀2* kinetic_energy
-
-
-        if contact
-
-
-            Tᶜ¹ = l₀2*Tᶜ¹
-            Tᶜ² = l₀2*Tᶜ²
-            Tᶜ³ = l₀2*Tᶜ³
-            Tᶜ⁴ = l₀2*Tᶜ⁴
-
-            contact_energy = l₀2 * contact_energy
-
-
-        end
-
-
-
-    end
-
-    Tᵏ = [Tᵏ¹; Tᵏ²; Tᵏ³; Tᵏ⁴]
-    
-    Tᶜ = [Tᶜ¹; Tᶜ²; Tᶜ³; Tᶜ⁴]
-
-    return strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ
-
-    
-end
-
-
-
-
-
-Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars, exact=false, dynamics=true) where T
+Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars, exact=true, dynamics=true) where T
 
     # Superscript ¹ means matrix or vector associated to u₁
     # Superscript ² means matrix or vector associated to Θ₁
@@ -1092,40 +771,49 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
             Īᵨᵍ = Rₑ*Īᵨ*Rₑ'
             kinetic_energy += ωᴳ/2 * (Aᵨ*u̇₀'*u̇₀ + ẇ₀'*Īᵨᵍ*ẇ₀)
 
-
-
             if contact
 
                 xᴳ = N₁*x₁ + N₂*x₂ + Rₑ*uᵗ
-                pₙ, p′ₙ, Πₑ, gₙ, ∂gₙ∂x, ∂²gₙ∂x² =  contact_gap(xᴳ, comp.εᶜ, sdf)
-        
-                if pₙ > 0 
-        
-                    ġₙ = dot(u̇₀, ∂gₙ∂x)*∂gₙ∂x
-                    ġₜ = u̇₀ - ġₙ
-                    ġₜ² = dot(ġₜ, ġₜ)
-        
-                    contact_energy -= ωᴳ*Πₑ
 
-                    γᵈᵃᵐᵖ = comp.γᵈᵃᵐᵖ
+                gₙ, ∂gₙ∂x, ∂²gₙ∂x² = contact_gap(xᴳ, sdf)
+
+                ḡₙ = sdf.r/4
+            
+                if gₙ ≤ ḡₙ
+
+                    (;kₙ, ηₙ, μ, εᵗ) = comp
+
+                    pₙ, p′ₙ, Πₑ = regularize_gₙ(gₙ, ḡₙ)
+                    ηₙ, η′ₙ = smoothstep(ηₙ, gₙ, ḡₙ)
+
+            
                     
-                    𝓯ⁿ = pₙ * ∂gₙ∂x - γᵈᵃᵐᵖ * pₙ * ġₙ
-                    μʳᵉᵍ = comp.μ/sqrt(ġₜ²+comp.εᵗ)
-                    𝓯ᵗ = -μʳᵉᵍ * pₙ * ġₜ
+                    u̇ₙ_mag = dot(u̇₀, ∂gₙ∂x)
+                    u̇ₙ = u̇ₙ_mag*∂gₙ∂x
+                    u̇ₜ = u̇₀ - u̇ₙ
+                    u̇ₜ² = dot(u̇ₜ, u̇ₜ)
+        
+                    contact_energy -= ωᴳ*kₙ*Πₑ
+                    
+                    𝓯ⁿ = kₙ * pₙ * ∂gₙ∂x - ηₙ * u̇ₙ
+                    μʳᵉᵍ = μ/sqrt(u̇ₜ²+εᵗ)
+                    𝓯ᵗ = - kₙ * pₙ * μʳᵉᵍ * u̇ₜ
+
 
                     𝓯ᶜ = 𝓯ⁿ + 𝓯ᵗ
         
                     𝓕ᶜ = Rₑ' * 𝓯ᶜ
+
+                    RₑH₁¹Rₑᵀ = Rₑ * H₁¹ * Rₑ'
+                    RₑH₁²Rₑᵀ = Rₑ * H₁² * Rₑ'
+                    RₑH₁³Rₑᵀ = Rₑ * H₁³ * Rₑ'
+                    RₑH₁⁴Rₑᵀ = Rₑ * H₁⁴ * Rₑ'
         
-                    RₑH₁ᵀ¹ = Rₑ * H₁¹'
-                    RₑH₁ᵀ² = Rₑ * H₁²'
-                    RₑH₁ᵀ³ = Rₑ * H₁³'
-                    RₑH₁ᵀ⁴ = Rₑ * H₁⁴'
-        
-                    Tᶜ¹ += ωᴳ * (RₑH₁ᵀ¹ * 𝓕ᶜ)
-                    Tᶜ² += ωᴳ * (RₑH₁ᵀ² * 𝓕ᶜ)
-                    Tᶜ³ += ωᴳ * (RₑH₁ᵀ³ * 𝓕ᶜ)
-                    Tᶜ⁴ += ωᴳ * (RₑH₁ᵀ⁴ * 𝓕ᶜ)
+                    Tᶜ¹ += ωᴳ * (RₑH₁¹Rₑᵀ' * 𝓯ᶜ)
+                    Tᶜ² += ωᴳ * (RₑH₁²Rₑᵀ' * 𝓯ᶜ)
+                    Tᶜ³ += ωᴳ * (RₑH₁³Rₑᵀ' * 𝓯ᶜ)
+                    Tᶜ⁴ += ωᴳ * (RₑH₁⁴Rₑᵀ' * 𝓯ᶜ)
+
 
         
                     ŜH₁ᵀ𝓕ᶜ¹ = skew(H₁¹' * 𝓕ᶜ)
@@ -1187,10 +875,10 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
                     t₂⁴³ = -t₂⁴¹
                     t₂⁴⁴ =                       - RₑG⁴ * S𝓕ᶜP₁P⁴Rₑᵀ
         
-                    RₑH₁ᵀ¹S𝓕ᶜ = RₑH₁ᵀ¹ * S𝓕ᶜ
-                    RₑH₁ᵀ²S𝓕ᶜ = RₑH₁ᵀ² * S𝓕ᶜ
-                    RₑH₁ᵀ³S𝓕ᶜ = RₑH₁ᵀ³ * S𝓕ᶜ
-                    RₑH₁ᵀ⁴S𝓕ᶜ = RₑH₁ᵀ⁴ * S𝓕ᶜ
+                    RₑH₁ᵀ¹S𝓕ᶜ = Rₑ * H₁¹' * S𝓕ᶜ
+                    RₑH₁ᵀ²S𝓕ᶜ = Rₑ * H₁²' * S𝓕ᶜ
+                    RₑH₁ᵀ³S𝓕ᶜ = Rₑ * H₁³' * S𝓕ᶜ
+                    RₑH₁ᵀ⁴S𝓕ᶜ = Rₑ * H₁⁴' * S𝓕ᶜ
         
                     t₃¹¹ = RₑH₁ᵀ¹S𝓕ᶜ * Gᵀ¹Rₑᵀ
                     t₃¹² = RₑH₁ᵀ¹S𝓕ᶜ * Gᵀ²Rₑᵀ
@@ -1211,25 +899,15 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
                     t₃⁴² = RₑH₁ᵀ⁴S𝓕ᶜ * Gᵀ²Rₑᵀ
                     t₃⁴³ = -t₃⁴¹
                     t₃⁴⁴ = RₑH₁ᵀ⁴S𝓕ᶜ * Gᵀ⁴Rₑᵀ
+
         
+                    t1 = dot(∂gₙ∂x, u̇₀) * ∂²gₙ∂x² + ∂gₙ∂x * (∂²gₙ∂x² * u̇₀)'
         
-                    
-        
-                    ∂gₙ∂xu̇₀∂²gₙ∂x² = dot(∂gₙ∂x, u̇₀) * ∂²gₙ∂x²
-                    ∂²gₙ∂x²u̇₀ = ∂²gₙ∂x² * u̇₀
-                    ∂u̇₀∂ḋ¹ = Rₑ * H₁¹ * Rₑ'
-                    ∂u̇₀∂ḋ² = Rₑ * H₁² * Rₑ'
-                    ∂u̇₀∂ḋ³ = Rₑ * H₁³ * Rₑ'
-                    ∂u̇₀∂ḋ⁴ = Rₑ * H₁⁴ * Rₑ'
-                    RₑH₁¹ᵀRₑᵀ = RₑH₁ᵀ¹ * Rₑ'
-                    RₑH₁²ᵀRₑᵀ = RₑH₁ᵀ² * Rₑ'
-                    RₑH₁³ᵀRₑᵀ = RₑH₁ᵀ³ * Rₑ'
-                    RₑH₁⁴ᵀRₑᵀ = RₑH₁ᵀ⁴ * Rₑ'
-        
-                    𝓐₁¹ =  ∂gₙ∂xu̇₀∂²gₙ∂x² * ∂u̇₀∂ḋ¹ + ∂gₙ∂x * (RₑH₁¹ᵀRₑᵀ * ∂²gₙ∂x²u̇₀)'
-                    𝓐₁² =  ∂gₙ∂xu̇₀∂²gₙ∂x² * ∂u̇₀∂ḋ² + ∂gₙ∂x * (RₑH₁²ᵀRₑᵀ * ∂²gₙ∂x²u̇₀)'
-                    𝓐₁³ =  ∂gₙ∂xu̇₀∂²gₙ∂x² * ∂u̇₀∂ḋ³ + ∂gₙ∂x * (RₑH₁³ᵀRₑᵀ * ∂²gₙ∂x²u̇₀)'
-                    𝓐₁⁴ =  ∂gₙ∂xu̇₀∂²gₙ∂x² * ∂u̇₀∂ḋ⁴ + ∂gₙ∂x * (RₑH₁⁴ᵀRₑᵀ * ∂²gₙ∂x²u̇₀)'
+                    𝓐₁¹ =  t1 * RₑH₁¹Rₑᵀ
+                    𝓐₁² =  t1 * RₑH₁²Rₑᵀ
+                    𝓐₁³ =  t1 * RₑH₁³Rₑᵀ
+                    𝓐₁⁴ =  t1 * RₑH₁⁴Rₑᵀ
+
         
 
                     RₑSh₁ = Rₑ * Sh₁
@@ -1254,59 +932,65 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
                     ∂u̇₀∂d³ = -∂u̇₀∂d¹
                     ∂u̇₀∂d⁴ = 𝓐₂⁴ + 𝓐₃⁴ + 𝓐₄⁴
 
-                    ∂gₙgₙ∂x = ∂gₙ∂x * ∂gₙ∂x'
+
+                    nn = ∂gₙ∂x*∂gₙ∂x'
         
-                    ∂ġₙ∂d¹ = 𝓐₁¹ + ∂gₙgₙ∂x * ∂u̇₀∂d¹
-                    ∂ġₙ∂d² = 𝓐₁² + ∂gₙgₙ∂x * ∂u̇₀∂d²
-                    ∂ġₙ∂d³ = 𝓐₁³ + ∂gₙgₙ∂x * ∂u̇₀∂d³
-                    ∂ġₙ∂d⁴ = 𝓐₁⁴ + ∂gₙgₙ∂x * ∂u̇₀∂d⁴
+                    ∂u̇ₙ∂d¹ = 𝓐₁¹ + nn * ∂u̇₀∂d¹
+                    ∂u̇ₙ∂d² = 𝓐₁² + nn * ∂u̇₀∂d²
+                    ∂u̇ₙ∂d³ = 𝓐₁³ + nn * ∂u̇₀∂d³
+                    ∂u̇ₙ∂d⁴ = 𝓐₁⁴ + nn * ∂u̇₀∂d⁴
 
-                    # ġₜ = u̇₀ - ġₙ
-                    ∂ġₜ∂d¹ = ∂u̇₀∂d¹ - ∂ġₙ∂d¹
-                    ∂ġₜ∂d² = ∂u̇₀∂d² - ∂ġₙ∂d²
-                    ∂ġₜ∂d³ = ∂u̇₀∂d³ - ∂ġₙ∂d³
-                    ∂ġₜ∂d⁴ = ∂u̇₀∂d⁴ - ∂ġₙ∂d⁴
-
-
-                    
+                    # u̇ₜ = u̇₀ - u̇ₙ
+                    ∂u̇ₜ∂d¹ = ∂u̇₀∂d¹ - ∂u̇ₙ∂d¹
+                    ∂u̇ₜ∂d² = ∂u̇₀∂d² - ∂u̇ₙ∂d²
+                    ∂u̇ₜ∂d³ = ∂u̇₀∂d³ - ∂u̇ₙ∂d³
+                    ∂u̇ₜ∂d⁴ = ∂u̇₀∂d⁴ - ∂u̇ₙ∂d⁴
 
 
-                    ∂ġₙ∂ḋ¹ = ∂gₙgₙ∂x * ∂u̇₀∂ḋ¹
-                    ∂ġₙ∂ḋ² = ∂gₙgₙ∂x * ∂u̇₀∂ḋ²
-                    ∂ġₙ∂ḋ³ = ∂gₙgₙ∂x * ∂u̇₀∂ḋ³
-                    ∂ġₙ∂ḋ⁴ = ∂gₙgₙ∂x * ∂u̇₀∂ḋ⁴
+                    ∂u̇ₙ∂ḋ¹ = nn * RₑH₁¹Rₑᵀ
+                    ∂u̇ₙ∂ḋ² = nn * RₑH₁²Rₑᵀ
+                    ∂u̇ₙ∂ḋ³ = nn * RₑH₁³Rₑᵀ
+                    ∂u̇ₙ∂ḋ⁴ = nn * RₑH₁⁴Rₑᵀ
 
-                    # ġₜ = u̇₀ - ġₙ
-                    ∂ġₜ∂ḋ¹ = ∂u̇₀∂ḋ¹ - ∂ġₙ∂ḋ¹
-                    ∂ġₜ∂ḋ² = ∂u̇₀∂ḋ² - ∂ġₙ∂ḋ²
-                    ∂ġₜ∂ḋ³ = ∂u̇₀∂ḋ³ - ∂ġₙ∂ḋ³
-                    ∂ġₜ∂ḋ⁴ = ∂u̇₀∂ḋ⁴ - ∂ġₙ∂ḋ⁴
-                    
-        
-                    p′ₙ∂gₙgₙ∂xpₙ∂²gₙ∂x² = p′ₙ * ∂gₙgₙ∂x + pₙ * ∂²gₙ∂x²
-                    p′ₙġₙ∂gₙ∂x = p′ₙ * ġₙ * ∂gₙ∂x'
-                    Kᶠⁿ¹ = p′ₙ∂gₙgₙ∂xpₙ∂²gₙ∂x² * ∂u̇₀∂ḋ¹ - γᵈᵃᵐᵖ * (p′ₙġₙ∂gₙ∂x * ∂u̇₀∂ḋ¹ + pₙ * ∂ġₙ∂d¹)
-                    Kᶠⁿ² = p′ₙ∂gₙgₙ∂xpₙ∂²gₙ∂x² * ∂u̇₀∂ḋ² - γᵈᵃᵐᵖ * (p′ₙġₙ∂gₙ∂x * ∂u̇₀∂ḋ² + pₙ * ∂ġₙ∂d²)
-                    Kᶠⁿ³ = p′ₙ∂gₙgₙ∂xpₙ∂²gₙ∂x² * ∂u̇₀∂ḋ³ - γᵈᵃᵐᵖ * (p′ₙġₙ∂gₙ∂x * ∂u̇₀∂ḋ³ + pₙ * ∂ġₙ∂d³)
-                    Kᶠⁿ⁴ = p′ₙ∂gₙgₙ∂xpₙ∂²gₙ∂x² * ∂u̇₀∂ḋ⁴ - γᵈᵃᵐᵖ * (p′ₙġₙ∂gₙ∂x * ∂u̇₀∂ḋ⁴ + pₙ * ∂ġₙ∂d⁴)
-
-                    Cᶠⁿ¹ = - γᵈᵃᵐᵖ * pₙ * ∂ġₙ∂ḋ¹
-                    Cᶠⁿ² = - γᵈᵃᵐᵖ * pₙ * ∂ġₙ∂ḋ²
-                    Cᶠⁿ³ = - γᵈᵃᵐᵖ * pₙ * ∂ġₙ∂ḋ³
-                    Cᶠⁿ⁴ = - γᵈᵃᵐᵖ * pₙ * ∂ġₙ∂ḋ⁴
-
-                    pₙIμʳᵉᵍġₜġₜ = pₙ*(ID3 - μʳᵉᵍ*ġₜ*ġₜ')
-                    p′ₙġₜ∂gₙ∂x = p′ₙ * ġₜ * ∂gₙ∂x'
-                    Kᶠᵗ¹ = - μʳᵉᵍ * (p′ₙġₜ∂gₙ∂x * ∂u̇₀∂ḋ¹ + pₙIμʳᵉᵍġₜġₜ * ∂ġₜ∂d¹ )
-                    Kᶠᵗ² = - μʳᵉᵍ * (p′ₙġₜ∂gₙ∂x * ∂u̇₀∂ḋ² + pₙIμʳᵉᵍġₜġₜ * ∂ġₜ∂d² )
-                    Kᶠᵗ³ = - μʳᵉᵍ * (p′ₙġₜ∂gₙ∂x * ∂u̇₀∂ḋ³ + pₙIμʳᵉᵍġₜġₜ * ∂ġₜ∂d³ )
-                    Kᶠᵗ⁴ = - μʳᵉᵍ * (p′ₙġₜ∂gₙ∂x * ∂u̇₀∂ḋ⁴ + pₙIμʳᵉᵍġₜġₜ * ∂ġₜ∂d⁴ )
+                    ∂u̇₀∂ḋ¹ = RₑH₁¹Rₑᵀ
+                    ∂u̇₀∂ḋ² = RₑH₁²Rₑᵀ
+                    ∂u̇₀∂ḋ³ = RₑH₁³Rₑᵀ
+                    ∂u̇₀∂ḋ⁴ = RₑH₁⁴Rₑᵀ
 
 
-                    Cᶠᵗ¹ = -μʳᵉᵍ * pₙIμʳᵉᵍġₜġₜ * ∂ġₜ∂ḋ¹
-                    Cᶠᵗ² = -μʳᵉᵍ * pₙIμʳᵉᵍġₜġₜ * ∂ġₜ∂ḋ²
-                    Cᶠᵗ³ = -μʳᵉᵍ * pₙIμʳᵉᵍġₜġₜ * ∂ġₜ∂ḋ³
-                    Cᶠᵗ⁴ = -μʳᵉᵍ * pₙIμʳᵉᵍġₜġₜ * ∂ġₜ∂ḋ⁴
+                    # u̇ₜ = u̇₀ - u̇ₙ
+                    ∂u̇ₜ∂ḋ¹ = ∂u̇₀∂ḋ¹ - ∂u̇ₙ∂ḋ¹
+                    ∂u̇ₜ∂ḋ² = ∂u̇₀∂ḋ² - ∂u̇ₙ∂ḋ²
+                    ∂u̇ₜ∂ḋ³ = ∂u̇₀∂ḋ³ - ∂u̇ₙ∂ḋ³
+                    ∂u̇ₜ∂ḋ⁴ = ∂u̇₀∂ḋ⁴ - ∂u̇ₙ∂ḋ⁴
+
+
+
+
+                    t1 = kₙ*p′ₙ*nn + kₙ*pₙ*∂²gₙ∂x² - η′ₙ*u̇ₙ*∂gₙ∂x'
+                    Kᶠⁿ¹ = t1*RₑH₁¹Rₑᵀ - ηₙ*∂u̇ₙ∂d¹
+                    Kᶠⁿ² = t1*RₑH₁²Rₑᵀ - ηₙ*∂u̇ₙ∂d²
+                    Kᶠⁿ³ = t1*RₑH₁³Rₑᵀ - ηₙ*∂u̇ₙ∂d³
+                    Kᶠⁿ⁴ = t1*RₑH₁⁴Rₑᵀ - ηₙ*∂u̇ₙ∂d⁴
+
+                    Cᶠⁿ¹ = - ηₙ * nn * ∂u̇₀∂ḋ¹
+                    Cᶠⁿ² = - ηₙ * nn * ∂u̇₀∂ḋ²
+                    Cᶠⁿ³ = - ηₙ * nn * ∂u̇₀∂ḋ³
+                    Cᶠⁿ⁴ = - ηₙ * nn * ∂u̇₀∂ḋ⁴
+
+
+                    t1 = - μʳᵉᵍ * kₙ * p′ₙ * u̇ₜ * ∂gₙ∂x'
+                    t2 = - μʳᵉᵍ * kₙ * pₙ*(ID3 - 1/(u̇ₜ²+εᵗ)*u̇ₜ*u̇ₜ')
+                    Kᶠᵗ¹ = t1 * RₑH₁¹Rₑᵀ + t2 * ∂u̇ₜ∂d¹
+                    Kᶠᵗ² = t1 * RₑH₁²Rₑᵀ + t2 * ∂u̇ₜ∂d²
+                    Kᶠᵗ³ = t1 * RₑH₁³Rₑᵀ + t2 * ∂u̇ₜ∂d³
+                    Kᶠᵗ⁴ = t1 * RₑH₁⁴Rₑᵀ + t2 * ∂u̇ₜ∂d⁴
+
+                    Cᶠᵗ¹ = t2 * ∂u̇ₜ∂ḋ¹
+                    Cᶠᵗ² = t2 * ∂u̇ₜ∂ḋ²
+                    Cᶠᵗ³ = t2 * ∂u̇ₜ∂ḋ³
+                    Cᶠᵗ⁴ = t2 * ∂u̇ₜ∂ḋ⁴
+
 
 
                     Kᶠᶜ¹ = Kᶠⁿ¹ + Kᶠᵗ¹
@@ -1314,28 +998,28 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
                     Kᶠᶜ³ = Kᶠⁿ³ + Kᶠᵗ³
                     Kᶠᶜ⁴ = Kᶠⁿ⁴ + Kᶠᵗ⁴
 
-  
+
         
 
-                    t₄¹¹ = RₑH₁¹ᵀRₑᵀ * Kᶠᶜ¹
-                    t₄¹² = RₑH₁¹ᵀRₑᵀ * Kᶠᶜ²
-                    t₄¹³ = RₑH₁¹ᵀRₑᵀ * Kᶠᶜ³
-                    t₄¹⁴ = RₑH₁¹ᵀRₑᵀ * Kᶠᶜ⁴
+                    t₄¹¹ = RₑH₁¹Rₑᵀ' * Kᶠᶜ¹
+                    t₄¹² = RₑH₁¹Rₑᵀ' * Kᶠᶜ²
+                    t₄¹³ = RₑH₁¹Rₑᵀ' * Kᶠᶜ³
+                    t₄¹⁴ = RₑH₁¹Rₑᵀ' * Kᶠᶜ⁴
         
-                    t₄²¹ = RₑH₁²ᵀRₑᵀ * Kᶠᶜ¹
-                    t₄²² = RₑH₁²ᵀRₑᵀ * Kᶠᶜ²
-                    t₄²³ = RₑH₁²ᵀRₑᵀ * Kᶠᶜ³
-                    t₄²⁴ = RₑH₁²ᵀRₑᵀ * Kᶠᶜ⁴
+                    t₄²¹ = RₑH₁²Rₑᵀ' * Kᶠᶜ¹
+                    t₄²² = RₑH₁²Rₑᵀ' * Kᶠᶜ²
+                    t₄²³ = RₑH₁²Rₑᵀ' * Kᶠᶜ³
+                    t₄²⁴ = RₑH₁²Rₑᵀ' * Kᶠᶜ⁴
         
-                    t₄³¹ = RₑH₁³ᵀRₑᵀ * Kᶠᶜ¹
-                    t₄³² = RₑH₁³ᵀRₑᵀ * Kᶠᶜ²
-                    t₄³³ = RₑH₁³ᵀRₑᵀ * Kᶠᶜ³
-                    t₄³⁴ = RₑH₁³ᵀRₑᵀ * Kᶠᶜ⁴
+                    t₄³¹ = RₑH₁³Rₑᵀ' * Kᶠᶜ¹
+                    t₄³² = RₑH₁³Rₑᵀ' * Kᶠᶜ²
+                    t₄³³ = RₑH₁³Rₑᵀ' * Kᶠᶜ³
+                    t₄³⁴ = RₑH₁³Rₑᵀ' * Kᶠᶜ⁴
         
-                    t₄⁴¹ = RₑH₁⁴ᵀRₑᵀ * Kᶠᶜ¹
-                    t₄⁴² = RₑH₁⁴ᵀRₑᵀ * Kᶠᶜ²
-                    t₄⁴³ = RₑH₁⁴ᵀRₑᵀ * Kᶠᶜ³
-                    t₄⁴⁴ = RₑH₁⁴ᵀRₑᵀ * Kᶠᶜ⁴
+                    t₄⁴¹ = RₑH₁⁴Rₑᵀ' * Kᶠᶜ¹
+                    t₄⁴² = RₑH₁⁴Rₑᵀ' * Kᶠᶜ²
+                    t₄⁴³ = RₑH₁⁴Rₑᵀ' * Kᶠᶜ³
+                    t₄⁴⁴ = RₑH₁⁴Rₑᵀ' * Kᶠᶜ⁴
         
         
                     Cᶠᶜ¹ = Cᶠⁿ¹ + Cᶠᵗ¹
@@ -1365,29 +1049,30 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
                     Kᶜ⁴⁴ +=  ωᴳ * (t₁⁴⁴ + t₂⁴⁴ + t₃⁴⁴ + t₄⁴⁴)
         
         
-                    Cᶜ¹¹ +=  ωᴳ * RₑH₁¹ᵀRₑᵀ * Cᶠᶜ¹
-                    Cᶜ¹² +=  ωᴳ * RₑH₁¹ᵀRₑᵀ * Cᶠᶜ²
-                    Cᶜ¹³ +=  ωᴳ * RₑH₁¹ᵀRₑᵀ * Cᶠᶜ³
-                    Cᶜ¹⁴ +=  ωᴳ * RₑH₁¹ᵀRₑᵀ * Cᶠᶜ⁴
+                    Cᶜ¹¹ +=  ωᴳ * RₑH₁¹Rₑᵀ' * Cᶠᶜ¹
+                    Cᶜ¹² +=  ωᴳ * RₑH₁¹Rₑᵀ' * Cᶠᶜ²
+                    Cᶜ¹³ +=  ωᴳ * RₑH₁¹Rₑᵀ' * Cᶠᶜ³
+                    Cᶜ¹⁴ +=  ωᴳ * RₑH₁¹Rₑᵀ' * Cᶠᶜ⁴
         
-                    Cᶜ²¹ +=  ωᴳ * RₑH₁²ᵀRₑᵀ * Cᶠᶜ¹
-                    Cᶜ²² +=  ωᴳ * RₑH₁²ᵀRₑᵀ * Cᶠᶜ²
-                    Cᶜ²³ +=  ωᴳ * RₑH₁²ᵀRₑᵀ * Cᶠᶜ³
-                    Cᶜ²⁴ +=  ωᴳ * RₑH₁²ᵀRₑᵀ * Cᶠᶜ⁴
+                    Cᶜ²¹ +=  ωᴳ * RₑH₁²Rₑᵀ' * Cᶠᶜ¹
+                    Cᶜ²² +=  ωᴳ * RₑH₁²Rₑᵀ' * Cᶠᶜ²
+                    Cᶜ²³ +=  ωᴳ * RₑH₁²Rₑᵀ' * Cᶠᶜ³
+                    Cᶜ²⁴ +=  ωᴳ * RₑH₁²Rₑᵀ' * Cᶠᶜ⁴
         
-                    Cᶜ³¹ +=  ωᴳ * RₑH₁³ᵀRₑᵀ * Cᶠᶜ¹
-                    Cᶜ³² +=  ωᴳ * RₑH₁³ᵀRₑᵀ * Cᶠᶜ²
-                    Cᶜ³³ +=  ωᴳ * RₑH₁³ᵀRₑᵀ * Cᶠᶜ³
-                    Cᶜ³⁴ +=  ωᴳ * RₑH₁³ᵀRₑᵀ * Cᶠᶜ⁴
+                    Cᶜ³¹ +=  ωᴳ * RₑH₁³Rₑᵀ' * Cᶠᶜ¹
+                    Cᶜ³² +=  ωᴳ * RₑH₁³Rₑᵀ' * Cᶠᶜ²
+                    Cᶜ³³ +=  ωᴳ * RₑH₁³Rₑᵀ' * Cᶠᶜ³
+                    Cᶜ³⁴ +=  ωᴳ * RₑH₁³Rₑᵀ' * Cᶠᶜ⁴
         
-                    Cᶜ⁴¹ +=  ωᴳ * RₑH₁⁴ᵀRₑᵀ * Cᶠᶜ¹
-                    Cᶜ⁴² +=  ωᴳ * RₑH₁⁴ᵀRₑᵀ * Cᶠᶜ²
-                    Cᶜ⁴³ +=  ωᴳ * RₑH₁⁴ᵀRₑᵀ * Cᶠᶜ³
-                    Cᶜ⁴⁴ +=  ωᴳ * RₑH₁⁴ᵀRₑᵀ * Cᶠᶜ⁴
-        
+                    Cᶜ⁴¹ +=  ωᴳ * RₑH₁⁴Rₑᵀ' * Cᶠᶜ¹
+                    Cᶜ⁴² +=  ωᴳ * RₑH₁⁴Rₑᵀ' * Cᶠᶜ²
+                    Cᶜ⁴³ +=  ωᴳ * RₑH₁⁴Rₑᵀ' * Cᶠᶜ³
+                    Cᶜ⁴⁴ +=  ωᴳ * RₑH₁⁴Rₑᵀ' * Cᶠᶜ⁴
+                
+                
                 end
-            
-            
+
+
             end
 
 
@@ -1587,78 +1272,6 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
 end
 
 
-
-
-
-function assemble_forces!(nodes, beams, matrices, energy, conf, sdf, comp) 
-    
-        
-    # initialise the matrices associate to the whole structure
-    fill!(matrices.Tⁱⁿᵗ, 0)
-    fill!(matrices.Tᵏ, 0)
-    fill!(matrices.Tᶜ, 0)
-    
-    # initialise the energy values associate to the whole structure
-    energy.strain_energy = 0
-    energy.kinetic_energy = 0
-    energy.contact_energy = 0
-        
-    lk = Threads.SpinLock()
-
-    Threads.@threads for b in LazyRows(beams)
-        
-            
-        # information from node 1 and 2
-        X₁, X₂ = nodes.X₀[b.node1], nodes.X₀[b.node2]
-        u₁, u₂ = nodes.u[b.node1], nodes.u[b.node2]
-        u̇₁, u̇₂ = nodes.u̇[b.node1], nodes.u̇[b.node2]
-        ü₁, ü₂ = nodes.ü[b.node1], nodes.ü[b.node2]
-        ẇ₁, ẇ₂ = nodes.ẇ[b.node1], nodes.ẇ[b.node2]
-        ẅ₁, ẅ₂ = nodes.ẅ[b.node1], nodes.ẅ[b.node2]
-        R₁, R₂ = nodes.R[b.node1], nodes.R[b.node2]
-        ΔR₁, ΔR₂ = nodes.ΔR[b.node1], nodes.ΔR[b.node2]
-
-
-        #----------------------------------------
-        # Compute the contibution from the e beam
-        init = (X₁, X₂, b.l₀, b.Rₑ⁰)
-        simvars = (conf.mat, conf.geom, comp, init, sdf)
-
-        strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ = compute_forces(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars)
-    
-
-        #-----------------------
-        # Assemble contributions
-        
-
-        idof1 = nodes.idof_6[b.node1]
-        idof2 = nodes.idof_6[b.node2]
-        
-        dofs = vcat(idof1, idof2)
-
-
-        lock(lk) do
-        
-            energy.strain_energy +=  strain_energy
-            energy.kinetic_energy += kinetic_energy
-            energy.contact_energy +=  contact_energy
-
-
-            @inbounds for (i, dof) in enumerate(dofs)
-                matrices.Tᵏ[dof] += Tᵏ[i]
-                matrices.Tⁱⁿᵗ[dof] += Tⁱⁿᵗ[i]
-                matrices.Tᶜ[dof] += Tᶜ[i]
-            end
-
-        end
-
-                            
-    end
-
-
-
-    
-end 
 
 
 

@@ -234,51 +234,56 @@ end
 #----------------------------------
 
 # Get contact at point point
-@inline contact_gap_specialize(point, sdf::Plane_z_SDF) = get_SDF_at_P_analitycal_plane_z(point, sdf)
-@inline contact_gap_specialize(point, sdf::Sphere_SDF) = get_SDF_at_P_analitycal_sphere(point, sdf)
-@inline contact_gap_specialize(point, sdf::Cylinder_SDF) = get_SDF_at_P_analitycal_cylinder(point, sdf)
-@inline contact_gap_specialize(point, sdf::Plane_y_SDF) = get_SDF_at_P_analitycal_plane_y(point, sdf)
-@inline contact_gap_specialize(point, sdf::Discrete_SDF) = get_SDF_at_P_discrete(point, sdf)
+@inline contact_gap(point, sdf::Plane_z_SDF) = get_SDF_at_P_analitycal_plane_z(point, sdf)
+@inline contact_gap(point, sdf::Sphere_SDF) = get_SDF_at_P_analitycal_sphere(point, sdf)
+@inline contact_gap(point, sdf::Cylinder_SDF) = get_SDF_at_P_analitycal_cylinder(point, sdf)
+@inline contact_gap(point, sdf::Plane_y_SDF) = get_SDF_at_P_analitycal_plane_y(point, sdf)
+@inline contact_gap(point, sdf::Discrete_SDF) = get_SDF_at_P_discrete(point, sdf)
     
-@inline function contact_gap(point, εᶜ, sdf)
+
+# Quadratically regulise penalty
+@inline function regularize_gₙ(gₙ::T, ḡₙ) where T
+    
+    p̄ₙ = ḡₙ/2
+
+    if gₙ≤0
+
+        pₙ = p̄ₙ - gₙ
+        p′ₙ = -one(T)
+        Πₑ = gₙ^2/2 - p̄ₙ*gₙ + (ḡₙ^2)/6
+
+    else
         
-    gₙ, ∂gₙ∂x, ∂²gₙ∂x² = contact_gap_specialize(point, sdf)
+        aux = (ḡₙ-p̄ₙ)/(ḡₙ^2)
+        pₙ =  aux*gₙ^2 - gₙ + p̄ₙ
+        p′ₙ = 2*aux*gₙ - 1
+        Πₑ = -(ḡₙ-p̄ₙ)/(3*ḡₙ^2)*gₙ^3 + gₙ^2/2 - p̄ₙ*gₙ + ḡₙ^2/6
+
+    end
     
-    pₙ, p′ₙ, Πₑ = quadratically_regularized_penalty(gₙ, εᶜ, sdf.r)
-    
-    return pₙ, p′ₙ, Πₑ, gₙ, ∂gₙ∂x, ∂²gₙ∂x²
+    return pₙ, p′ₙ, Πₑ
     
 end 
 
 
 
-# Quadratically regulise penalty
-@inline function quadratically_regularized_penalty(gₙ::T, εᶜ, r) where T
-    
-    ḡₙ = r/4
-    p̄ₙ = εᶜ*ḡₙ/2
-    
-    pₙ = zero(T)
-    p′ₙ = zero(T)
-    Πₑ = zero(T)
-    
-    # eq[111] in [2]
-    if gₙ≤0
 
-        pₙ = p̄ₙ - εᶜ*gₙ
-        p′ₙ = -εᶜ
-        Πₑ = (εᶜ/2)*gₙ^2 - p̄ₙ*gₙ + (εᶜ*ḡₙ^2)/6
-        
-    elseif gₙ≤ḡₙ
-        
-        aux = (εᶜ*ḡₙ-p̄ₙ)/(ḡₙ^2)
-        pₙ =  aux*gₙ^2 - εᶜ*gₙ + p̄ₙ
-        p′ₙ = 2*aux*gₙ - εᶜ
-        Πₑ = -(εᶜ*ḡₙ-p̄ₙ)/(3*ḡₙ^2)*gₙ^3 + (εᶜ/2)*gₙ^2 - p̄ₙ*gₙ + (εᶜ*ḡₙ^2)/6
-        
+@inline function smoothstep(v::T, x, xᵘ) where T
+    
+    if x≤0
+
+        y = v
+        y′ = zero(T)
+
+    else
+
+        x = (x-xᵘ)/xᵘ
+        y = x * x * (3 + 2 * x) * v
+        y′ = 6/xᵘ * x * (1 + x) * v
+
     end
     
-    return pₙ, p′ₙ, Πₑ
+    return y, y′
     
 end 
 

@@ -95,11 +95,11 @@ function test_angle()
     zG = Vec3(-sqrt(3/5), 0, sqrt(3/5)) 
 
     # penalty parameters
-    εᶜ = 5000
+    kₙ = 5000
     μ = 0
     εᵗ = 0.1
 
-    comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+    comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, kₙ, μ, εᵗ, T)
 
     # -------------------------------------------------------------------------------------------
     # External forces

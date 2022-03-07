@@ -44,8 +44,7 @@ R₂ = rotation_matrix(Θ₂)
 ΔR₂ = 1. *ID3
 mat = (E = 1., G = 0.1, Jᵨ = Diagonal(@SVector [20, 10, 10]), Aᵨ = 0.01)
 geom = (A = 0.01, J = 0.01, I₃₃ = 0.01, I₂₂ = 0.01)
-comp = (nᴳ = 3, zᴳ = @SVector[-sqrt(3/5), 0, sqrt(3/5)], ωᴳ = @SVector[5/9, 8/9, 5/9], εᶜ = 10., μ = 0.3, εᵗ = 0.1, γᵈᵃᵐᵖ = 10., damping=0.1)
-
+comp = (nᴳ = 3, zᴳ = @SVector[-sqrt(3/5), 0, sqrt(3/5)], ωᴳ = @SVector[5/9, 8/9, 5/9], kₙ = 10., μ = 0.3, εᵗ = 0.1, ηₙ = 1., damping=0.1)
 
 init = (;X₁, X₂, l₀, Rₑ⁰)
 
@@ -118,7 +117,7 @@ function finitediff_contact(exact=true)
     x₀ = [u₁..., Θ₁..., u₂..., Θ₂...]
 
     # frictionless
-    newcomp = (comp..., μ = 0., γᵈᵃᵐᵖ = 0., μʳᵉᵍ = 0.)
+    newcomp = (comp..., μ = 0., ηₙ = 0., εᵗ = 0.)
     simvars_contact_frictionless = (;mat, geom, comp=newcomp, init, sdf)
     _, _, _, _, _, ftest, _, _, _, _, _ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars_contact_frictionless, exact, true)
     funK_frictionless(x) = compute(x[1:3], x[7:9], rotation_matrix(x[4:6]), rotation_matrix(x[10:12]), ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars_contact_frictionless, true, true)
@@ -151,4 +150,4 @@ end
 
 @inferred compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars_contact, true, true)
 
-# @btime compute($u₁, $u₂, $R₁, $R₂, $ΔR₁, $ΔR₂, $u̇₁, $u̇₂, $ẇ₁, $ẇ₂, $ü₁, $ü₂, $ẅ₁, $ẅ₂, $simvars_contact, $true, $true)
+@btime compute($u₁, $u₂, $R₁, $R₂, $ΔR₁, $ΔR₂, $u̇₁, $u̇₂, $ẇ₁, $ẇ₂, $ü₁, $ü₂, $ẅ₁, $ẅ₂, $simvars_contact, $true, $true)

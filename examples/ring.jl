@@ -114,11 +114,11 @@ nG = 3
 zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 
 # penalty parameters
-εᶜ = 1E6
+kₙ = 1E6
 μ = 0.3
 εᵗ = 0.5
 
-comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T)
+comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, kₙ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces

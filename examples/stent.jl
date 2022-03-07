@@ -73,8 +73,8 @@ damping = 1e3
 tᵉⁿᵈ = 1
 
 # tolerance and maximum number of iterations
-tol_res = 1e-3
-tol_ΔD = 1e-3
+tol_res = 1e-5
+tol_ΔD = 1e-5
 max_it = 10
 
 # Gauss points
@@ -83,12 +83,12 @@ nG = 3
 zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 
 # contact parameters
-εᶜ = 1 #penalty parameter
+kₙ = 10 #penalty parameter
 μ = 0.3
-εᵗ = 10 #regularized parameter for friction contact
-γᵈᵃᵐᵖ = 10
+εᵗ = 0.1 #regularized parameter for friction contact
+ηₙ = 1.
 
-comp = SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, γ, T)
+comp = SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, kₙ, μ, εᵗ, ηₙ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces

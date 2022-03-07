@@ -96,9 +96,12 @@ function recompute_at_gausspts!(vtkdata, nodes, beams, mat, sdf, comp)
             vtkdata.stress[k] = mat.E*(1-lₙ/l₀)
 
             if !isnothing(sdf)
-                pₙ, _, _, gₙ, ∂gₙ∂x, _ =  contact_gap(xᴳ, comp.εᶜ, sdf)
+                gₙ, ∂gₙ∂x, _ = contact_gap(xᴳ, sdf)
                 vtkdata.contact_distance[k] = gₙ
-                if pₙ > 0 
+                ḡₙ = sdf.r/4
+                if gₙ ≤ ḡₙ
+                    pₙ, _, _ = regularize_gₙ(gₙ, ḡₙ)
+                    ηₙ, _ = smoothstep(comp.ηₙ, gₙ, ḡₙ)
                     U̇₁ = Rₑ' * u̇₁
                     U̇₂ = Rₑ' * u̇₂
                     Ẇ₁ = Rₑ' * ẇ₁
@@ -116,16 +119,16 @@ function recompute_at_gausspts!(vtkdata, nodes, beams, mat, sdf, comp)
                     H₁⁴ =          P₁P⁴ - Suᵗ*Gᵀ⁴
                     h₁ = H₁¹ * U̇₁ + H₁² * Ẇ₁ + H₁³ * U̇₂ + H₁⁴ * Ẇ₂
                     u̇₀ = Rₑ * h₁
-                    ġₙ = dot(u̇₀, ∂gₙ∂x)*∂gₙ∂x
-                    ġₜ = u̇₀ - ġₙ
-                    ġₜ² = dot(ġₜ, ġₜ)
-                    γᵈᵃᵐᵖ = comp.γᵈᵃᵐᵖ
-                    μʳᵉᵍ = comp.μ/sqrt(ġₜ²+comp.εᵗ)
-                    vtkdata.normal_contact_force[k] = pₙ*∂gₙ∂x - γᵈᵃᵐᵖ * pₙ * ġₙ
-                    vtkdata.tangential_contact_force[k] = -μʳᵉᵍ * pₙ * ġₜ
+                    u̇ₙ = dot(u̇₀, ∂gₙ∂x)*∂gₙ∂x
+                    u̇ₜ = u̇₀ - u̇ₙ
+                    u̇ₜ² = dot(u̇ₜ, u̇ₜ)
+                    μʳᵉᵍ = comp.μ/sqrt(u̇ₜ²+comp.εᵗ)
+                    vtkdata.normal_contact_force[k] = comp.kₙ * pₙ * ∂gₙ∂x - ηₙ * u̇ₙ
+                    vtkdata.tangential_contact_force[k] = - pₙ * comp.kₙ * gₙ * μʳᵉᵍ * u̇ₜ
                     vtkdata.incontact[k] = 1
                 end
             end
+
 
             k += 1
 

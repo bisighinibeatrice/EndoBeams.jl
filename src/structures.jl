@@ -29,16 +29,16 @@ struct SimulationParameters{T, NG}
     zᴳ::SVector{NG, T}
     
     # penalty parameters
-    εᶜ::T
+    kₙ::T
     μ::T
     εᵗ::T
-    γᵈᵃᵐᵖ::T
+    ηₙ::T
     
 end
 
 
 """
-    comp = SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, T=Float64)    
+    comp = SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, kₙ, μ, εᵗ, T=Float64)    
 
 Constructor of the structure containing the simulation parameters:
     - `α`: integration parameter;
@@ -54,16 +54,16 @@ Constructor of the structure containing the simulation parameters:
     - `nG`: number of Gauss points;
     - `ωG`: Gauss points weights;
     - `zG`: Gauss points positions along centreline;
-    - `εᶜ`: penalty coefficient for the contact normal contributions;
+    - `kₙ`: penalty coefficient for the contact normal contributions;
     - `μ`: friction coefficient;
     - `εᵗ`: regularisation coefficient for the contact tangential contributions.
-    - `γᵈᵃᵐᵖ`: contact normal damping parameter
+    - `ηₙ`: contact normal damping parameter
 
 Returns a SimulationParameters structure.
 """
-function SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, γᵈᵃᵐᵖ, T=Float64)
+function SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, kₙ, μ, εᵗ, ηₙ, T=Float64)
     
-    return SimulationParameters{T, nG}(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, εᶜ, μ, εᵗ, γᵈᵃᵐᵖ)
+    return SimulationParameters{T, nG}(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, kₙ, μ, εᵗ, ηₙ)
     
 end 
 
