@@ -86,7 +86,7 @@ zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 kₙ = 10 #penalty parameter
 μ = 0.3
 εᵗ = 0.1 #regularized parameter for friction contact
-ηₙ = 1.
+ηₙ = 0.1
 
 comp = SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, kₙ, μ, εᵗ, ηₙ, T)
 

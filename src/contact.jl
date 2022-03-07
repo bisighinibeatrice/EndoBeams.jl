@@ -214,7 +214,7 @@ end
     if isinside(point, sdf.dom)
 
         gₙ = sitp(point...)
-        ∂gₙ∂x = Interpolations.gradient(sitp, point...)
+        ∂gₙ∂x = normalize(Interpolations.gradient(sitp, point...))
         ∂²gₙ∂x² = Interpolations.hessian(sitp, point...)
 
     else 
