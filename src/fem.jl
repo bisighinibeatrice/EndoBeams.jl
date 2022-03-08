@@ -1294,6 +1294,11 @@ function assemble!(conf, matrices, energy, params)
     energy.strain_energy = 0
     energy.kinetic_energy = 0
     energy.contact_energy = 0
+
+    #Preparing constants
+    gausspoints = (params.nᴳ, params.ωᴳ, params.zᴳ)
+    contactparams = conf.contact
+    sdf = conf.sdf  
         
     lk = Threads.SpinLock()
 
@@ -1312,10 +1317,7 @@ function assemble!(conf, matrices, energy, params)
         ΔR₁, ΔR₂ = nodes.ΔR[n1], nodes.ΔR[n2]
 
         # Packing
-        init = (X₁, X₂, b.l₀, b.Rₑ⁰)
-        gausspoints = (params.nᴳ, params.ωᴳ, params.zᴳ)
-        contactparams = conf.contact
-        sdf = conf.sdf        
+        init = (X₁, X₂, b.l₀, b.Rₑ⁰)      
         constants = (init, gausspoints, b.properties, contactparams, sdf)
 
         strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ, Kⁱⁿᵗ, Kᶜ, M, Cᵏ, Cᶜ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, constants)

@@ -13,18 +13,18 @@ ini_Δt = 0.01
 Δt_plot =  0.01
 tᵉⁿᵈ = 1
 
-params = Params{T}(output_dir = "examples/output3D", ini_Δt=ini_Δt, Δt_plot=Δt_plot, tᵉⁿᵈ=tᵉⁿᵈ, stop_on_energy_threshold = true, energy_threshold=1e-6)
+params = Params{T}(;ini_Δt, Δt_plot, tᵉⁿᵈ, output_dir = "examples/output3D", stop_on_energy_threshold=true, energy_threshold=1e-6)
 
 # -------------------------------------------------------------------------------------------
 # Read stent information
 # -------------------------------------------------------------------------------------------
 
 # read expanded configuration
-intial_positions =  readdlm("examples/input_stent/pos_stent.txt")
+initial_positions =  readdlm("examples/input_stent/pos_stent.txt")
 connectivity = readdlm("examples/input_stent/conn_stent.txt", Int)
 
 # read crimped configuration
-crimped_positions = intial_positions + readdlm("examples/input_stent/u_crimping.txt")
+crimped_positions = initial_positions + readdlm("examples/input_stent/u_crimping.txt")
 
 # read positioned configuration
 final_positions =  crimped_positions + readdlm("examples/input_stent/u_positioning.txt")
@@ -37,7 +37,7 @@ final_positions =  crimped_positions + readdlm("examples/input_stent/u_positioni
 nnodes = size(final_positions, 1)
 
 # initial conditions
-u⁰ = final_positions - intial_positions
+u⁰ = final_positions - initial_positions
 
 u̇⁰ = zeros(nnodes, 3)
 ü⁰ = zeros(nnodes, 3)
@@ -48,7 +48,7 @@ R₀ = readdlm("examples/input_stent/R_positioning.txt")
 
 
 # nodes StructArray
-nodes = build_nodes(intial_positions, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, R₀, T)
+nodes = build_nodes(initial_positions, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, R₀, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
