@@ -38,10 +38,10 @@ end
 #----------------------------------
 
 """
-nodes = constructor_nodes(X, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, Rₑ⁰=nothing, T=Float64) 
+nodes = nodes(X, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, Rₑ⁰=nothing, T=Float64) 
 
 Constructor of the nodes StructArray:
-- `X`: nodes StructArray (created with constructor_nodes);
+- `X`: nodes StructArray (created with nodes);
 - `u⁰`: initial displacements;
 - `u̇⁰`: initial velocities;
 - `ü⁰`: initial accelerations;
@@ -52,7 +52,7 @@ Constructor of the nodes StructArray:
 
 Returns a StructArray{Node}, structure containing the information of the nodes. 
 """
-function constructor_nodes(X::AbstractMatrix, u⁰::AbstractMatrix, u̇⁰::AbstractMatrix, ü⁰::AbstractMatrix, w⁰::AbstractMatrix, ẇ⁰::AbstractMatrix, ẅ⁰::AbstractMatrix, Rₑ⁰=nothing, T=Float64) 
+function build_nodes(X::AbstractMatrix, u⁰::AbstractMatrix, u̇⁰::AbstractMatrix, ü⁰::AbstractMatrix, w⁰::AbstractMatrix, ẇ⁰::AbstractMatrix, ẅ⁰::AbstractMatrix, Rₑ⁰=nothing, T=Float64) 
 
     nodes = StructArray(Node{T}(
             i, 
@@ -82,7 +82,7 @@ function constructor_nodes(X::AbstractMatrix, u⁰::AbstractMatrix, u̇⁰::Abst
 end
 
 
-function constructor_nodes(X::AbstractVector, u⁰::AbstractVector, u̇⁰::AbstractVector, ü⁰::AbstractVector, w⁰::AbstractVector, ẇ⁰::AbstractVector, ẅ⁰::AbstractVector, Rₑ⁰=nothing, T=Float64) 
+function build_nodes(X::AbstractVector, u⁰::AbstractVector, u̇⁰::AbstractVector, ü⁰::AbstractVector, w⁰::AbstractVector, ẇ⁰::AbstractVector, ẅ⁰::AbstractVector, Rₑ⁰=nothing, T=Float64) 
 
     nnodes = length(X)
     nodes = StructArray{Node{T}}((

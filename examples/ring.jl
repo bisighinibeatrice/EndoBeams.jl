@@ -44,7 +44,7 @@ ẅ⁰ = zeros(size(X₀,1)*3)
 plane = fill("xy", length(X₀))
 
 # nodes StructArray
-nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
+nodes = nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -70,9 +70,9 @@ nbInterpolationPoints = 30
 # geometric dimension of the cylinder
 r = 0.5
 E = 100
-nu = 0.0001
+ν = 0.0001
 ρ = 0.01
-G = E/(2*(1+nu))
+G = E/(2*(1+ν))
 A = pi*r^2
 I₂₂ = 0.25*pi*r^4
 I₃₃ = 0.25*pi*r^4
@@ -82,11 +82,11 @@ J = Iₒ
 Jᵨ = Mat33(ρ*Iₒ, 0, 0, 0, ρ*I₂₂, 0, 0, 0, ρ*I₃₃)
 Aᵨ = ρ*A
 
-geom = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
-mat = Material{T}(E, G, Aᵨ, Jᵨ)
+geometry = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
+material = Material{T}(E, G, Aᵨ, Jᵨ)
 
 # beams vector
-beams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
+beams = beams(nodes, conn, material, geometry, nbInterpolationPoints, nothing)
 
 #-----------------------------------------------------------------------------------
 # Simulation parameters
@@ -109,51 +109,47 @@ tol_ΔD = 1e-5
 max_it = 10
 
 # Gauss points
-nG = 3
-ωG = Vec3(5/9, 8/9, 5/9)
-zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
+nᴳ = 3
+ωᴳ = Vec3(5/9, 8/9, 5/9)
+zᴳ = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 
 # penalty parameters
-kₙ = 1E6
+kₙ = 10 #penalty parameter
 μ = 0.3
-εᵗ = 0.5
+εᵗ = 0.1 #regularized parameter for friction contact
+ηₙ = 0.
 
-comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, kₙ, μ, εᵗ, T)
+comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nᴳ, ωᴳ, zᴳ, kₙ, μ, εᵗ, ηₙ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
 # -------------------------------------------------------------------------------------------
 
 # external force and applied dof
-flag_crimping = false
-F(t) = 0
-dofs_load = T[]
+loaded_dofs = T[]
+force(t, node_idx) = 0
 
-ext_forces = ExternalForces(flag_crimping, F, dofs_load, T)
+ext_forces = ExternalForces(force, loaded_dofs)
 
 # -------------------------------------------------------------------------------------------
 # Boundary conditions
 # -------------------------------------------------------------------------------------------
 
 # multifreedom constraints
-cons = Int[]
+constraints = Int[]
 
-# number of dof (6 per node)
 ndofs = nnodes*6
-
-# Dirichlet boundary conditions: fixed positions
 fixed_dofs = Int[]
-free_dofs = setdiff(1:ndofs, fixed_dofs) 
+free_dofs = 1:ndofs
 
-# Dirichlet boundary conditions: moving positions
-flag_cylindrical = false
+
+# Dirichlet dof (x6)
 disp_dofs = Int[]
-Fdisp(t) = 0
-flag_disp_vector = false
 disp_vals = T[]
+disp(t, node_idx) = 0
 
 # boundary conditions strucutre 
-bcs = BoundaryConditions(fixed_dofs, free_dofs, flag_cylindrical, flag_disp_vector, Fdisp, disp_vals, disp_dofs, T)
+bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
 
 # -------------------------------------------------------------------------------------------
 # SDF
@@ -170,11 +166,11 @@ sdf = Plane_z_SDF{T}(r, z0)
 
 
 # configuration: mesh, external forces and boundary conditions
-conf = Configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
+conf = Configuration(material, geometry, ndofs, ext_forces, bcs, T)
 
 # -------------------------------------------------------------------------------------------
 # Solve
 # -------------------------------------------------------------------------------------------
 
-params = Params(scale = 2, output_dir = "examples/output3D")
-solver!(nodes, beams, conf, comp, sdf, cons, params, T)                                        
+params = Params(output_dir = "examples/output3D")
+solver!(nodes, beams, conf, comp, sdf, constraints, params, T)                                        

@@ -25,7 +25,7 @@ ẅ⁰ = zeros(Vec3, nnodes)
 
 
 # nodes StructArray
-nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
+nodes = nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -49,11 +49,11 @@ Iₒ = 0
 Iᵣᵣ = 0
 J = 1e-3
 
-geom = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
-mat = Material{T, typeof(Jᵨ)}(E, G, Aᵨ, Jᵨ)
+geometry = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
+material = Material{T, typeof(Jᵨ)}(E, G, Aᵨ, Jᵨ)
 
 # beams vector
-beams = constructor_beams(nodes, connectivity, mat, geom, nothing)
+beams = beams(nodes, connectivity, material, geometry, nothing)
 
 #-----------------------------------------------------------------------------------
 # Simulation parameters
@@ -76,16 +76,16 @@ tol_ΔD = 1e-5
 max_it = 10
 
 # Gauss points
-nG = 3
-ωG = Vec3(5/9, 8/9, 5/9)
-zG = Vec3(-sqrt(3/5), 0, sqrt(3/5)) 
+nᴳ = 3
+ωᴳ = Vec3(5/9, 8/9, 5/9)
+zᴳ = Vec3(-sqrt(3/5), 0, sqrt(3/5)) 
 
 # penalty parameters
 kₙ = 5000
 μ = 0
 εᵗ = 0.1
 
-comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, kₙ, μ, εᵗ, T)
+comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nᴳ, ωᴳ, zᴳ, kₙ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -102,7 +102,7 @@ ext_forces = ExternalForces(force, loaded_dofs)
 # -------------------------------------------------------------------------------------------
 
 # multifreedom constraints
-cons = nothing
+constraints = nothing
 
 # Dirichlet boundary conditions: fixed positions
 ndofs = nnodes*6
@@ -130,11 +130,11 @@ sdf = nothing
 # -------------------------------------------------------------------------------------------
 
 # configuration: mesh, external forces and boundary conditions
-conf = Configuration(mat, geom, ndofs, ext_forces, bcs, T)
+conf = Configuration(material, geometry, ndofs, ext_forces, bcs, T)
 
 # -------------------------------------------------------------------------------------------
 # Solve
 # -------------------------------------------------------------------------------------------
 
-params = Params(output_dir = "examples/output3D", SHOW_TIME_SECTIONS=false)
-solver!(nodes, beams, conf, comp, sdf, cons, params, T)       
+params = Params(output_dir = "examples/output3D", record_timings=false)
+solver!(nodes, beams, conf, comp, sdf, constraints, params, T)       

@@ -3,6 +3,8 @@
 # STRUCTURES
 #----------------------------------
 
+abstract type SignedDistanceField{T} end
+
 """
     sdf = struct Plane_z_SDF{T}
 
@@ -12,7 +14,7 @@ Constructor of the structure containing the properties of the analytical SDF of 
 
 Returns a structure containing the information of the created sdf. 
 """
-struct Plane_z_SDF{T}
+struct Plane_z_SDF{T} <: SignedDistanceField{T}
     
     r::T  # beams radius
     z0::T # plane position 
@@ -28,7 +30,7 @@ Constructor of the structure containing the properties  of the analytical SDF of
 
 Returns a structure containing the information of the created sdf.  
 """
-struct Plane_y_SDF{T}
+struct Plane_y_SDF{T} <: SignedDistanceField{T}
     
     r::T  # beams radius
     y0::T # plane position 
@@ -47,7 +49,7 @@ Constructor of the structure containing the properties  of the analytical SDF of
     
 Returns a structure containing the information of the created sdf. 
 """
-struct Sphere_SDF{T}
+struct Sphere_SDF{T} <: SignedDistanceField{T}
     
     r::T # beams radius
     R::T # sphere radius
@@ -66,7 +68,7 @@ Constructor of the structure containing the properties of the analytical SDF of 
     
 Returns a structure containing the information of the created sdf. 
 """
-struct Cylinder_SDF{T}
+struct Cylinder_SDF{T} <: SignedDistanceField{T}
     
     r::T # beams radius
     R::T # cylinder radius
@@ -75,7 +77,7 @@ struct Cylinder_SDF{T}
 end  
 
 # Properties of a discrete SDF
-struct Discrete_SDF{T, F}
+struct Discrete_SDF{T, F} <: SignedDistanceField{T}
     
     r::T
     sitp::F

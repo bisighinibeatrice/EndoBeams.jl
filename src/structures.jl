@@ -2,70 +2,17 @@
 # STRUCTURES
 #----------------------------------
 
-# Variables for the time and space integration and contact linearization
-struct SimulationParameters{T, NG}
-    
-    # integration parameters
-    α::T 
-    β::T 
-    γ::T 
-    
-    # numerical damping
-    damping::T
-    
-    # time step and total time
-    Δt::Float64
-    Δt_plot::Float64
-    tᵉⁿᵈ::Float64
-    
-    # tolerance and maximum number of iterations
-    tol_res::Float64
-    tol_ΔD::Float64
-    max_it::Int
-    
-    # Gauss points
-    nᴳ::Int
-    ωᴳ::SVector{NG, T}
-    zᴳ::SVector{NG, T}
-    
-    # penalty parameters
+struct ContactParameters{T}
     kₙ::T
     μ::T
     εᵗ::T
     ηₙ::T
-    
 end
 
+ContactParameters(kₙ, μ, εᵗ, ηₙ, T=Float64) = ContactParameters{T}(kₙ, μ, εᵗ, ηₙ)
 
-"""
-    comp = SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, kₙ, μ, εᵗ, T=Float64)    
 
-Constructor of the structure containing the simulation parameters:
-    - `α`: integration parameter;
-    - `β`: integration parameter;
-    - `γ`: integration parameter;
-    - `damping`: damping coefficient;
-    - `Δt`: time step;
-    - `Δt_plot`: time step for the saving of output files;
-    - `tᵉⁿᵈ`: total time of the simulation;
-    - `tol_res`: residual tolerance for the Newton-Raphson algorithm;
-    - `tol_ΔD`: solution vector tolerance for the Newton-Raphson algorithm;
-    - `max_it`: maximum number of iterations for the Newton-Raphson algorithm;
-    - `nG`: number of Gauss points;
-    - `ωG`: Gauss points weights;
-    - `zG`: Gauss points positions along centreline;
-    - `kₙ`: penalty coefficient for the contact normal contributions;
-    - `μ`: friction coefficient;
-    - `εᵗ`: regularisation coefficient for the contact tangential contributions.
-    - `ηₙ`: contact normal damping parameter
 
-Returns a SimulationParameters structure.
-"""
-function SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, kₙ, μ, εᵗ, ηₙ, T=Float64)
-    
-    return SimulationParameters{T, nG}(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, kₙ, μ, εᵗ, ηₙ)
-    
-end 
 
 # Dirichlet boundary conditions
 struct BoundaryConditions{T, TF}
@@ -140,122 +87,95 @@ end
 
 
 # Material properties
-struct Material{T, TJ}
+struct BeamProperties{T, TK, TJ}
     
     E::T
-    G::T
-    Aᵨ::T
+    K̄ⁱⁿᵗ::TK
     Jᵨ::TJ
+    Aᵨ::T
+    damping::T
     
 end 
 
 """
-    mat = Material(E, nu, ρ, radius)
+    material = Material(E, ν, ρ, radius, damping, T=Float64)
 
 Constructor of the structure containing the material properties:
 - `E`: Young modulus;
-- `nu`: Poisson coefficient;
+- `ν`: Poisson coefficient;
 - `ρ`: density;
-- `radius`: beam radius.
+- `radius`: beam radius;
+- `damping`: viscous damping
 
 Returns a Material structure.
 """
-function Material(E, nu, ρ, radius, T=Float64)
+function BeamProperties(l₀, E, ν, ρ, radius, damping, T=Float64)
 
-    G = E/(2*(1+nu))
+    G = E/(2*(1+ν))
     A = pi*radius^2
     I₂₂ = pi*radius^4/4
-    I₃₃ = pi*radius^4/4
+    I₃₃ = I₂₂
     Iₒ = I₂₂ + I₃₃
     Jᵨ = ρ * Diagonal(Vec3(Iₒ, I₂₂, I₃₃))
     Aᵨ = ρ*A
 
-    mat = Material{T, typeof(Jᵨ)}(E, G, Aᵨ, Jᵨ)
+    K̄ⁱⁿᵗ = K̄ⁱⁿᵗ_beam(E, G, Iₒ, A, I₂₂, I₃₃, l₀)
 
-    return mat
+    beamprops = BeamProperties{T, typeof(K̄ⁱⁿᵗ), typeof(Jᵨ)}(E, K̄ⁱⁿᵗ, Jᵨ, Aᵨ, damping)
+
+    return beamprops
 
 end
 
-# Geometrical properties
-struct Geometry{T}
-    
-    A::T
-    I₂₂::T
-    I₃₃::T
-    Iₒ::T
-    Iᵣᵣ::T
-    J::T   
-    
-end 
-
-
-"""
-    geom = Geometry(radius)
-
-Constructor of the structure containing the geometrical properties:
-- `radius`: beam radius.
-
-Returns a Geometry structure.
-"""
-function Geometry(radius, T=Float64)
-
-    A = pi*radius^2
-    I₂₂ = pi*radius^4/4
-    I₃₃ = pi*radius^4/4
-    Iₒ = I₂₂+I₃₃
-    Iᵣᵣ = Iₒ
-    J = Iₒ
-    
-    geom = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
-
-    return geom
-
-end 
 
 # Configuration of the mesh
-struct Configuration{T, TJ, TF, TU}
+struct Configuration{T, Tn, Tb, Tc, Te, Tbc, Tcon, Tsdf}
+
+    nodes::Tn
+    beams::Tb
+    constraints::Tc
     
-    # material
-    mat::Material{T, TJ}
-    
-    # geometry
-    geom::Geometry{T}
-    
-    # dof
+    # dofs
     ndofs::Int
     disp_dofs::Vector{Int}
     rot_dofs::Vector{Int}
     
     # external forces
-    ext_forces::ExternalForces{TF}
+    ext_forces::Te
     
     # boundary conditions
-    bcs::BoundaryConditions{T, TU}
-    
+    bcs::Tbc
+
+    contact::Tcon
+
+    sdf::Tsdf
+
 end
 
 
 
 
 """
-    conf = Configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T=Float64)
+    conf = Configuration(material, geometry, nnodes, ndofs, ext_forces, bcs, T=Float64)
 
 Constructor of the structure collecting the information for the simulation:
-- `mat`: material properties (Material{T});
-- `geom`: geoltrical properties (Geometry{T});
+- `material`: material properties (Material{T});
+- `geometry`: geoltrical properties (Geometry{T});
 - `nnodes`: number of nodes in the system;
 - `ndofs`: number of DOFs in the system;
 - `bcs`: Dirichlet BCs.
 
 Returns a Configuration structure.
 """
-function Configuration(mat::Material{TT, TJ}, geom::Geometry, ndofs, ext_forces::ExternalForces{TF}, bcs::BoundaryConditions{TT, TU}, T=Float64) where {TT, TF, TU, TJ}
+function Configuration(nodes::StructVector, beams::StructVector, constraints::Union{StructVector, Nothing}, ext_forces::ExternalForces, bcs::BoundaryConditions, contact::Union{ContactParameters, Nothing}, sdf::Union{SignedDistanceField, Nothing}, T=Float64)
     
+    ndofs = length(nodes)*6
+
     # displacement dofs
     disp_dofs = [i for i in 1:ndofs if mod1(i, 6)≤3]
     rot_dofs = [i for i in 1:ndofs if mod1(i, 6)>3]
 
-    return Configuration{T, TJ, TF, TU}(mat, geom, ndofs, disp_dofs, rot_dofs, ext_forces, bcs)
+    return Configuration{T, typeof(nodes), typeof(beams), typeof(constraints), typeof(ext_forces), typeof(bcs), typeof(contact), typeof(sdf)}(nodes, beams, constraints, ndofs, disp_dofs, rot_dofs, ext_forces, bcs, contact, sdf)
     
 end 
 
@@ -271,7 +191,7 @@ struct Solution{T}
 end 
 
 # Constructor of the structure where the last force vectors are saved in order to be used in the next step by the solver
-function Solution(conf, T=Float64)
+function Solution(conf::Configuration{T}) where T
     
     ndofs = conf.ndofs
 
@@ -384,7 +304,7 @@ end
 
 
 # Constructor of the structure containing the energy contributions
-function Energy(T=Float64)
+function Energy(T)
     
     return Energy{T}(0, 0, 0)
     
@@ -458,11 +378,12 @@ end
 
 
 # Constructor of the sparse matrices
-function constructor_sparse_matrices!(beams, nodes, constraints, conf::Configuration{T}) where T
+function sparse_matrices!(conf::Configuration{T}) where T
 
-    ndofs =  conf.ndofs
-    free_dofs = conf.bcs.free_dofs
-    fixed_dofs = conf.bcs.fixed_dofs
+    @unpack beams, nodes, constraints, bcs, ndofs = conf
+
+    free_dofs = bcs.free_dofs
+    fixed_dofs = bcs.fixed_dofs
     nfreedofs = length(free_dofs)
 
     I, J, sparsity_free = sparsity(nodes, beams, constraints, fixed_dofs)

@@ -150,7 +150,7 @@ end
     else
         sinΘ, cosΘ = sincos(Θnorm)
         sinΘ2 = sin(Θnorm/2)
-        aux₁ = (2*sinΘ2/Θnorm)^2
+        aux = (2*sinΘ2/Θnorm)^2
 
         u = Θ/Θnorm
         uvᶜ = cross(u, v)
@@ -161,8 +161,8 @@ end
     
         Kᵥ =  (cosΘ-sinΘ/Θnorm)/Θnorm * (VU-uvᵈ*UU) + 
               (1-sinΘ/Θnorm)/Θnorm * (UV - 2*uvᵈ*UU + uvᵈ*ID3) -
-              (sinΘ/Θnorm-aux₁) * (uvᶜ*u') +
-              aux₁ * skew(v)/2
+              (sinΘ/Θnorm-aux) * (uvᶜ*u') +
+              aux * skew(v)/2
     
     end
 
@@ -172,11 +172,11 @@ end
 
 
 #  Compute Kint matrix
-@inline function K̄ⁱⁿᵗ_beam(mat, geom, l₀)
+@inline function K̄ⁱⁿᵗ_beam(E, G, Iₒ, A, I₂₂, I₃₃, l₀)
     
-    K̄ⁱⁿᵗū = geom.A*mat.E/l₀
-    K̄ⁱⁿᵗΘ̅ = Diagonal(@SVector [mat.G*geom.J/l₀, 4*mat.E*geom.I₃₃/l₀, 4*mat.E*geom.I₂₂/l₀])
-    K̄ⁱⁿᵗΘ̅Θ̅ = Diagonal(@SVector [-mat.G*geom.J/l₀, 2*mat.E*geom.I₃₃/l₀, 2*mat.E*geom.I₂₂/l₀])
+    K̄ⁱⁿᵗū = A*E/l₀
+    K̄ⁱⁿᵗΘ̅ = Diagonal(@SVector [G*Iₒ/l₀, 4*E*I₃₃/l₀, 4*E*I₂₂/l₀])
+    K̄ⁱⁿᵗΘ̅Θ̅ = Diagonal(@SVector [-G*Iₒ/l₀, 2*E*I₃₃/l₀, 2*E*I₂₂/l₀])
     
     return K̄ⁱⁿᵗū, K̄ⁱⁿᵗΘ̅, K̄ⁱⁿᵗΘ̅Θ̅
     
@@ -247,15 +247,17 @@ end
 
 
 
-Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars, exact=true, dynamics=true) where T
+Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, constants, exact=true, isdynamic=true) where T
 
     # Superscript ¹ means matrix or vector associated to u₁
     # Superscript ² means matrix or vector associated to Θ₁
     # Superscript ³ means matrix or vector associated to u₂
     # Superscript ⁴ means matrix or vector associated to Θ₂
 
-    mat, geom, comp, init, sdf = simvars
+    init, gausspoints, beamproperties, contactparams, sdf = constants
     X₁, X₂, l₀, Rₑ⁰ = init
+    nG, ωG, zG = gausspoints
+    @unpack K̄ⁱⁿᵗ, Jᵨ, Aᵨ, damping = beamproperties
     
 
     x₁ =  X₁ + u₁
@@ -309,7 +311,7 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
 
     
 
-    K̄ⁱⁿᵗū, K̄ⁱⁿᵗΘ̅, K̄ⁱⁿᵗΘ̅Θ̅ = K̄ⁱⁿᵗ_beam(mat, geom, l₀)
+    K̄ⁱⁿᵗū, K̄ⁱⁿᵗΘ̅, K̄ⁱⁿᵗΘ̅Θ̅ = K̄ⁱⁿᵗ
 
     # T̄ⁱⁿᵗ = K̄ⁱⁿᵗ D̄
     T̄ⁱⁿᵗū  = K̄ⁱⁿᵗū  * ū
@@ -534,9 +536,9 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
 
 
     
-    contact = !isnothing(sdf)
+    searchcontact = !isnothing(sdf)
         
-    if dynamics
+    if isdynamic
         
         U̇₁ = Rₑ' * u̇₁
         U̇₂ = Rₑ' * u̇₂
@@ -572,10 +574,10 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
 
 
         # cycle among the Gauss positions
-        for iG in 1:comp.nᴳ
+        for iG in 1:nG
 
-            zᴳ = comp.zᴳ[iG]
-            ωᴳ = comp.ωᴳ[iG]
+            zᴳ = zG[iG]
+            ωᴳ = ωG[iG]
 
             ξ = l₀*(zᴳ+1)/2
 
@@ -598,8 +600,7 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
 
             R̄ = ID3 + SΘ̄
 
-            Īᵨ = R̄*mat.Jᵨ*R̄'
-            Aᵨ = mat.Aᵨ
+            Īᵨ = R̄*Jᵨ*R̄'
 
             N₇lₙ = N₇/lₙ
             N₇lₙ² = N₇lₙ/lₙ
@@ -622,7 +623,7 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
             H₂⁴ = Diagonal(@SVector [N₂, N₆, N₆])
 
 
-            u̇ᵗ =  P₁P¹ * U̇₁ +  P₁P² * Ẇ₁ + P₁P³ * U̇₂ + P₁P² * Ẇ₂
+            u̇ᵗ =  P₁P¹ * U̇₁ +  P₁P² * Ẇ₁ + P₁P³ * U̇₂ + P₁P⁴ * Ẇ₂
 
             Su̇ᵗ = skew(u̇ᵗ)
             
@@ -692,12 +693,12 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
             Tᵏ⁴ += ωᴳ * (AᵨH₁⁴ᵀ*Rₑᵀü₀ + H₂⁴'*ĪᵨRₑᵀẅ₀SẆ₀ĪᵨẆ₀)
 
 
-            if comp.damping>0
-                Tᵈ¹G = ωᴳ * comp.damping*(AᵨH₁¹ᵀ*h₁ + H₂¹'*Īᵨ*h₂)
+            if damping>0
+                Tᵈ¹G = ωᴳ * damping*(AᵨH₁¹ᵀ*h₁ + H₂¹'*Īᵨ*h₂)
                 Tᵏ¹ += Tᵈ¹G
-                Tᵏ² += ωᴳ * comp.damping*(AᵨH₁²ᵀ*h₁ + H₂²'*Īᵨ*h₂)
-                Tᵏ³ += -Tᵈ¹G + ωᴳ * Aᵨ * comp.damping * h₁
-                Tᵏ⁴ += ωᴳ * comp.damping*(AᵨH₁⁴ᵀ*h₁ + H₂⁴'*Īᵨ*h₂)
+                Tᵏ² += ωᴳ * damping*(AᵨH₁²ᵀ*h₁ + H₂²'*Īᵨ*h₂)
+                Tᵏ³ += -Tᵈ¹G + ωᴳ * Aᵨ * damping * h₁
+                Tᵏ⁴ += ωᴳ * damping*(AᵨH₁⁴ᵀ*h₁ + H₂⁴'*Īᵨ*h₂)
             end
 
 
@@ -765,13 +766,14 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
             Cᵏ⁴¹ += Cᵏ⁴¹G
             Cᵏ⁴² += Cᵏ⁴²G
             Cᵏ⁴⁴ += Cᵏ⁴⁴G
+            
 
 
             # kinetic energy
             Īᵨᵍ = Rₑ*Īᵨ*Rₑ'
             kinetic_energy += ωᴳ/2 * (Aᵨ*u̇₀'*u̇₀ + ẇ₀'*Īᵨᵍ*ẇ₀)
 
-            if contact
+            if searchcontact
 
                 xᴳ = N₁*x₁ + N₂*x₂ + Rₑ*uᵗ
 
@@ -781,13 +783,12 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
             
                 if gₙ ≤ ḡₙ
 
-                    (;kₙ, ηₙ, μ, εᵗ) = comp
+                    @unpack kₙ, ηₙ, μ, εᵗ = contactparams
 
                     pₙ, p′ₙ, Πₑ = regularize_gₙ(gₙ, ḡₙ)
                     ηₙ, η′ₙ = smoothstep(ηₙ, gₙ, ḡₙ)
 
-            
-                    
+
                     u̇ₙ_mag = dot(u̇₀, ∂gₙ∂x)
                     u̇ₙ = u̇ₙ_mag*∂gₙ∂x
                     u̇ₜ = u̇₀ - u̇ₙ
@@ -813,7 +814,6 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
                     Tᶜ² += ωᴳ * (RₑH₁²Rₑᵀ' * 𝓯ᶜ)
                     Tᶜ³ += ωᴳ * (RₑH₁³Rₑᵀ' * 𝓯ᶜ)
                     Tᶜ⁴ += ωᴳ * (RₑH₁⁴Rₑᵀ' * 𝓯ᶜ)
-
 
         
                     ŜH₁ᵀ𝓕ᶜ¹ = skew(H₁¹' * 𝓕ᶜ)
@@ -901,12 +901,12 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
                     t₃⁴⁴ = RₑH₁ᵀ⁴S𝓕ᶜ * Gᵀ⁴Rₑᵀ
 
         
-                    t1 = dot(∂gₙ∂x, u̇₀) * ∂²gₙ∂x² + ∂gₙ∂x * (∂²gₙ∂x² * u̇₀)'
+                    aux = dot(∂gₙ∂x, u̇₀) * ∂²gₙ∂x² + ∂gₙ∂x * (∂²gₙ∂x² * u̇₀)'
         
-                    𝓐₁¹ =  t1 * RₑH₁¹Rₑᵀ
-                    𝓐₁² =  t1 * RₑH₁²Rₑᵀ
-                    𝓐₁³ =  t1 * RₑH₁³Rₑᵀ
-                    𝓐₁⁴ =  t1 * RₑH₁⁴Rₑᵀ
+                    𝓐₁¹ =  aux * RₑH₁¹Rₑᵀ
+                    𝓐₁² =  aux * RₑH₁²Rₑᵀ
+                    𝓐₁³ =  aux * RₑH₁³Rₑᵀ
+                    𝓐₁⁴ =  aux * RₑH₁⁴Rₑᵀ
 
         
 
@@ -967,11 +967,11 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
 
 
 
-                    t1 = kₙ*p′ₙ*nn + kₙ*pₙ*∂²gₙ∂x² - η′ₙ*u̇ₙ*∂gₙ∂x'
-                    Kᶠⁿ¹ = t1*RₑH₁¹Rₑᵀ - ηₙ*∂u̇ₙ∂d¹
-                    Kᶠⁿ² = t1*RₑH₁²Rₑᵀ - ηₙ*∂u̇ₙ∂d²
-                    Kᶠⁿ³ = t1*RₑH₁³Rₑᵀ - ηₙ*∂u̇ₙ∂d³
-                    Kᶠⁿ⁴ = t1*RₑH₁⁴Rₑᵀ - ηₙ*∂u̇ₙ∂d⁴
+                    aux = kₙ*p′ₙ*nn + kₙ*pₙ*∂²gₙ∂x² - η′ₙ*u̇ₙ*∂gₙ∂x'
+                    Kᶠⁿ¹ = aux * RₑH₁¹Rₑᵀ - ηₙ*∂u̇ₙ∂d¹
+                    Kᶠⁿ² = aux * RₑH₁²Rₑᵀ - ηₙ*∂u̇ₙ∂d²
+                    Kᶠⁿ³ = aux * RₑH₁³Rₑᵀ - ηₙ*∂u̇ₙ∂d³
+                    Kᶠⁿ⁴ = aux * RₑH₁⁴Rₑᵀ - ηₙ*∂u̇ₙ∂d⁴
 
                     Cᶠⁿ¹ = - ηₙ * nn * ∂u̇₀∂ḋ¹
                     Cᶠⁿ² = - ηₙ * nn * ∂u̇₀∂ḋ²
@@ -979,17 +979,17 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
                     Cᶠⁿ⁴ = - ηₙ * nn * ∂u̇₀∂ḋ⁴
 
 
-                    t1 = - μʳᵉᵍ * kₙ * p′ₙ * u̇ₜ * ∂gₙ∂x'
-                    t2 = - μʳᵉᵍ * kₙ * pₙ*(ID3 - 1/(u̇ₜ²+εᵗ)*u̇ₜ*u̇ₜ')
-                    Kᶠᵗ¹ = t1 * RₑH₁¹Rₑᵀ + t2 * ∂u̇ₜ∂d¹
-                    Kᶠᵗ² = t1 * RₑH₁²Rₑᵀ + t2 * ∂u̇ₜ∂d²
-                    Kᶠᵗ³ = t1 * RₑH₁³Rₑᵀ + t2 * ∂u̇ₜ∂d³
-                    Kᶠᵗ⁴ = t1 * RₑH₁⁴Rₑᵀ + t2 * ∂u̇ₜ∂d⁴
+                    aux1 = - μʳᵉᵍ * kₙ * p′ₙ * u̇ₜ * ∂gₙ∂x'
+                    aux2 = - μʳᵉᵍ * kₙ * pₙ*(ID3 - 1/(u̇ₜ²+εᵗ)*u̇ₜ*u̇ₜ')
+                    Kᶠᵗ¹ = aux1 * RₑH₁¹Rₑᵀ + aux2 * ∂u̇ₜ∂d¹
+                    Kᶠᵗ² = aux1 * RₑH₁²Rₑᵀ + aux2 * ∂u̇ₜ∂d²
+                    Kᶠᵗ³ = aux1 * RₑH₁³Rₑᵀ + aux2 * ∂u̇ₜ∂d³
+                    Kᶠᵗ⁴ = aux1 * RₑH₁⁴Rₑᵀ + aux2 * ∂u̇ₜ∂d⁴
 
-                    Cᶠᵗ¹ = t2 * ∂u̇ₜ∂ḋ¹
-                    Cᶠᵗ² = t2 * ∂u̇ₜ∂ḋ²
-                    Cᶠᵗ³ = t2 * ∂u̇ₜ∂ḋ³
-                    Cᶠᵗ⁴ = t2 * ∂u̇ₜ∂ḋ⁴
+                    Cᶠᵗ¹ = aux2 * ∂u̇ₜ∂ḋ¹
+                    Cᶠᵗ² = aux2 * ∂u̇ₜ∂ḋ²
+                    Cᶠᵗ³ = aux2 * ∂u̇ₜ∂ḋ³
+                    Cᶠᵗ⁴ = aux2 * ∂u̇ₜ∂ḋ⁴
 
 
 
@@ -1122,23 +1122,23 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
 
         kinetic_energy = l₀2*kinetic_energy
 
-        if comp.damping>0
-            Cᵏ¹¹ += comp.damping*M¹¹
-            Cᵏ¹² += comp.damping*M¹²
-            Cᵏ¹³ += comp.damping*M¹³
-            Cᵏ¹⁴ += comp.damping*M¹⁴
-            Cᵏ²¹ += comp.damping*M¹²'
-            Cᵏ²² += comp.damping*M²²
-            Cᵏ²³ += comp.damping*M²³
-            Cᵏ²⁴ += comp.damping*M²⁴
-            Cᵏ³¹ += comp.damping*M¹³'
-            Cᵏ³² += comp.damping*M²³'
-            Cᵏ³³ += comp.damping*M³³
-            Cᵏ³⁴ += comp.damping*M³⁴
-            Cᵏ⁴¹ += comp.damping*M¹⁴'
-            Cᵏ⁴² += comp.damping*M²⁴'
-            Cᵏ⁴³ += comp.damping*M³⁴'
-            Cᵏ⁴⁴ += comp.damping*M⁴⁴
+        if damping>0
+            Cᵏ¹¹ += damping*M¹¹
+            Cᵏ¹² += damping*M¹²
+            Cᵏ¹³ += damping*M¹³
+            Cᵏ¹⁴ += damping*M¹⁴
+            Cᵏ²¹ += damping*M¹²'
+            Cᵏ²² += damping*M²²
+            Cᵏ²³ += damping*M²³
+            Cᵏ²⁴ += damping*M²⁴
+            Cᵏ³¹ += damping*M¹³'
+            Cᵏ³² += damping*M²³'
+            Cᵏ³³ += damping*M³³
+            Cᵏ³⁴ += damping*M³⁴
+            Cᵏ⁴¹ += damping*M¹⁴'
+            Cᵏ⁴² += damping*M²⁴'
+            Cᵏ⁴³ += damping*M³⁴'
+            Cᵏ⁴⁴ += damping*M⁴⁴
         end
 
 
@@ -1185,7 +1185,7 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
 
 
 
-        if contact
+        if searchcontact
 
 
             Tᶜ¹ = l₀2*Tᶜ¹
@@ -1277,7 +1277,9 @@ end
 
 
 
-function assemble!(nodes, beams, matrices, energy, conf, sdf, comp) 
+function assemble!(conf, matrices, energy, params) 
+
+    @unpack nodes, beams = conf
     
         
     # initialise the matrices associate to the whole structure
@@ -1309,16 +1311,17 @@ function assemble!(nodes, beams, matrices, energy, conf, sdf, comp)
         R₁, R₂ = nodes.R[n1], nodes.R[n2]
         ΔR₁, ΔR₂ = nodes.ΔR[n1], nodes.ΔR[n2]
 
-
-        #----------------------------------------
-        # Compute the contibution from the e beam
+        # Packing
         init = (X₁, X₂, b.l₀, b.Rₑ⁰)
-        simvars = (conf.mat, conf.geom, comp, init, sdf)
+        gausspoints = (params.nᴳ, params.ωᴳ, params.zᴳ)
+        contactparams = conf.contact
+        sdf = conf.sdf        
+        constants = (init, gausspoints, b.properties, contactparams, sdf)
 
-        strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ, Kⁱⁿᵗ, Kᶜ, M, Cᵏ, Cᶜ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, simvars)
+        strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ, Kⁱⁿᵗ, Kᶜ, M, Cᵏ, Cᶜ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, constants)
     
         K = Kⁱⁿᵗ - Kᶜ
-        C = Cᵏ-(1+comp.α)*Cᶜ
+        C = Cᵏ-(1+params.α)*Cᶜ
 
         #-----------------------
         # Assemble contributions

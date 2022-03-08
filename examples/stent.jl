@@ -3,6 +3,18 @@ using DelimitedFiles
 
 const T = Float64
 
+
+# -------------------------------------------------------------------------------------------
+# Time stepping parameters
+# -------------------------------------------------------------------------------------------
+
+# initial time step and total time
+ini_Δt = 0.01
+Δt_plot =  0.01
+tᵉⁿᵈ = 1
+
+params = Params{T}(output_dir = "examples/output3D", ini_Δt=ini_Δt, Δt_plot=Δt_plot, tᵉⁿᵈ=tᵉⁿᵈ, stop_on_energy_threshold = true, energy_threshold=1e-6)
+
 # -------------------------------------------------------------------------------------------
 # Read stent information
 # -------------------------------------------------------------------------------------------
@@ -36,7 +48,7 @@ R₀ = readdlm("examples/input_stent/R_positioning.txt")
 
 
 # nodes StructArray
-nodes = constructor_nodes(intial_positions, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, R₀, T)
+nodes = build_nodes(intial_positions, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, R₀, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -48,47 +60,23 @@ E = 225*1e3
 ν = 0.33
 ρ = 9.13*1e-6
 radius = 0.065
-geom =  Geometry(radius, T)
-mat = Material(E, ν, ρ, radius, T)
+damping = 1e3
 
 # read initial rotations for the beams
 Re₀ = readdlm("examples/input_stent/Re0_positioning.txt")
 
 # beams vector
-beams = constructor_beams(nodes, connectivity, mat, geom, Re₀)
+beams = build_beams(nodes, connectivity, E, ν, ρ, radius, damping, Re₀)
 
-# -------------------------------------------------------------------------------------------
-# Simulation parameters
-# -------------------------------------------------------------------------------------------
 
-# integration parameters
-α = -0.05
-β = 0.25*(1-α)^2
-γ = 0.5*(1-2*α)
-damping = 1e3
-
-# time step and total time
-Δt = 0.01
-Δt_plot =  0.01
-tᵉⁿᵈ = 1
-
-# tolerance and maximum number of iterations
-tol_res = 1e-5
-tol_ΔD = 1e-5
-max_it = 10
-
-# Gauss points
-nG = 3
-ωG = Vec3(5/9, 8/9, 5/9)
-zG = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 
 # contact parameters
 kₙ = 10 #penalty parameter
 μ = 0.3
 εᵗ = 0.1 #regularized parameter for friction contact
-ηₙ = 1.
+ηₙ = 0.1
 
-comp = SimulationParameters(α, β, γ, damping, Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, kₙ, μ, εᵗ, ηₙ, T)
+contact = ContactParameters(kₙ, μ, εᵗ, ηₙ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -109,7 +97,7 @@ ndofs = nnodes*6
 
 # penalty constraints
 nodespairs = readdlm("examples/input_stent/constr_stent.txt")
-cons = constructor_constraints(nodespairs, 1E3, 1)
+constraints = build_constraints(nodespairs, 1E3, 1)
 
 # Dirichlet boundary conditions: blocked positions
 fixed_dofs = T[]
@@ -135,11 +123,11 @@ sdf = Discrete_SDF("examples/input_stent/arcStretchObj.vtk", radius, false)
 # -------------------------------------------------------------------------------------------
 
 # configuration: mesh, external forces and boundary conditions
-conf = Configuration(mat, geom, ndofs, ext_forces, bcs, T)
+conf = Configuration(nodes, beams, constraints, ext_forces, bcs, contact, sdf)
 
 # -------------------------------------------------------------------------------------------
 # Start simulation
 # -------------------------------------------------------------------------------------------
 
-params = Params(output_dir = "examples/output3D", ENERGY_STOP = true, scale=2, SHOW_TIME_SECTIONS=false)
-solver!(nodes, beams, conf, comp, sdf, cons, params, T)
+
+solver!(conf, params, T)

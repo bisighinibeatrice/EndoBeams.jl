@@ -16,14 +16,14 @@ function clean_folders(output_dir)
 end 
 
 # Cleans folders, pre-allocate and initialise the variables used during the simulation and save the VTKs of the initial configuration
-function solver_initialisation(conf, nodes, beams, constraints, sdf, output_dir, T=Float64)
+function solver_initialisation(conf::Configuration{T}, output_dir) where T
 
-    solⁿ = Solution(conf, T)
+    solⁿ = Solution(conf)
     solⁿ⁺¹ = deepcopy(solⁿ)
     energy = Energy(T) 
-    matrices, nodes_sol = constructor_sparse_matrices!(beams, nodes, constraints, conf)
+    matrices, nodes_sol = sparse_matrices!(conf)
 
-    vtkdata = VTKData(length(beams), output_dir, sdf, T)
+    vtkdata = VTKData(length(conf.beams), output_dir, conf.sdf, T)
 
     return solⁿ, solⁿ⁺¹, nodes_sol, matrices, energy, vtkdata
 
@@ -157,16 +157,12 @@ end
 
 
 # Compute residual and increment vector residual in the corrector loop
-function compute_norms_corrector(k, solⁿ⁺¹, nodes_sol, matrices, SHOW_COMP_TIME = false)
+function compute_norms_corrector(k, nodes_sol, verbose = false)
     
-    f_norm = mapreduce((f...) -> sum(f^2 for f in f), +, solⁿ⁺¹.fᵉˣᵗ, solⁿ⁺¹.Tᶜ, matrices.Tᶜᵒⁿ)
-    f_norm = sqrt(f_norm)
     res_norm = norm(nodes_sol.r_free)
-    
-    res_norm = f_norm > 1e-1 ? res_norm/f_norm : res_norm
-    
     ΔD_norm = norm(nodes_sol.ΔD_free)
-    if SHOW_COMP_TIME
+
+    if verbose
         k == 1 && @printf "%4s\t%8s\t%8s\n" "iter" "‖res‖" "‖ΔD‖"
         @printf "%4d\t%1.2e\t%1.2e\n"  k  res_norm  ΔD_norm 
     end
@@ -179,13 +175,13 @@ end
 
 function tangent_and_residuals_predictor!(nodes_sol, matrices, solⁿ, solⁿ⁺¹, Δt, α, β, γ)
         
-        @. nodes_sol.Ktan = (1+α) * matrices.K + (1/(β*Δt^2)) * matrices.M + (γ/(β*Δt)) * matrices.C
+    @. nodes_sol.Ktan = (1+α) * matrices.K + (1/(β*Δt^2)) * matrices.M + (γ/(β*Δt)) * matrices.C
 
-        @. nodes_sol.r =  (1+α) * solⁿ⁺¹.fᵉˣᵗ - matrices.Tⁱⁿᵗ - matrices.Tᶜ - matrices.Tᶜᵒⁿ - matrices.Tᵏ - α * solⁿ.fᵉˣᵗ
-        @. nodes_sol.temp = γ/β * nodes_sol.Ḋ - (Δt/2*(2*β-γ)/β) * nodes_sol.D̈
-        mul!(nodes_sol.r, matrices.C_mat, nodes_sol.temp, 1, 1)
-        @. nodes_sol.temp =  Δt * nodes_sol.Ḋ + Δt^2/2 * nodes_sol.D̈
-        mul!(nodes_sol.r, matrices.M_mat, nodes_sol.temp, 1/(β*Δt^2), 1)
+    @. nodes_sol.r =  (1+α) * solⁿ⁺¹.fᵉˣᵗ - matrices.Tⁱⁿᵗ - matrices.Tᶜ - matrices.Tᶜᵒⁿ - matrices.Tᵏ - α * solⁿ.fᵉˣᵗ
+    @. nodes_sol.temp = γ/β * nodes_sol.Ḋ - (Δt/2*(2*β-γ)/β) * nodes_sol.D̈
+    mul!(nodes_sol.r, matrices.C_mat, nodes_sol.temp, 1, 1)
+    @. nodes_sol.temp =  Δt * nodes_sol.Ḋ + Δt^2/2 * nodes_sol.D̈
+    mul!(nodes_sol.r, matrices.M_mat, nodes_sol.temp, 1/(β*Δt^2), 1)
 
 end
 

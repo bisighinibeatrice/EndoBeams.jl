@@ -1,13 +1,15 @@
 
 
 # Write interpolated beam info as vtk file
-function write_VTK(write_counter, step, t, nodes, beams, energy, conf, sdf, comp, vtkdata) 
+function write_VTK(write_counter, step, t, conf, energy, vtkdata) 
+
+    @unpack nodes, beams, sdf, contact = conf
 
     fill!(vtkdata.normal_contact_force, zero(eltype(vtkdata.normal_contact_force)))
     fill!(vtkdata.tangential_contact_force, zero(eltype(vtkdata.tangential_contact_force)))
     fill!(vtkdata.incontact, 0)
 
-    recompute_at_gausspts!(vtkdata, nodes, beams, conf.mat, sdf, comp)
+    recompute_at_gausspts!(vtkdata, nodes, beams, sdf, contact)
 
     output_dir = vtkdata.output_dir
 
@@ -30,8 +32,8 @@ function write_VTK(write_counter, step, t, nodes, beams, energy, conf, sdf, comp
         vtk["Kinetic Energy", VTKFieldData()] = energy.kinetic_energy
         vtk["Strain Energy", VTKFieldData()] = energy.strain_energy
 
-        # vtk["time", VTKFieldData()] = t
-        # vtk["step", VTKFieldData()] = step
+        vtk["time", VTKFieldData()] = t
+        vtk["step", VTKFieldData()] = step
 
         vtkdata.VTKcollection[t] = vtk 
 
@@ -42,7 +44,7 @@ function write_VTK(write_counter, step, t, nodes, beams, energy, conf, sdf, comp
 end 
 
 
-function recompute_at_gausspts!(vtkdata, nodes, beams, mat, sdf, comp)
+function recompute_at_gausspts!(vtkdata, nodes, beams, sdf, contact)
 
     @batch for bi in eachindex(beams)
 
@@ -93,15 +95,16 @@ function recompute_at_gausspts!(vtkdata, nodes, beams, mat, sdf, comp)
             vtkdata.velocity[k] = N₁*u̇₁ + N₂*u̇₂
 
             vtkdata.strain[k] = 1-lₙ/l₀
-            vtkdata.stress[k] = mat.E*(1-lₙ/l₀)
+            vtkdata.stress[k] = beams[bi].properties.E*(1-lₙ/l₀)
 
             if !isnothing(sdf)
+                @unpack ηₙ, εᵗ, kₙ, μ = contact
                 gₙ, ∂gₙ∂x, _ = contact_gap(xᴳ, sdf)
                 vtkdata.contact_distance[k] = gₙ
                 ḡₙ = sdf.r/4
                 if gₙ ≤ ḡₙ
                     pₙ, _, _ = regularize_gₙ(gₙ, ḡₙ)
-                    ηₙ, _ = smoothstep(comp.ηₙ, gₙ, ḡₙ)
+                    ηₙ, _ = smoothstep(ηₙ, gₙ, ḡₙ)
                     U̇₁ = Rₑ' * u̇₁
                     U̇₂ = Rₑ' * u̇₂
                     Ẇ₁ = Rₑ' * ẇ₁
@@ -122,9 +125,9 @@ function recompute_at_gausspts!(vtkdata, nodes, beams, mat, sdf, comp)
                     u̇ₙ = dot(u̇₀, ∂gₙ∂x)*∂gₙ∂x
                     u̇ₜ = u̇₀ - u̇ₙ
                     u̇ₜ² = dot(u̇ₜ, u̇ₜ)
-                    μʳᵉᵍ = comp.μ/sqrt(u̇ₜ²+comp.εᵗ)
-                    vtkdata.normal_contact_force[k] = comp.kₙ * pₙ * ∂gₙ∂x - ηₙ * u̇ₙ
-                    vtkdata.tangential_contact_force[k] = - pₙ * comp.kₙ * gₙ * μʳᵉᵍ * u̇ₜ
+                    μʳᵉᵍ = μ/sqrt(u̇ₜ²+εᵗ)
+                    vtkdata.normal_contact_force[k] = kₙ * pₙ * ∂gₙ∂x - ηₙ * u̇ₙ
+                    vtkdata.tangential_contact_force[k] = - pₙ * kₙ * gₙ * μʳᵉᵍ * u̇ₜ
                     vtkdata.incontact[k] = 1
                 end
             end

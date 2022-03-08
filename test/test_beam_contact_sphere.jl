@@ -28,7 +28,7 @@ function test_sphere()
     plane = fill("xy", length(X₀))
     
     # nodes StructArray
-    nodes = constructor_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
+    nodes = nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
     
     # -------------------------------------------------------------------------------------------
     # Building the beams
@@ -53,9 +53,9 @@ function test_sphere()
     d = 0.6/1000
     r = d/2
     E = 5*1e7
-    nu = 0.33
+    ν = 0.33
     ρ = 7850
-    G = E/(2*(1+nu))
+    G = E/(2*(1+ν))
     A = pi*r^2
     I₂₂ = 0.25*pi*r^4
     I₃₃ = 0.25*pi*r^4
@@ -65,11 +65,11 @@ function test_sphere()
     Jᵨ = Mat33(ρ*Iₒ, 0, 0, 0, ρ*I₂₂, 0, 0, 0, ρ*I₃₃)
     Aᵨ = ρ*A
     
-    geom = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
-    mat = Material{T}(E, G, Aᵨ, Jᵨ)
+    geometry = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
+    material = Material{T}(E, G, Aᵨ, Jᵨ)
     
     # beams vector
-    beams = constructor_beams(nodes, conn, mat, geom, nbInterpolationPoints, nothing)
+    beams = beams(nodes, conn, material, geometry, nbInterpolationPoints, nothing)
     
     #-----------------------------------------------------------------------------------
     # Simulation parameters
@@ -92,16 +92,16 @@ function test_sphere()
     max_it = 10
     
     # Gauss points
-    nG = 3
-    ωG = Vec3(5/9, 8/9, 5/9)
-    zG = Vec3(-sqrt(3/5), 0, sqrt(3/5)) 
+    nᴳ = 3
+    ωᴳ = Vec3(5/9, 8/9, 5/9)
+    zᴳ = Vec3(-sqrt(3/5), 0, sqrt(3/5)) 
     
     # penalty parameters
     kₙ = 50
     μ = 0.3
     εᵗ = 0.1
     
-    comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nG, ωG, zG, kₙ, μ, εᵗ, T)
+    comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nᴳ, ωᴳ, zᴳ, kₙ, μ, εᵗ, T)
     
     # -------------------------------------------------------------------------------------------
     # External forces
@@ -119,7 +119,7 @@ function test_sphere()
     # -------------------------------------------------------------------------------------------
     
     # multifreedom constraints
-    cons = nothing
+    constraints = nothing
     
     # number of dof (6 per node)
     ndofs = nnodes*6
@@ -160,14 +160,14 @@ function test_sphere()
     # -------------------------------------------------------------------------------------------
     
     # configuration: mesh, external forces and boundary conditions
-    conf = Configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
+    conf = Configuration(material, geometry, nnodes, ndofs, ext_forces, bcs, T)
     
     # -------------------------------------------------------------------------------------------
     # Solve
     # -------------------------------------------------------------------------------------------
     
     params = ParamsTest()
-    solver!(nodes, beams, conf, comp, sdf, cons, params, T)         
+    solver!(nodes, beams, conf, comp, sdf, constraints, params, T)         
     
     # -------------------------------------------------------------------------------------------
     # Test 
