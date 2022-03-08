@@ -21,10 +21,14 @@ Julia 1.6:
   extends:
     - .script
     - .coverage
+  only:
+    - master
 Julia 1.7:
   image: julia:1.7
   extends:
     - .script
+  only:
+    - master
 pages:
   image: julia:1.6
   stage: deploy
