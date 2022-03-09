@@ -1,0 +1,27 @@
+%%
+%% This is file `yhmath.sty',
+%% generated with the docstrip utility.
+%%
+%% The original source files were:
+%%
+%% yhmath.dtx  (with options: `package')
+%% 
+\NeedsTeXFormat{LaTeX2e}[1995/12/01]
+\ProvidesPackage{yhmath}
+\RequirePackage{amsmath}
+\DeclareSymbolFont{largesymbols}{OMX}{yhex}{m}{n}
+\DeclareMathAccent{\widetilde}{\mathord}{largesymbols}{"65}
+\DeclareMathAccent{\widehat}{\mathord}{largesymbols}{"62}
+\DeclareMathAccent{\widetriangle}{\mathord}{largesymbols}{"E6}
+\DeclareMathAccent{\wideparen}{\mathord}{largesymbols}{"F3}
+\newenvironment{amatrix}{\left\langle\begin{matrix}}{\end{matrix}\right\rangle}
+\def\adots{\mathinner{\mkern2mu\raise\p@\hbox{.}
+\mkern2mu\raise4\p@\hbox{.}\mkern1mu
+\raise7\p@\vbox{\kern7\p@\hbox{.}}\mkern1mu}}
+\edef\@tempa#1#2{\def#1{\mathaccent\string"\noexpand\accentclass@#2 }}
+\@tempa\ring{017}
+\newcommand{\widering}[1]{\overset{\smash{\vbox to .2ex{%
+\hbox{$\mathring{}$}}}}{\wideparen{#1}}}
+\endinput
+%%
+%% End of file `yhmath.sty'.
