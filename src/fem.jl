@@ -788,7 +788,7 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
                     u̇ₜ = u̇₀ - u̇ₙ
                     u̇ₜ² = dot(u̇ₜ, u̇ₜ)
         
-                    contact_energy -= ωᴳ*kₙ*Πₑ
+                    contact_energy += ωᴳ*kₙ*Πₑ
                     
                     𝓯ⁿ = kₙ * pₙ * ∂gₙ∂x - ηₙ * u̇ₙ
                     μʳᵉᵍ = μ/sqrt(u̇ₜ²+εᵗ)
