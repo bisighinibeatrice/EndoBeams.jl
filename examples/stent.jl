@@ -35,15 +35,12 @@ w⁰ = zeros(nnodes, 3)
 ẇ⁰ = zeros(nnodes, 3)
 ẅ⁰ = zeros(nnodes, 3)
 
+R = readdlm("examples/input_stent/R_positioning.txt")
 
 # nodes StructArray
-nodes = build_nodes(initial_positions, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
+nodes = build_nodes(initial_positions, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, R, T)
 
-R = readdlm("examples/input_stent/R_positioning.txt")
-for i in 1:length(nodes)
-    nodes.R[i] = R[i,:]
-    nodes.Rⁿ[i] = R[i,:]
-end
+
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
