@@ -5,8 +5,8 @@
 struct Constraint{T}
     node1::Int # index of node 1   
     node2::Int # index of node 2
-    stiffness::T
-    damping::T
+    k::T
+    η::T
     sparsity_map::SVector{144, Int} 
 end
 
@@ -15,7 +15,7 @@ end
 #----------------------------------
 
 "Constructor of the constraints StructArray"
-function build_constraints(connectivity, stiffness, damping, T=Float64)
+function build_constraints(connectivity, k, η, T=Float64)
     
     constraints = StructArray(Constraint(connectivity[i, 1], connectivity[i, 2], stiffness, damping, T) for i in 1:size(connectivity, 1))
     
@@ -24,9 +24,9 @@ function build_constraints(connectivity, stiffness, damping, T=Float64)
 end 
 
 # Constructor of one Constraint structure
-function Constraint(node1, node2, stiffness, damping, T=Float64)
+function Constraint(node1, node2, k, η, T=Float64)
     
-    return Constraint{T}(node1, node2, stiffness, damping, zeros(Int, 144))
+    return Constraint{T}(node1, node2, k, η, zeros(Int, 144))
    
 end 
 
@@ -42,8 +42,8 @@ function constraints!(matrices, nodes, constraints)
     
     for c in LazyRows(constraints)
 
-        k = c.stiffness
-        α = c.damping
+        k = c.k
+        η = c.η
 
         i1 = c.node1
         i2 = c.node2
@@ -85,11 +85,11 @@ function constraints!(matrices, nodes, constraints)
 
         dofs = c.sparsity_map[mkindices]
         matrices.K[dofs] .+= k
-        matrices.C[dofs] .+= α*k
+        matrices.C[dofs] .+= η*k
 
         dofs = c.sparsity_map[pkindices]
         matrices.K[dofs] .-= k
-        matrices.C[dofs] .-= α*k
+        matrices.C[dofs] .-= η*k
 
     end 
 

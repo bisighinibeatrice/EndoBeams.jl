@@ -32,7 +32,7 @@ ẅ⁰ = zeros(nnodes, 3)
 
 
 # nodes StructArray
-nodes = nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
+nodes = build_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -40,65 +40,31 @@ nodes = nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
 
 
 # geometric and material properties
-r = 0.2/1000
 E = 10
-vu = 0.0
-G = E/(2*(1+vu))
+ν = 0
 ρ = 1500
-A = pi*r^2
-I₂₂ = 0.25*pi*r^4
-I₃₃ = 0.25*pi*r^4
-Iₒ = I₂₂+I₃₃
-Iᵣᵣ = I₂₂+I₃₃
-J = I₂₂+I₃₃
-Jᵨ = ρ*Diagonal(Vec3(J, I₂₂, I₃₃))
-Aᵨ = ρ*A
-
-geometry = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
-material = Material{T, typeof(Jᵨ)}(E, G, Aᵨ, Jᵨ)
-
-# beams vector
-beams = beams(nodes, connectivity, material, geometry, nothing)
-    
-#-----------------------------------------------------------------------------------
-# Simulation parameters
-# -------------------------------------------------------------------------------------------
-
-# integration parameters
-α = -0.05
-β = 0.25*(1-α)^2
-γ = 0.5*(1-2*α)
+radius = 0.2e-3
 damping = 1e-3
 
-# time step and total time
-Δt = 0.5
-Δt_plot = 0.5
-tᵉⁿᵈ = 100
 
-# tolerance and maximum number of iterations
-tol_res = 1e-5
-tol_ΔD = 1e-5
-max_it = 10
+beams = build_beams(nodes, connectivity, E, ν, ρ, radius, damping)
 
-# Gauss points
-nᴳ = 3
-ωᴳ = Vec3(5/9, 8/9, 5/9)
-zᴳ = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 
-# penalty parameters
-kₙ = 0.01
-μ = 0.01
-εᵗ = 0.5
-ηₙ = 0.01
 
-comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nᴳ, ωᴳ, zᴳ, kₙ, μ, εᵗ, ηₙ, T)
+# contact parameters
+kₙ = 0.1 #penalty parameter
+μ = 0.1
+εᵗ = 0.1 #regularized parameter for friction contact
+ηₙ = 1
 
+contact = ContactParameters(kₙ, μ, εᵗ, ηₙ, T)
+  
 # -------------------------------------------------------------------------------------------
 # External forces
 # -------------------------------------------------------------------------------------------
 
 # external force and applied dof
-loaded_dofs = Int[]
+loaded_dofs = T[]
 force(t, node_idx) = 0
 
 ext_forces = ExternalForces(force, loaded_dofs)
@@ -107,45 +73,52 @@ ext_forces = ExternalForces(force, loaded_dofs)
 # Boundary conditions
 # -------------------------------------------------------------------------------------------
 
-# multifreedom constraints
-constraints = nothing
-
-
-# Dirichlet boundary conditions: fixed positions
+# number of dof (6 per node)
 ndofs = nnodes*6
-fixed_dofs = Int[]
-free_dofs = 1:ndofs
 
+# Dirichlet boundary conditions: blocked positions
+fixed_dofs = T[]
+free_dofs = setdiff(1:ndofs, fixed_dofs)
 
 # Dirichlet dof (x6)
 disp_dofs = Int[]
 disp_vals = T[]
 disp(t, node_idx) = 0
 
-# boundary conditions strucutre 
-bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
 
+# boundary conditions strucutre
+bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
 # -------------------------------------------------------------------------------------------
 # SDF
 # -------------------------------------------------------------------------------------------
 
 # analytical SDF
-sdf = Sphere_SDF{T}(r, 0.05, 0, 0, 0)
-
-# discrete SDF
-# inside = true
-# sdf = Discrete_SDF("examples/input_net/sdf_sphere_20.vtk", r, inside)
+sdf = Sphere_SDF{T}(radius, 0.05, 0, 0, 0)
 
 # -------------------------------------------------------------------------------------------
 # Configuration
 # -------------------------------------------------------------------------------------------
 
 # configuration: mesh, external forces and boundary conditions
-conf = Configuration(material, geometry, ndofs, ext_forces, bcs, T)
+conf = Configuration(nodes, beams, nothing, ext_forces, bcs, contact, sdf)
+
+# -------------------------------------------------------------------------------------------
+# Time stepping parameters
+# -------------------------------------------------------------------------------------------
+
+# initial time step and total time
+ini_Δt = 0.5
+max_Δt = 0.5
+Δt_plot =  0.5
+tᵉⁿᵈ = 100
+
+params = Params{T}(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "examples/output3D")
+
+
 
 # -------------------------------------------------------------------------------------------
 # Solve
 # -------------------------------------------------------------------------------------------
 
-params = Params(output_dir = "examples/output3D", record_timings=true)
-solver!(nodes, beams, conf, comp, sdf, constraints, params, T)
+
+solver!(conf, params, T)

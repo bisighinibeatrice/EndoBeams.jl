@@ -30,6 +30,10 @@
     ωᴳ::Vec3{T} = Vec3(5/9, 8/9, 5/9)
     zᴳ::Vec3{T} = Vec3(-sqrt(3/5), 0, sqrt(3/5))
 
+    #Constraint penalty
+    kᶜᵒⁿ::T = 1e3
+    ηᶜᵒⁿ::T = 1
+
 
 end 
 

@@ -25,7 +25,7 @@ ẅ⁰ = zeros(Vec3, nnodes)
 
 
 # nodes StructArray
-nodes = nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
+nodes = build_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -39,53 +39,14 @@ connectivity = [Vec2(i, i+1) for i in 1:nbeams]
 
 # geometric and material properties
 E = 1e6
-G = 1e6
-Jᵨ = EndoBeams.Diagonal(Vec3(20, 10, 10))
-Aᵨ = 1
-A = 1
-I₂₂ = 1e-3
-I₃₃ = 1e-3
-Iₒ = 0
-Iᵣᵣ = 0
-J = 1e-3
-
-geometry = Geometry{T}(A, I₂₂, I₃₃, Iₒ, Iᵣᵣ, J)
-material = Material{T, typeof(Jᵨ)}(E, G, Aᵨ, Jᵨ)
-
-# beams vector
-beams = beams(nodes, connectivity, material, geometry, nothing)
-
-#-----------------------------------------------------------------------------------
-# Simulation parameters
-# -------------------------------------------------------------------------------------------
-
-# integration parameters
-α = -0.05
-β = 0.25*(1-α)^2
-γ = 0.5*(1-2*α)
+ν = 0.3
+ρ = 1
+radius = 0.3
 damping = 0
 
-# time step and total time
-Δt = 0.25
-Δt_plot = 0.25
-tᵉⁿᵈ = 30
+beams = build_beams(nodes, connectivity, E, ν, ρ, radius, damping)
 
-# tolerance and maximum number of iterations
-tol_res = 1e-5
-tol_ΔD = 1e-5
-max_it = 10
 
-# Gauss points
-nᴳ = 3
-ωᴳ = Vec3(5/9, 8/9, 5/9)
-zᴳ = Vec3(-sqrt(3/5), 0, sqrt(3/5)) 
-
-# penalty parameters
-kₙ = 5000
-μ = 0
-εᵗ = 0.1
-
-comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol_res, tol_ΔD, max_it, nᴳ, ωᴳ, zᴳ, kₙ, μ, εᵗ, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -93,7 +54,15 @@ comp = SimulationParameters(α, β, γ, damping,  Δt, Δt_plot, tᵉⁿᵈ, tol
 
 # external force and applied dof
 loaded_dofs = [6*length(0:dx:L)-3]
-force(t, node_idx) = 1*(t.<=1).*(50*t) .+1*((t.>1) .& (t.<=2)).*(-50*t.+100).+(t.>2).*0
+function force(t, node_idx)
+    if t<=1
+        return 50. *t
+    elseif t>1 && t<=2
+        return -50. *t + 100.
+    else
+        return 0.
+    end
+end
 
 ext_forces = ExternalForces(force, loaded_dofs)
 
@@ -119,22 +88,27 @@ disp(t, node_idx) = 0
 bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
 
 # -------------------------------------------------------------------------------------------
-# SDF
-# -------------------------------------------------------------------------------------------
-
-#there is no contact
-sdf = nothing
-
-# -------------------------------------------------------------------------------------------
 # Configuration
 # -------------------------------------------------------------------------------------------
 
-# configuration: mesh, external forces and boundary conditions
-conf = Configuration(material, geometry, ndofs, ext_forces, bcs, T)
+conf = Configuration(nodes, beams, nothing, ext_forces, bcs, nothing, nothing)
+
+# -------------------------------------------------------------------------------------------
+# Time stepping parameters
+# -------------------------------------------------------------------------------------------
+
+# initial time step and total time
+ini_Δt = 0.25
+max_Δt = 0.25
+Δt_plot =  0.25
+tᵉⁿᵈ = 30
+
+params = Params{T}(;ini_Δt, max_Δt, Δt_plot, tᵉⁿᵈ, output_dir = "examples/output3D")
+
 
 # -------------------------------------------------------------------------------------------
 # Solve
 # -------------------------------------------------------------------------------------------
 
-params = Params(output_dir = "examples/output3D", record_timings=false)
-solver!(nodes, beams, conf, comp, sdf, constraints, params, T)       
+
+solver!(conf, params, T)   

@@ -76,5 +76,5 @@ function Beam(ind, node1::Node{T}, node2::Node{T}, E, ν, ρ, radius, damping, R
     
 end 
 
-Beam(ind, node1::Node{T}, node2::Node{T}, beamprops, E, ν, ρ, radius, damping, Rₑ⁰::Nothing) where T = Beam(ind, node1, node2, beamprops, E, ν, ρ, radius, damping, local_R⁰(node1.X₀, node2.X₀))
+Beam(ind, node1::Node{T}, node2::Node{T}, E, ν, ρ, radius, damping, Rₑ⁰::Nothing) where T = Beam(ind, node1, node2, E, ν, ρ, radius, damping, local_R⁰(node1.X₀, node2.X₀))
 

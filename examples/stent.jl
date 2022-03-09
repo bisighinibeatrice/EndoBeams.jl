@@ -4,16 +4,6 @@ using DelimitedFiles
 const T = Float64
 
 
-# -------------------------------------------------------------------------------------------
-# Time stepping parameters
-# -------------------------------------------------------------------------------------------
-
-# initial time step and total time
-ini_Δt = 0.01
-Δt_plot =  0.01
-tᵉⁿᵈ = 1
-
-params = Params{T}(;ini_Δt, Δt_plot, tᵉⁿᵈ, output_dir = "examples/output3D", stop_on_energy_threshold=true, energy_threshold=1e-6)
 
 # -------------------------------------------------------------------------------------------
 # Read stent information
@@ -96,8 +86,11 @@ ext_forces = ExternalForces(force, loaded_dofs)
 ndofs = nnodes*6
 
 # penalty constraints
+kᶜᵒⁿ = 1e3
+ηᶜᵒⁿ = 1
 nodespairs = readdlm("examples/input_stent/constr_stent.txt")
-constraints = build_constraints(nodespairs, 1E3, 1)
+constraints = build_constraints(nodespairs, kᶜᵒⁿ, ηᶜᵒⁿ)
+
 
 # Dirichlet boundary conditions: blocked positions
 fixed_dofs = T[]
@@ -124,6 +117,18 @@ sdf = Discrete_SDF("examples/input_stent/arcStretchObj.vtk", radius, false)
 
 # configuration: mesh, external forces and boundary conditions
 conf = Configuration(nodes, beams, constraints, ext_forces, bcs, contact, sdf)
+
+# -------------------------------------------------------------------------------------------
+# Time stepping parameters
+# -------------------------------------------------------------------------------------------
+
+# initial time step and total time
+ini_Δt = 0.01
+Δt_plot =  0.01
+tᵉⁿᵈ = 1
+
+params = Params{T}(;ini_Δt, Δt_plot, tᵉⁿᵈ, output_dir = "examples/output3D", stop_on_energy_threshold=true, energy_threshold=1e-6)
+
 
 # -------------------------------------------------------------------------------------------
 # Start simulation
