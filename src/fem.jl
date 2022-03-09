@@ -259,6 +259,7 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
     nG, ωG, zG = gausspoints
     @unpack K̄ⁱⁿᵗ, Jᵨ, Aᵨ, damping = beamproperties
     
+    contactsearch = !(isnothing(sdf) || isnothing(contactparams))
 
     x₁ =  X₁ + u₁
     x₂ =  X₂ + u₂
@@ -319,7 +320,6 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
     T̄ⁱⁿᵗΘ̅₂ = K̄ⁱⁿᵗΘ̅Θ̅ * Θ̅₁ + K̄ⁱⁿᵗΘ̅  * Θ̅₂
 
     strain_energy = (ū*T̄ⁱⁿᵗū + dot(Θ̅₁, T̄ⁱⁿᵗΘ̅₁) + dot(Θ̅₂, T̄ⁱⁿᵗΘ̅₂))/2
-
 
     # Tⁱⁿᵗ = Bᵀ T̄ⁱⁿᵗ
     Tⁱⁿᵗ¹ = B¹'*T̄ⁱⁿᵗū + B¹¹'*T̄ⁱⁿᵗΘ̅₁ + B²¹'*T̄ⁱⁿᵗΘ̅₂
@@ -534,9 +534,6 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
     Cᶜ⁴³ = zeros(Mat33{T})
     Cᶜ⁴⁴ = zeros(Mat33{T})
 
-
-    
-    searchcontact = !isnothing(sdf)
         
     if isdynamic
         
@@ -568,9 +565,6 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
         RₑG¹ = Rₑ * Gᵀ¹'
         RₑG² = Rₑ * Gᵀ²'
         RₑG⁴ = Rₑ * Gᵀ⁴'
-
-
-
 
 
         # cycle among the Gauss positions
@@ -773,7 +767,7 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
             Īᵨᵍ = Rₑ*Īᵨ*Rₑ'
             kinetic_energy += ωᴳ/2 * (Aᵨ*u̇₀'*u̇₀ + ẇ₀'*Īᵨᵍ*ẇ₀)
 
-            if searchcontact
+            if contactsearch
 
                 xᴳ = N₁*x₁ + N₂*x₂ + Rₑ*uᵗ
 
@@ -1185,7 +1179,7 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
 
 
 
-        if searchcontact
+        if contactsearch
 
 
             Tᶜ¹ = l₀2*Tᶜ¹
@@ -1327,7 +1321,6 @@ function assemble!(conf, matrices, energy, params)
 
         #-----------------------
         # Assemble contributions
-        
 
         idof1 = nodes.idof_6[n1]
         idof2 = nodes.idof_6[n2]

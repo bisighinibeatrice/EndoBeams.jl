@@ -17,7 +17,7 @@ end
 "Constructor of the constraints StructArray"
 function build_constraints(connectivity, k, η, T=Float64)
     
-    constraints = StructArray(Constraint(connectivity[i, 1], connectivity[i, 2], stiffness, damping, T) for i in 1:size(connectivity, 1))
+    constraints = StructArray(Constraint(connectivity[i, 1], connectivity[i, 2], k, η, T) for i in 1:size(connectivity, 1))
     
     return constraints
     
@@ -55,7 +55,7 @@ function constraints!(matrices, nodes, constraints)
         va = nodes.u̇[i1]
         vb = nodes.u̇[i2]
 
-        ta = k * (xb - xa) + α * k * (vb - va)
+        ta = k * (xb - xa) + η * k * (vb - va)
 
         @inbounds for (i, dof) in enumerate(dofs_a)
             matrices.Tᶜᵒⁿ[dof] += ta[i]
