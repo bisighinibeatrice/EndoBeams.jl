@@ -10,14 +10,11 @@ const T = Float64
 # -------------------------------------------------------------------------------------------
 
 # read expanded configuration
-initial_positions =  readdlm("examples/input_large_stent/positions.txt")
+initial_positions =  readdlm("examples/input_large_stent/initial.txt")
 connectivity = readdlm("examples/input_large_stent/connectivity.txt", Int)
 
-# read crimped configuration
-crimped_positions = initial_positions + readdlm("examples/input_large_stent/u_crimping.txt")
-
 # read positioned configuration
-final_positions = crimped_positions + readdlm("examples/input_large_stent/u_positioning.txt")
+final_positions = readdlm("examples/input_large_stent/crimped.txt")
 
 
 # -------------------------------------------------------------------------------------------
@@ -56,7 +53,7 @@ radius = 0.065
 damping = 1e3
 
 # read initial rotations for the beams
-Re₀ = readdlm("examples/input_large_stent/Re0.txt")
+Re₀ = readdlm("examples/input_large_stent/R0.txt")
 
 # beams vector
 beams = build_beams(nodes, connectivity, E, ν, ρ, radius, damping, Re₀)
