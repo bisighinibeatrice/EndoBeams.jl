@@ -14,8 +14,7 @@
         Pkg.add("Coverage")
         using Coverage
         c, t = get_summary(process_folder())
-        using Printf
-        @printf "Test coverage %.2f%%\n" 100c / t'
+        println("(", c/t*100, "%) covered")'
 Julia 1.6:
   image: julia:1.6
   extends:
