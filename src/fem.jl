@@ -771,11 +771,11 @@ Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R
 
                 xᴳ = N₁*x₁ + N₂*x₂ + Rₑ*uᵗ
 
-                gₙ, ∂gₙ∂x, ∂²gₙ∂x² = contact_gap(xᴳ, sdf)
-
                 ḡₙ = sdf.r/4
             
-                if gₙ ≤ ḡₙ
+                if incontact(xᴳ, sdf, ḡₙ)
+
+                    gₙ, ∂gₙ∂x, ∂²gₙ∂x² = contact_gap(xᴳ, sdf)
 
                     @unpack kₙ, ηₙ, μ, εᵗ = contactparams
 

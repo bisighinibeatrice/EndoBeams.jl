@@ -62,9 +62,9 @@ beams = build_beams(nodes, connectivity, E, ν, ρ, radius, damping, Re₀)
 
 # contact parameters
 kₙ = 10 #penalty parameter
-μ = 0.3
+μ = 0.1
 εᵗ = 0.1 #regularized parameter for friction contact
-ηₙ = 0.1
+ηₙ = 0.01
 
 contact = ContactParameters(kₙ, μ, εᵗ, ηₙ, T)
 
@@ -109,7 +109,7 @@ bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
 # SDF
 # -------------------------------------------------------------------------------------------
 
-sdf = Discrete_SDF("examples/input_stent/arcStretchObj.vtk", radius, false)
+sdf = Discrete_SDF("examples/input_large_stent/sdf.vtk", radius, true)
 
 # -------------------------------------------------------------------------------------------
 # Final configuration
@@ -128,7 +128,7 @@ max_Δt = 1.
 Δt_plot =  1e-5
 tᵉⁿᵈ = 1
 
-params = Params{T}(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "examples/output3D", stop_on_energy_threshold=true, energy_threshold=1e-10)
+params = Params{T}(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "examples/output3D", stop_on_energy_threshold=true, energy_threshold=1e-10, tol_res = 1e-3, tol_ΔD = 1e-3)
 
 
 # -------------------------------------------------------------------------------------------

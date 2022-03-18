@@ -134,34 +134,9 @@ function Discrete_SDF(filename, radius, inside, T=Float64)
 
 end 
 
-#----------------------------------
-# GET INFO OF ANALYTICAL SDFs
-#----------------------------------
-
-# Get gap, gradient and hession of z-normal plane analytical SDF at point 
-@inline function get_SDF_at_P_analitycal_plane_z(point::AbstractVector{T}, sdf) where T
-    
-    gₙ = point[3] - sdf.z0 - sdf.r
-    ∂gₙ∂x = Vec3{T}(0, 0, 1)
-    ∂²gₙ∂x² = zeros(Mat33{T})
-    
-    return gₙ, ∂gₙ∂x, ∂²gₙ∂x²
-    
-end 
-
-# Get gap, gradient and hession of y-normal plane analytical SDF at point 
-@inline function get_SDF_at_P_analitycal_plane_y(point::AbstractVector{T}, sdf) where T
-    
-    gₙ = point[2] - sdf.y0 - sdf.r
-    ∂gₙ∂x = Vec3{T}(0, 1, 0)
-    ∂²gₙ∂x² = zeros(Mat33{T})
-    
-    return -gₙ, ∂gₙ∂x, ∂²gₙ∂x²
-    
-end
 
 # Get gap, gradient and hession of sphere analytical SDF at point 
-@inline function get_SDF_at_P_analitycal_sphere(point::AbstractVector{T}, sdf) where T
+@inline function contact_gap(point, sdf::Sphere_SDF)
     
     aux = Vec3(point[1] - sdf.x0, point[2] - sdf.y0, point[3] - sdf.z0)
     
@@ -176,25 +151,17 @@ end
     
 end
 
-# Get gap, gradient and hession of cylinder analytical SDF at point 
-@inline function get_SDF_at_P_analitycal_cylinder(point::AbstractVector{T}, sdf) where T
+@inline function incontact(point, sdf::Sphere_SDF, ḡₙ)
     
-    aux = Vec3(point[1], point[2], 0)
-    
+    aux = Vec3(point[1] - sdf.x0, point[2] - sdf.y0, point[3] - sdf.z0)
     norm_aux = norm(aux)
-    invnorm = 1/norm_aux
+    gₙ = norm_aux - sdf.R - sdf.r
+    return gₙ - sdf.r ≤ ḡₙ
     
-    gₙ = norm_aux - sdf.R + sdf.r
-    ∂gₙ∂x = invnorm * aux
-    ∂²gₙ∂x² = invnorm*ID3 - (invnorm^3)*(aux*aux')
-    
-    return -gₙ, -∂gₙ∂x, -∂²gₙ∂x²
-    
-end 
+end
 
-#----------------------------------
-# INTERPOLATE DISCRETE SDF 
-#----------------------------------
+
+
 
 @inline function isinside(point, dom)
 
@@ -209,39 +176,27 @@ end
 
 end
 
-@inline function get_SDF_at_P_discrete(point::AbstractVector{T}, sdf) where T
+@inline function contact_gap(point, sdf::Discrete_SDF)
 
     sitp = sdf.sitp
 
-    if isinside(point, sdf.dom)
-
-        gₙ = sitp(point...)
-        ∂gₙ∂x = normalize(Interpolations.gradient(sitp, point...))
-        ∂²gₙ∂x² = Interpolations.hessian(sitp, point...)
-
-    else 
-
-        gₙ = zero(T)
-        ∂gₙ∂x = zeros(Vec3{T})
-        ∂²gₙ∂x² = zeros(Mat33{T})
-                
-    end 
+    gₙ = sitp(point...)
+    ∂gₙ∂x = normalize(Interpolations.gradient(sitp, point...))
+    ∂²gₙ∂x² = Interpolations.hessian(sitp, point...)
 
     return gₙ - sdf.r, ∂gₙ∂x, ∂²gₙ∂x²
         
 end 
 
-#----------------------------------
-# CONTACT FUNCTIONS
-#----------------------------------
 
-# Get contact at point point
-@inline contact_gap(point, sdf::Plane_z_SDF) = get_SDF_at_P_analitycal_plane_z(point, sdf)
-@inline contact_gap(point, sdf::Sphere_SDF) = get_SDF_at_P_analitycal_sphere(point, sdf)
-@inline contact_gap(point, sdf::Cylinder_SDF) = get_SDF_at_P_analitycal_cylinder(point, sdf)
-@inline contact_gap(point, sdf::Plane_y_SDF) = get_SDF_at_P_analitycal_plane_y(point, sdf)
-@inline contact_gap(point, sdf::Discrete_SDF) = get_SDF_at_P_discrete(point, sdf)
-    
+@inline function incontact(point, sdf::Discrete_SDF, ḡₙ)
+
+    sitp = sdf.sitp
+    return isinside(point, sdf.dom) && (sitp(point...) - sdf.r) ≤ ḡₙ
+        
+end 
+
+
 
 # Quadratically regulise penalty
 @inline function regularize_gₙ(gₙ::T, ḡₙ) where T
