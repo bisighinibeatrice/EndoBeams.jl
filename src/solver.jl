@@ -33,6 +33,12 @@ function solver!(conf, params, T=Float64)
         
         # Linear solver
         ps = MKLPardisoSolver()
+        set_matrixtype!(ps, Pardiso.REAL_NONSYM)
+        pardisoinit(ps)
+
+        fix_iparm!(ps, :N)
+        set_iparm!(ps, 1, 1)
+        set_iparm!(ps, 24, 1)
         
     end 
     
@@ -239,7 +245,12 @@ function predictor!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol,
 
     end 
     
-    @timeit_debug "Linear solve" solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
+    @timeit_debug "Linear solve" begin
+        set_phase!(ps, Pardiso.ANALYSIS)
+        pardiso(ps, nodes_sol.Ktan_free, nodes_sol.r_free)
+        set_phase!(ps, Pardiso.NUM_FACT_SOLVE_REFINE)
+        pardiso(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
+    end
     
     @timeit_debug "Update" begin 
 
@@ -320,7 +331,10 @@ function corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol,
                 @views nodes_sol.Ktan_free.nzval .= nodes_sol.Ktan[matrices.sparsity_free]
             end 
             
-            @timeit_debug "Linear solve" solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
+            @timeit_debug "Linear solve" begin
+                set_phase!(ps, Pardiso.NUM_FACT_SOLVE_REFINE)
+                pardiso(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
+            end
             
             @timeit_debug "Update global and local variables" begin
     
@@ -348,9 +362,8 @@ function corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol,
         
     end 
     
-    # -------------------------------------------------------------------------------------------
-    # OUTPUT
-    # -------------------------------------------------------------------------------------------
+    set_phase!(ps, Pardiso.RELEASE_ALL)
+    pardiso(ps)
     
     return k
     
