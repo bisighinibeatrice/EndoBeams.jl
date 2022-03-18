@@ -14,7 +14,11 @@ initial_positions =  readdlm("examples/input_large_stent/positions.txt")
 connectivity = readdlm("examples/input_large_stent/connectivity.txt", Int)
 
 # read crimped configuration
-final_positions = initial_positions + readdlm("examples/input_large_stent/u.txt")
+crimped_positions = initial_positions + readdlm("examples/input_large_stent/u_crimping.txt")
+
+# read positioned configuration
+final_positions = crimped_positions + readdlm("examples/input_large_stent/u_positioning.txt")
+
 
 # -------------------------------------------------------------------------------------------
 # Building the nodes
