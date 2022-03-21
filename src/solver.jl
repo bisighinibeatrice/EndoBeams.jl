@@ -33,12 +33,7 @@ function solver!(conf, params, T=Float64)
         
         # Linear solver
         
-        ps = MKLPardisoSolver()
-        set_matrixtype!(ps, Pardiso.REAL_NONSYM)
-        pardisoinit(ps)
-
-        set_iparm!(ps, 1, 1) # set to allow non-default iparams
-        set_iparm!(ps, 12, 2)
+        solver = init(:MKL)
         
     end 
     
@@ -64,7 +59,7 @@ function solver!(conf, params, T=Float64)
                 end 
                 
                 # solve system @tⁿ
-                n_it = solve_step_dynamics!(conf, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, nodes_sol, matrices, energy, ps, params)
+                n_it = solve_step_dynamics!(conf, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, nodes_sol, matrices, energy, solver, params)
 
                 # if not converged, halve the time step and re-solve the system until it converges
                 if n_it > max_it
@@ -146,7 +141,7 @@ function solver!(conf, params, T=Float64)
 end
 
 #  Solves the current step
-function solve_step_dynamics!(conf, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, nodes_sol, matrices, energy, ps, params) 
+function solve_step_dynamics!(conf, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, nodes_sol, matrices, energy, solver, params) 
 
     @unpack ext_forces, bcs = conf
 
@@ -176,7 +171,7 @@ function solve_step_dynamics!(conf, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, nodes_s
     @timeit_debug "Predictor" begin
         
         # predict the solution @n+1
-        predictor!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol, ps, params)
+        predictor!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol, solver, params)
         
     end
     
@@ -187,7 +182,7 @@ function solve_step_dynamics!(conf, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, nodes_s
     @timeit_debug "Corrector" begin
         
         # corrector loop: output = number of iterations
-        k = corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol, ps, params)
+        k = corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol, solver, params)
         
     end
    
@@ -196,7 +191,7 @@ function solve_step_dynamics!(conf, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, nodes_s
 end 
 
 # Predicts the solution at the current step
-function predictor!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol, ps, params)
+function predictor!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol, solver, params)
     # -------------------------------------------------------------------------------------------
     # INITIALISATION
     # -------------------------------------------------------------------------------------------
@@ -246,10 +241,8 @@ function predictor!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol,
     end 
     
     @timeit_debug "Linear solve" begin
-        set_phase!(ps, Pardiso.ANALYSIS)
-        pardiso(ps, nodes_sol.Ktan_free, nodes_sol.r_free)
-        set_phase!(ps, Pardiso.NUM_FACT_SOLVE_REFINE)
-        pardiso(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
+        analyze!(solver, nodes_sol.Ktan_free, nodes_sol.r_free)
+        solve!(solver, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
     end
     
     @timeit_debug "Update" begin 
@@ -272,7 +265,7 @@ function predictor!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol,
 end 
 
 # Corrects the solution at the current step
-function corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol, ps, params) 
+function corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol, solver, params) 
     
     # -------------------------------------------------------------------------------------------
     # INITIALISATION
@@ -331,10 +324,8 @@ function corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol,
                 @views nodes_sol.Ktan_free.nzval .= nodes_sol.Ktan[matrices.sparsity_free]
             end 
             
-            @timeit_debug "Linear solve" begin
-                set_phase!(ps, Pardiso.NUM_FACT_SOLVE_REFINE)
-                pardiso(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
-            end
+            @timeit_debug "Linear solve" solve!(solver, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
+
             
             @timeit_debug "Update global and local variables" begin
     
@@ -362,8 +353,7 @@ function corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, nodes_sol,
         
     end 
     
-    set_phase!(ps, Pardiso.RELEASE_ALL)
-    pardiso(ps)
+    release!(solver)
     
     return k
     
