@@ -176,7 +176,7 @@ end
 
 end
 
-@inline function contact_gap(point, sdf::Discrete_SDF, normalize=false)
+@inline function contact_gap(point, sdf::Discrete_SDF)
 
     sitp = sdf.sitp
 
