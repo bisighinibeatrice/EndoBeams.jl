@@ -247,7 +247,7 @@ end
 
 
 
-Base.@propagate_inbounds function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, constants, exact=true, isdynamic=true) where T
+function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, constants, exact=true, isdynamic=true) where T
 
     # Superscript ¹ means matrix or vector associated to u₁
     # Superscript ² means matrix or vector associated to Θ₁
@@ -1273,7 +1273,7 @@ end
 
 function assemble!(conf, matrices, energy, params) 
 
-    @unpack nodes, beams = conf
+    @unpack nodes, beams, colors, contact, sdf = conf
     
         
     # initialise the matrices associate to the whole structure
@@ -1291,45 +1291,42 @@ function assemble!(conf, matrices, energy, params)
 
     #Preparing constants
     gausspoints = (params.nᴳ, params.ωᴳ, params.zᴳ)
-    contactparams = conf.contact
-    sdf = conf.sdf  
+
+    for cidxs in colors
+
+        @batch for idx in cidxs
+
+            b = LazyRow(beams, idx)
+            
+            n1 = b.node1
+            n2 = b.node2
+            # information from node 1 and 2
+            X₁, X₂ = nodes.X₀[n1], nodes.X₀[n2]
+            u₁, u₂ = nodes.u[n1], nodes.u[n2]
+            u̇₁, u̇₂ = nodes.u̇[n1], nodes.u̇[n2]
+            ü₁, ü₂ = nodes.ü[n1], nodes.ü[n2]
+            ẇ₁, ẇ₂ = nodes.ẇ[n1], nodes.ẇ[n2]
+            ẅ₁, ẅ₂ = nodes.ẅ[n1], nodes.ẅ[n2]
+            R₁, R₂ = nodes.R[n1], nodes.R[n2]
+            ΔR₁, ΔR₂ = nodes.ΔR[n1], nodes.ΔR[n2]
+
+            # Packing
+            init = (X₁, X₂, b.l₀, b.Rₑ⁰)      
+            constants = (init, gausspoints, b.properties, contact, sdf)
+
+            strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ, Kⁱⁿᵗ, Kᶜ, M, Cᵏ, Cᶜ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, constants)
         
-    lk = Threads.SpinLock()
+            K = Kⁱⁿᵗ - Kᶜ
+            C = Cᵏ-(1+params.α)*Cᶜ
 
-    @batch for b in LazyRows(beams)
-        
-        n1 = b.node1
-        n2 = b.node2
-        # information from node 1 and 2
-        X₁, X₂ = nodes.X₀[n1], nodes.X₀[n2]
-        u₁, u₂ = nodes.u[n1], nodes.u[n2]
-        u̇₁, u̇₂ = nodes.u̇[n1], nodes.u̇[n2]
-        ü₁, ü₂ = nodes.ü[n1], nodes.ü[n2]
-        ẇ₁, ẇ₂ = nodes.ẇ[n1], nodes.ẇ[n2]
-        ẅ₁, ẅ₂ = nodes.ẅ[n1], nodes.ẅ[n2]
-        R₁, R₂ = nodes.R[n1], nodes.R[n2]
-        ΔR₁, ΔR₂ = nodes.ΔR[n1], nodes.ΔR[n2]
+            #-----------------------
+            # Assemble contributions
 
-        # Packing
-        init = (X₁, X₂, b.l₀, b.Rₑ⁰)      
-        constants = (init, gausspoints, b.properties, contactparams, sdf)
+            idof1 = nodes.idof_6[n1]
+            idof2 = nodes.idof_6[n2]
+            
+            dofs = vcat(idof1, idof2)
 
-        strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ, Kⁱⁿᵗ, Kᶜ, M, Cᵏ, Cᶜ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, constants)
-    
-        K = Kⁱⁿᵗ - Kᶜ
-        C = Cᵏ-(1+params.α)*Cᶜ
-
-        #-----------------------
-        # Assemble contributions
-
-        idof1 = nodes.idof_6[n1]
-        idof2 = nodes.idof_6[n2]
-        
-        dofs = vcat(idof1, idof2)
-
-
-        lock(lk)
-        try
             energy.strain_energy +=  strain_energy
             energy.kinetic_energy += kinetic_energy
             energy.contact_energy += contact_energy
@@ -1342,11 +1339,9 @@ function assemble!(conf, matrices, energy, params)
             matrices.C[b.sparsity_map] += vec(C)
             matrices.M[b.sparsity_map] += vec(M)
 
-        finally
-            unlock(lk)
+                                
         end
 
-                            
     end
 
 

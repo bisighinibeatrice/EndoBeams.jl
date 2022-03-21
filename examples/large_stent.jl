@@ -124,11 +124,11 @@ conf = Configuration(nodes, beams, constraints, ext_forces, bcs, contact, sdf)
 
 # initial time step and total time
 ini_Δt = 1e-5
-max_Δt = 1.
+max_Δt = 1e-5
 Δt_plot =  1e-5
-tᵉⁿᵈ = 1
+tᵉⁿᵈ = 1e-4
 
-params = Params{T}(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "examples/output3D", stop_on_energy_threshold=true, energy_threshold=1e-10, tol_res = 1e-3, tol_ΔD = 1e-3)
+params = Params{T}(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "examples/output3D", stop_on_energy_threshold=true, energy_threshold=1e-10, tol_res = 1e-3, tol_ΔD = 1e-3, record_timings=true)
 
 
 # -------------------------------------------------------------------------------------------

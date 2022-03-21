@@ -32,13 +32,13 @@ function solver!(conf, params, T=Float64)
         write_counter += 1
         
         # Linear solver
+        
         ps = MKLPardisoSolver()
         set_matrixtype!(ps, Pardiso.REAL_NONSYM)
         pardisoinit(ps)
 
-        fix_iparm!(ps, :N)
-        set_iparm!(ps, 1, 1)
-        set_iparm!(ps, 24, 1)
+        set_iparm!(ps, 1, 1) # set to allow non-default iparams
+        set_iparm!(ps, 12, 2)
         
     end 
     

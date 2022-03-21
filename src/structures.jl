@@ -150,10 +150,46 @@ struct Configuration{T, Tn, Tb, Tc, Te, Tbc, Tcon, Tsdf}
 
     sdf::Tsdf
 
+    colors::Vector{Vector{Int}}
+
 end
 
 
 
+function first_available(color_set)
+    # Return smallest positive integer not in the given list of colors.
+    count = 1
+    while true
+        if count ∉ color_set
+            return count
+        end
+        count += 1
+    end
+end
+
+
+
+
+function greedy_color(beams)
+    
+    elcolors = zeros(Int, length(beams))
+    colors = Vector{Vector{Int}}()
+    for (i,b) in enumerate(LazyRows(beams))
+        neighbors = [j for (j, nodes) in enumerate(zip(beams.node1, beams.node2)) if (b.node1 in nodes) || (b.node2 in nodes)]
+        used_neighbour_colors = [elcolors[nbr] for nbr in neighbors if elcolors[nbr]>0]
+        c = first_available(used_neighbour_colors)
+        elcolors[i] = c
+        if c>length(colors)
+            push!(colors, [i])
+        else
+            push!(colors[c], i)
+        end
+        
+    end
+    
+    return colors
+
+end
 
 """
     conf = Configuration(material, geometry, nnodes, ndofs, ext_forces, bcs, T=Float64)
@@ -175,7 +211,7 @@ function Configuration(nodes::StructVector, beams::StructVector, constraints::Un
     disp_dofs = [i for i in 1:ndofs if mod1(i, 6)≤3]
     rot_dofs = [i for i in 1:ndofs if mod1(i, 6)>3]
 
-    return Configuration{T, typeof(nodes), typeof(beams), typeof(constraints), typeof(ext_forces), typeof(bcs), typeof(contact), typeof(sdf)}(nodes, beams, constraints, ndofs, disp_dofs, rot_dofs, ext_forces, bcs, contact, sdf)
+    return Configuration{T, typeof(nodes), typeof(beams), typeof(constraints), typeof(ext_forces), typeof(bcs), typeof(contact), typeof(sdf)}(nodes, beams, constraints, ndofs, disp_dofs, rot_dofs, ext_forces, bcs, contact, sdf, greedy_color(beams))
     
 end 
 
