@@ -18,6 +18,7 @@ function solver!(conf, params, T=Float64)
         
         # initialization of time loop variables
         t = 0.
+        write_t = t
         start = time()
         write_counter = 0
         Δt = ini_Δt
@@ -90,10 +91,11 @@ function solver!(conf, params, T=Float64)
                 
                 
                 if successive_success_it ≥ accelerate_after_success_it
-                        
-                        Δt = min(Δt*1.5, max_Δt)
-                        verbose && printstyled("Δt increased: Δt=$Δt\n"; color = :green)
-                        successive_success_it = 0
+                    
+                    Δtold = Δt
+                    Δt = min(Δt*1.5, max_Δt)
+                    verbose && Δt > Δtold && printstyled("Δt increased: Δt=$Δt\n"; color = :green)
+                    successive_success_it = 0
                     
                 end
                 
@@ -102,9 +104,10 @@ function solver!(conf, params, T=Float64)
             @timeit_debug "Write results to file" begin
                 
                 # save VTK with frequency 1/Δt_plot: 
-                if  tⁿ⁺¹ > write_counter*Δt_plot  ||  tⁿ⁺¹ ≈ write_counter*Δt_plot
+                if  tⁿ⁺¹ > write_t + Δt_plot  ||  tⁿ⁺¹ ≈ write_t + Δt_plot
                     write_VTK(write_counter, step, tⁿ⁺¹, conf, energy, vtkdata)
                     write_counter += 1
+                    write_t = tⁿ⁺¹
                 end
  
                 
@@ -143,7 +146,7 @@ end
 #  Solves the current step
 function solve_step_dynamics!(conf, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, nodes_sol, matrices, energy, solver, params) 
 
-    @unpack ext_forces, bcs = conf
+    @unpack ext_forces, bcs, sdf = conf
 
     # -------------------------------------------------------------------------------------------
     # INITIALIZATION
@@ -160,7 +163,6 @@ function solve_step_dynamics!(conf, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, nodes_s
         for i in bcs.disp_dofs
             bcs.disp_vals[i] = bcs.u(tⁿ⁺¹, i)     
         end
-        
         
     end
     
