@@ -1,7 +1,10 @@
+authors = ["Beatrice Bisighini", "Baptiste Pierrat", "Miquel Aguirre"]
 name = "EndoBeams"
 uuid = "0f089cde-a4e5-430d-9c37-7e1e6f8286ff"
-authors = ["Beatrice Bisighini", "Baptiste Pierrat", "Miquel Aguirre"]
 version = "0.1.0"
+
+[compat]
+julia = "1.6"
 
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
@@ -22,10 +25,8 @@ StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 
-[compat]
-julia = "1.6"
-
 [extras]
+CPUSummary = "2a0fbf3d-bb9c-48f3-b0a9-814d99fd7ab9"
 FiniteDiff = "6a86dc24-6348-571c-b903-95158fe2bd41"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 

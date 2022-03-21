@@ -176,15 +176,23 @@ end
 
 end
 
-@inline function contact_gap(point, sdf::Discrete_SDF)
+@inline function contact_gap(point, sdf::Discrete_SDF, normalize=false)
 
     sitp = sdf.sitp
 
     gₙ = sitp(point...)
-    ∂gₙ∂x = normalize(Interpolations.gradient(sitp, point...))
+    ∂gₙ∂x = Interpolations.gradient(sitp, point...)
     ∂²gₙ∂x² = Interpolations.hessian(sitp, point...)
-
-    return gₙ - sdf.r, ∂gₙ∂x, ∂²gₙ∂x²
+    
+    # Normalize
+    nn = dot(∂gₙ∂x, ∂gₙ∂x)
+    nmaginv = 1/sqrt(nn)
+    n = ∂gₙ∂x*nmaginv 
+    H = ∂²gₙ∂x²*nmaginv * (ID3 - (∂gₙ∂x*∂gₙ∂x')/nn)
+    
+    return gₙ - sdf.r, n, H
+    
+    
         
 end 
 
