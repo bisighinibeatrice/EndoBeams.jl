@@ -2,11 +2,11 @@
 # STRUCTURE
 #----------------------------------
 
-struct Constraint{T}
+struct Constraint
     node1::Int # index of node 1   
     node2::Int # index of node 2
-    k::T
-    η::T
+    k::Float64
+    η::Float64
     sparsity_map::SVector{144, Int} 
 end
 
@@ -15,18 +15,18 @@ end
 #----------------------------------
 
 "Constructor of the constraints StructArray"
-function build_constraints(connectivity, k, η, T=Float64)
+function build_constraints(connectivity, k, η)
     
-    constraints = StructArray(Constraint(connectivity[i, 1], connectivity[i, 2], k, η, T) for i in 1:size(connectivity, 1))
+    constraints = StructArray(Constraint(connectivity[i, 1], connectivity[i, 2], k, η) for i in 1:size(connectivity, 1))
     
     return constraints
     
 end 
 
 # Constructor of one Constraint structure
-function Constraint(node1, node2, k, η, T=Float64)
+function Constraint(node1, node2, k, η)
     
-    return Constraint{T}(node1, node2, k, η, zeros(Int, 144))
+    return Constraint(node1, node2, k, η, zeros(Int, 144))
    
 end 
 
@@ -65,7 +65,7 @@ function constraints!(matrices, nodes, constraints)
             matrices.Tᶜᵒⁿ[dof] -= ta[i]
         end
 
-        # Kᶜᵒⁿ = Mat1212(
+        # Kᶜᵒⁿ :
         #     -k, 0,  0,  0, 0, 0, k,  0,  0,  0, 0, 0,
         #     0,  -k, 0,  0, 0, 0, 0,  k,  0,  0, 0, 0,
         #     0,  0,  -k, 0, 0, 0, 0,  0,  k,  0, 0, 0,
@@ -77,7 +77,7 @@ function constraints!(matrices, nodes, constraints)
         #     0,  0,  k,  0, 0, 0, 0,  0,  -k, 0, 0, 0,
         #     0,  0,  0,  0, 0, 0, 0,  0,  0,  0, 0, 0,
         #     0,  0,  0,  0, 0, 0, 0,  0,  0,  0, 0, 0,
-        #     0,  0,  0,  0, 0, 0, 0,  0,  0,  0, 0, 0)
+        #     0,  0,  0,  0, 0, 0, 0,  0,  0,  0, 0, 0
 
         mkindices = @SVector [i+12*(i-1) for i in [1,2,3,7,8,9]]
         pkindices = @SVector [i+12*(mod1(i+6, 12)-1) for i in [7,8,9,1,2,3]]

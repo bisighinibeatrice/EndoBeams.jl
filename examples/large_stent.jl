@@ -1,9 +1,6 @@
 using EndoBeams
 using DelimitedFiles
 
-const T = Float64
-
-
 
 # -------------------------------------------------------------------------------------------
 # Read stent information
@@ -36,7 +33,7 @@ ẅ⁰ = zeros(nnodes, 3)
 R = readdlm("examples/input_large_stent/R.txt")
 
 # nodes StructArray
-nodes = build_nodes(initial_positions, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, R, T)
+nodes = build_nodes(initial_positions, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, R)
 
 
 
@@ -66,14 +63,14 @@ kₙ = 4/3 * 5/(1-0.5^2)*sqrt(radius) # Approximate Hertz contact with 5 MPa wal
 εᵗ = 0.1 #regularized parameter for friction contact
 ηₙ = 0.01
 
-contact = ContactParameters(kₙ, μ, εᵗ, ηₙ, T)
+contact = ContactParameters(kₙ, μ, εᵗ, ηₙ)
 
 # -------------------------------------------------------------------------------------------
 # External forces
 # -------------------------------------------------------------------------------------------
 
 # external force and applied dof
-loaded_dofs = T[]
+loaded_dofs = Float64[]
 force(t, node_idx) = 0
 
 ext_forces = ExternalForces(force, loaded_dofs)
@@ -93,17 +90,17 @@ constraints = build_constraints(nodespairs, kᶜᵒⁿ, ηᶜᵒⁿ)
 
 
 # Dirichlet boundary conditions: blocked positions
-fixed_dofs = T[]
+fixed_dofs = Float64[]
 free_dofs = setdiff(1:ndofs, fixed_dofs)
 
 # Dirichlet dof (x6)
 disp_dofs = Int[]
-disp_vals = T[]
+disp_vals = Float64[]
 disp(t, node_idx) = 0
 
 
 # boundary conditions strucutre
-bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
+bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs)
 
 # -------------------------------------------------------------------------------------------
 # SDF
@@ -126,9 +123,9 @@ conf = Configuration(nodes, beams, constraints, ext_forces, bcs, contact, sdf)
 ini_Δt = 1e-5
 max_Δt = 1e-2
 Δt_plot =  1e-5
-tᵉⁿᵈ = 1
+tᵉⁿᵈ = 0.0001
 
-params = Params{T}(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "examples/output3D", stop_on_energy_threshold=true, energy_threshold=1e-10, tol_res = 1e-3, tol_ΔD = 1e-3, record_timings=true)
+params = Params(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "examples/output3D", stop_on_energy_threshold=true, energy_threshold=1e-6, tol_res = 1e-3, tol_ΔD = 1e-3, record_timings=false)
 
 
 # -------------------------------------------------------------------------------------------
@@ -136,4 +133,4 @@ params = Params{T}(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "exampl
 # -------------------------------------------------------------------------------------------
 
 
-solver!(conf, params, T)
+solver!(conf, params);

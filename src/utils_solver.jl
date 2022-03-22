@@ -16,14 +16,14 @@ function clean_folders(output_dir)
 end 
 
 # Cleans folders, pre-allocate and initialise the variables used during the simulation and save the VTKs of the initial configuration
-function solver_initialisation(conf::Configuration{T}, output_dir) where T
+function solver_initialisation(conf::Configuration, output_dir) where T
 
     solⁿ = Solution(conf)
     solⁿ⁺¹ = deepcopy(solⁿ)
-    energy = Energy(T) 
+    energy = Energy() 
     matrices, nodes_sol = sparse_matrices!(conf)
 
-    vtkdata = VTKData(length(conf.beams), output_dir, conf.sdf, T)
+    vtkdata = VTKData(length(conf.beams), output_dir, conf.sdf)
 
     return solⁿ, solⁿ⁺¹, nodes_sol, matrices, energy, vtkdata
 

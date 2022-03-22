@@ -2,7 +2,7 @@ using EndoBeams
 using DelimitedFiles
 using LinearAlgebra
 
-const T = Float64
+
 
 #-------------------------------------------------------------------------------------------
 # Read the mesh
@@ -32,7 +32,7 @@ ẅ⁰ = zeros(nnodes, 3)
 
 
 # nodes StructArray
-nodes = build_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
+nodes = build_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -55,16 +55,16 @@ beams = build_beams(nodes, connectivity, E, ν, ρ, radius, damping)
 kₙ = 0.1 #penalty parameter
 μ = 0.1
 εᵗ = 0.1 #regularized parameter for friction contact
-ηₙ = 1
+ηₙ = 0.1
 
-contact = ContactParameters(kₙ, μ, εᵗ, ηₙ, T)
+contact = ContactParameters(kₙ, μ, εᵗ, ηₙ)
   
 # -------------------------------------------------------------------------------------------
 # External forces
 # -------------------------------------------------------------------------------------------
 
 # external force and applied dof
-loaded_dofs = T[]
+loaded_dofs = Float64[]
 force(t, node_idx) = 0
 
 ext_forces = ExternalForces(force, loaded_dofs)
@@ -77,23 +77,23 @@ ext_forces = ExternalForces(force, loaded_dofs)
 ndofs = nnodes*6
 
 # Dirichlet boundary conditions: blocked positions
-fixed_dofs = T[]
+fixed_dofs = Float64[]
 free_dofs = setdiff(1:ndofs, fixed_dofs)
 
 # Dirichlet dof (x6)
 disp_dofs = Int[]
-disp_vals = T[]
+disp_vals = Float64[]
 disp(t, node_idx) = 0
 
 
 # boundary conditions strucutre
-bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
+bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs)
 # -------------------------------------------------------------------------------------------
 # SDF
 # -------------------------------------------------------------------------------------------
 
 # analytical SDF
-sdf = Sphere_SDF{T}(radius, 0.05, 0, 0, 0)
+sdf = Sphere_SDF(radius, 0.05, 0, 0, 0)
 
 # -------------------------------------------------------------------------------------------
 # Configuration
@@ -112,7 +112,7 @@ max_Δt = 0.5
 Δt_plot =  0.5
 tᵉⁿᵈ = 100
 
-params = Params{T}(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "examples/output3D")
+params = Params(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "examples/output3D")
 
 
 
@@ -121,4 +121,4 @@ params = Params{T}(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "exampl
 # -------------------------------------------------------------------------------------------
 
 
-solver!(conf, params, T)
+solver!(conf, params);

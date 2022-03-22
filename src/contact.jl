@@ -3,10 +3,10 @@
 # STRUCTURES
 #----------------------------------
 
-abstract type SignedDistanceField{T} end
+abstract type SignedDistanceField end
 
 """
-    sdf = struct Plane_z_SDF{T}
+    sdf = struct Plane_z_SDF
 
 Constructor of the structure containing the properties of the analytical SDF of a z-normal plane:
 - `r`: beam radius;
@@ -14,15 +14,15 @@ Constructor of the structure containing the properties of the analytical SDF of 
 
 Returns a structure containing the information of the created sdf. 
 """
-struct Plane_z_SDF{T} <: SignedDistanceField{T}
+struct Plane_z_SDF <: SignedDistanceField
     
-    r::T  # beams radius
-    z0::T # plane position 
+    r::Float64  # beams radius
+    z0::Float64 # plane position 
     
 end 
 
 """
-    sdf = struct Plane_y_SDF{T}
+    sdf = struct Plane_y_SDF
 
 Constructor of the structure containing the properties  of the analytical SDF of a y-normal plane.
 - `r`: beam radius;
@@ -30,15 +30,15 @@ Constructor of the structure containing the properties  of the analytical SDF of
 
 Returns a structure containing the information of the created sdf.  
 """
-struct Plane_y_SDF{T} <: SignedDistanceField{T}
+struct Plane_y_SDF <: SignedDistanceField
     
-    r::T  # beams radius
-    y0::T # plane position 
+    r::Float64  # beams radius
+    y0::Float64 # plane position 
     
 end 
 
 """
-    sdf = struct Sphere_SDF{T}
+    sdf = struct Sphere_SDF
 
 Constructor of the structure containing the properties  of the analytical SDF of a sphere.
 - `r`: beam radius;
@@ -49,18 +49,18 @@ Constructor of the structure containing the properties  of the analytical SDF of
     
 Returns a structure containing the information of the created sdf. 
 """
-struct Sphere_SDF{T} <: SignedDistanceField{T}
+struct Sphere_SDF <: SignedDistanceField
     
-    r::T # beams radius
-    R::T # sphere radius
-    x0::T # sphere position
-    y0::T # sphere position
-    z0::T # sphere position
+    r::Float64 # beams radius
+    R::Float64 # sphere radius
+    x0::Float64 # sphere position
+    y0::Float64 # sphere position
+    z0::Float64 # sphere position
     
 end 
 
 """
-    sdf = struct Cylinder_SDF{T}
+    sdf = struct Cylinder_SDF
 
 Constructor of the structure containing the properties of the analytical SDF of an infinite cylinder oriented along z.
 - `r`: beam radius;
@@ -68,23 +68,23 @@ Constructor of the structure containing the properties of the analytical SDF of 
     
 Returns a structure containing the information of the created sdf. 
 """
-struct Cylinder_SDF{T} <: SignedDistanceField{T}
+struct Cylinder_SDF <: SignedDistanceField
     
-    r::T # beams radius
-    R::T # cylinder radius
+    r::Float64 # beams radius
+    R::Float64 # cylinder radius
     
     
 end  
 
 # Properties of a discrete SDF
-struct Discrete_SDF{T, F} <: SignedDistanceField{T}
+struct Discrete_SDF{F} <: SignedDistanceField
     
-    r::T
+    r::Float64
     sitp::F
     dom::NTuple{6, Float64}
-    dx::T
-    dy::T
-    dz::T
+    dx::Float64
+    dy::Float64
+    dz::Float64
     
 end 
 
@@ -92,7 +92,7 @@ end
 # CONSTRUCTOR DISCRETE SDF
 #----------------------------------
 """
-    sdf = Discrete_SDF(filename, radius, inside,  T=Float64)
+    sdf = Discrete_SDF(filename, radius, inside)
 
 Constructor of the discrete SDF from a vtk file.
 - `filename`: sdf file (all files with extensions .vtk are accepted);
@@ -101,7 +101,7 @@ Constructor of the discrete SDF from a vtk file.
 
 Returns a structure containing the information of the created sdf. 
 """
-function Discrete_SDF(filename, radius, inside, T=Float64)
+function Discrete_SDF(filename, radius, inside)
     
     # Read sdf from file
     npx, npy, npz, dx, dy, dz, dom, sdf = read_VTK_sdf(filename)
@@ -130,7 +130,7 @@ function Discrete_SDF(filename, radius, inside, T=Float64)
     # Scale the interpolation on the defined coordinate grid
     sitp = scale(itp, x, y, z)  
 
-    return Discrete_SDF{T, typeof(sitp)}(radius, sitp, dom, dx, dy, dz)  
+    return Discrete_SDF{typeof(sitp)}(radius, sitp, dom, dx, dy, dz)  
 
 end 
 
@@ -222,7 +222,7 @@ end
         aux = (ḡₙ-p̄ₙ)/(ḡₙ^2)
         pₙ =  aux*gₙ^2 - gₙ + p̄ₙ
         p′ₙ = 2*aux*gₙ - 1
-        Πₑ = -(ḡₙ-p̄ₙ)/(3*ḡₙ^2)*gₙ^3 + gₙ^2/2 - p̄ₙ*gₙ + ḡₙ^2/6
+        Πₑ = (ḡₙ-p̄ₙ)/(3*ḡₙ^2)*gₙ^3 - gₙ^2/2 + p̄ₙ*gₙ - ḡₙ^2/6
 
     end
     

@@ -2,13 +2,13 @@
 # STRUCTURE
 #----------------------------------
 
-struct Beam{T, Tp}
+struct Beam{Tp}
     
     ind::Int # index of this beam 
     node1::Int # index of node 1   
     node2::Int # index of node 2
-    l₀::T # initial beam length
-    Rₑ⁰::Mat33{T} # initial beam rotation matrix
+    l₀::Float64 # initial beam length
+    Rₑ⁰::Mat33{Float64} # initial beam rotation matrix
     properties::Tp # beam internal matrix
     sparsity_map::SVector{144, Int} # sparsity map from local indices (beam matrix) to global indices (gloabl sparse matrix) -> computed in the constructor of the sparse matrices
 
@@ -18,13 +18,13 @@ end
 # CONSTRUCTORS
 #----------------------------------
 """
-    beams = beams(nodes, connectivity, beamprops, Rₑ⁰=nothing, T=Float64)
+    beams = beams(nodes, connectivity, beamprops, Rₑ⁰=nothing)
 
 Constructor of the beams StructArray:
 - `nodes`: nodes StructArray (created with nodes);
 - `connectivity`: connectivity of the mesh (Vec2{Int});
-- `material`: struct containing the material properties of the mesh (Material{T});
-- `geometry`: struct containing the geomtrical properties of the mesh (Geometry{T});
+- `material`: struct containing the material properties of the mesh (Material{Float64});
+- `geometry`: struct containing the geomtrical properties of the mesh (Geometry{Float64});
 - `Rₑ⁰`: (not mandatory) initial rotation of the beam elements.
 
 Returns a StructArray{Beam}, structure containing the information of the beam elements. 
@@ -65,16 +65,16 @@ end
 
     
 # Constructor of the one beam (Beam) given initial rotation
-function Beam(ind, node1::Node{T}, node2::Node{T}, E, ν, ρ, radius, damping, Rₑ⁰) where T
+function Beam(ind, node1::Node, node2::Node, E, ν, ρ, radius, damping, Rₑ⁰)
     
     i1 = node1.i   
     i2 = node2.i  
     l₀ = norm(node1.X₀ - node2.X₀)   
-    beamprops = BeamProperties(l₀, E, ν, ρ, radius, damping, T)
+    beamprops = BeamProperties(l₀, E, ν, ρ, radius, damping)
     
-    return Beam{T, typeof(beamprops)}(ind, i1, i2, l₀, Rₑ⁰, beamprops, zeros(Int, 144))
+    return Beam{typeof(beamprops)}(ind, i1, i2, l₀, Rₑ⁰, beamprops, zeros(Int, 144))
     
 end 
 
-Beam(ind, node1::Node{T}, node2::Node{T}, E, ν, ρ, radius, damping, Rₑ⁰::Nothing) where T = Beam(ind, node1, node2, E, ν, ρ, radius, damping, local_R⁰(node1.X₀, node2.X₀))
+Beam(ind, node1::Node, node2::Node, E, ν, ρ, radius, damping, Rₑ⁰::Nothing) = Beam(ind, node1, node2, E, ν, ρ, radius, damping, local_R⁰(node1.X₀, node2.X₀))
 

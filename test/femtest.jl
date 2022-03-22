@@ -3,6 +3,7 @@ using StaticArrays
 using BenchmarkTools
 using FiniteDiff
 using Test
+using EndoBeams
 using EndoBeams: Sphere_SDF, Plane_z_SDF, contact_gap, local_R⁰, rotation_matrix, compute, ID3, Tₛ⁻¹
 
 
@@ -61,7 +62,7 @@ function genparams()
     init = (X₁, X₂, l₀, Rₑ⁰)
     gausspoints = (nG, ωG, zG)
     contactparams = ContactParameters(kₙ, μ, εᵗ, ηₙ)
-    sdf = Sphere_SDF{Float64}(1., 1., 0, 0, 0)    
+    sdf = Sphere_SDF(1., 1., 0, 0, 0)    
     properties = BeamProperties(l₀, E, ν, ρ, radius, damping)
 
     constants_nocontact = (init, gausspoints, properties, nothing, nothing)

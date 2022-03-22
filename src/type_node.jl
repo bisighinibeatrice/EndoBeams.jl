@@ -1,10 +1,10 @@
 #----------------------------------
 # STRUCTURE
 #----------------------------------
-struct Node{T}
+struct Node
    
     i::Int # index
-    X₀::Vec3{T} # initial position
+    X₀::Vec3{Float64} # initial position
 
     # dof: total, displacement, angular
     idof_6::Vec6{Int}
@@ -12,24 +12,24 @@ struct Node{T}
     idof_rot::Vec3{Int}
 
     # current configuration of the node (@n+1)
-    u::Vec3{T} # displacement
-    u̇::Vec3{T} # velocity
-    ü::Vec3{T} # acceleration
-    w::Vec3{T} # angle (spin vecotr)
-    ẇ::Vec3{T} # angular velocity
-    ẅ::Vec3{T} # angular acceleration
-    R::Mat33{T} # local rotation matrix
-    ΔR::Mat33{T} # local rotation matrix variation
+    u::Vec3{Float64} # displacement
+    u̇::Vec3{Float64} # velocity
+    ü::Vec3{Float64} # acceleration
+    w::Vec3{Float64} # angle (spin vecotr)
+    ẇ::Vec3{Float64} # angular velocity
+    ẅ::Vec3{Float64} # angular acceleration
+    R::Mat33{Float64} # local rotation matrix
+    ΔR::Mat33{Float64} # local rotation matrix variation
 
     # last configuration of the node (@n)
-    uⁿ::Vec3{T}
-    u̇ⁿ::Vec3{T}
-    üⁿ::Vec3{T}
-    wⁿ::Vec3{T}
-    ẇⁿ::Vec3{T}
-    ẅⁿ::Vec3{T}
-    Rⁿ::Mat33{T}
-    ΔRⁿ::Mat33{T}
+    uⁿ::Vec3{Float64}
+    u̇ⁿ::Vec3{Float64}
+    üⁿ::Vec3{Float64}
+    wⁿ::Vec3{Float64}
+    ẇⁿ::Vec3{Float64}
+    ẅⁿ::Vec3{Float64}
+    Rⁿ::Mat33{Float64}
+    ΔRⁿ::Mat33{Float64}
 
 end
 
@@ -38,7 +38,7 @@ end
 #----------------------------------
 
 """
-nodes = nodes(X, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, Rₑ⁰=nothing, T=Float64) 
+nodes = nodes(X, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, Rₑ⁰=nothing) 
 
 Constructor of the nodes StructArray:
 - `X`: nodes StructArray (created with nodes);
@@ -52,9 +52,9 @@ Constructor of the nodes StructArray:
 
 Returns a StructArray{Node}, structure containing the information of the nodes. 
 """
-function build_nodes(X::AbstractMatrix, u⁰::AbstractMatrix, u̇⁰::AbstractMatrix, ü⁰::AbstractMatrix, w⁰::AbstractMatrix, ẇ⁰::AbstractMatrix, ẅ⁰::AbstractMatrix, Rₑ⁰=nothing, T=Float64) 
+function build_nodes(X::AbstractMatrix, u⁰::AbstractMatrix, u̇⁰::AbstractMatrix, ü⁰::AbstractMatrix, w⁰::AbstractMatrix, ẇ⁰::AbstractMatrix, ẅ⁰::AbstractMatrix, Rₑ⁰=nothing) 
 
-    nodes = StructArray(Node{T}(
+    nodes = StructArray(Node(
             i, 
             X[i, :], 
             Vec6(6*(i-1).+(1,2,3,4,5,6)),
@@ -82,31 +82,31 @@ function build_nodes(X::AbstractMatrix, u⁰::AbstractMatrix, u̇⁰::AbstractMa
 end
 
 
-function build_nodes(X::AbstractVector, u⁰::AbstractVector, u̇⁰::AbstractVector, ü⁰::AbstractVector, w⁰::AbstractVector, ẇ⁰::AbstractVector, ẅ⁰::AbstractVector, Rₑ⁰=nothing, T=Float64) 
+function build_nodes(X::AbstractVector, u⁰::AbstractVector, u̇⁰::AbstractVector, ü⁰::AbstractVector, w⁰::AbstractVector, ẇ⁰::AbstractVector, ẅ⁰::AbstractVector, Rₑ⁰=nothing) 
 
     nnodes = length(X)
-    nodes = StructArray{Node{T}}((
+    nodes = StructArray{Node}((
             1:nnodes, 
-            convert(Vector{Vec3{T}}, X), 
+            convert(Vector{Vec3{Float64}}, X), 
             [Vec6(6*(i-1).+(1,2,3,4,5,6)) for i in 1:nnodes],
             [Vec3(6*(i-1).+(1,2,3)) for i in 1:nnodes],
             [Vec3(6*(i-1).+(4,5,6)) for i in 1:nnodes],
-            convert(Vector{Vec3{T}}, u⁰),  
-            convert(Vector{Vec3{T}}, u̇⁰),  
-            convert(Vector{Vec3{T}}, ü⁰),  
-            convert(Vector{Vec3{T}}, w⁰),  
-            convert(Vector{Vec3{T}}, ẇ⁰),  
-            convert(Vector{Vec3{T}}, ẅ⁰),  
-            Rₑ⁰ isa AbstractVector ? convert(Vector{Mat33{T}}, Rₑ⁰) : [Mat33{T}(ID3) for i in 1:nnodes], 
-            [Mat33{T}(ID3) for i in 1:nnodes],
-            convert(Vector{Vec3{T}}, u⁰), 
-            convert(Vector{Vec3{T}}, u̇⁰), 
-            convert(Vector{Vec3{T}}, ü⁰), 
-            convert(Vector{Vec3{T}}, w⁰), 
-            convert(Vector{Vec3{T}}, ẇ⁰), 
-            convert(Vector{Vec3{T}}, ẅ⁰), 
-            Rₑ⁰ isa AbstractVector ? convert(Vector{Mat33{T}}, Rₑ⁰) : [Mat33{T}(ID3) for i in 1:nnodes],
-            [Mat33{T}(ID3) for i in 1:nnodes]))
+            convert(Vector{Vec3{Float64}}, u⁰),  
+            convert(Vector{Vec3{Float64}}, u̇⁰),  
+            convert(Vector{Vec3{Float64}}, ü⁰),  
+            convert(Vector{Vec3{Float64}}, w⁰),  
+            convert(Vector{Vec3{Float64}}, ẇ⁰),  
+            convert(Vector{Vec3{Float64}}, ẅ⁰),  
+            Rₑ⁰ isa AbstractVector ? convert(Vector{Mat33{Float64}}, Rₑ⁰) : [Mat33{Float64}(ID3) for i in 1:nnodes], 
+            [Mat33{Float64}(ID3) for i in 1:nnodes],
+            convert(Vector{Vec3{Float64}}, u⁰), 
+            convert(Vector{Vec3{Float64}}, u̇⁰), 
+            convert(Vector{Vec3{Float64}}, ü⁰), 
+            convert(Vector{Vec3{Float64}}, w⁰), 
+            convert(Vector{Vec3{Float64}}, ẇ⁰), 
+            convert(Vector{Vec3{Float64}}, ẅ⁰), 
+            Rₑ⁰ isa AbstractVector ? convert(Vector{Mat33{Float64}}, Rₑ⁰) : [Mat33{Float64}(ID3) for i in 1:nnodes],
+            [Mat33{Float64}(ID3) for i in 1:nnodes]))
 
     return nodes
 

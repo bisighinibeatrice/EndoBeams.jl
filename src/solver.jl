@@ -1,5 +1,5 @@
 "Preallocates and initialises all the variables and starts the temporal loop"
-function solver!(conf, params, T=Float64)
+function solver!(conf, params)
 
     nodes = conf.nodes
     
@@ -69,10 +69,10 @@ function solver!(conf, params, T=Float64)
                     
                     Δt = Δt/2
                     
-                    verbose && printstyled("Δt decreased: Δt=$Δt\n"; color = :yellow)
+                    verbose && printstyled((@sprintf "Δt decreased: Δt=%1.2e\n" Δt); color = :yellow)
 
                     if Δt<min_Δt
-                        printstyled("Δt < $min_Δt: aborting simulation...\n"; color = :red)
+                        printstyled((@sprintf "Δt < %1.2e: aborting simulation...\n" min_Δt); color = :red)
                         break
                     end
                     
@@ -94,7 +94,7 @@ function solver!(conf, params, T=Float64)
                     
                     Δtold = Δt
                     Δt = min(Δt*1.5, max_Δt)
-                    verbose && Δt > Δtold && printstyled("Δt increased: Δt=$Δt\n"; color = :green)
+                    verbose && Δt > Δtold && printstyled((@sprintf "Δt increased: Δt=%1.2e\n" Δt); color = :green)
                     successive_success_it = 0
                     
                 end

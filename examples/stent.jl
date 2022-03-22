@@ -1,7 +1,7 @@
 using EndoBeams
 using DelimitedFiles
 
-const T = Float64
+
 
 
 
@@ -38,7 +38,7 @@ ẅ⁰ = zeros(nnodes, 3)
 R = readdlm("examples/input_stent/R_positioning.txt")
 
 # nodes StructArray
-nodes = build_nodes(initial_positions, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, R, T)
+nodes = build_nodes(initial_positions, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, R)
 
 
 
@@ -68,14 +68,14 @@ kₙ = 10 #penalty parameter
 εᵗ = 0.1 #regularized parameter for friction contact
 ηₙ = 0.1
 
-contact = ContactParameters(kₙ, μ, εᵗ, ηₙ, T)
+contact = ContactParameters(kₙ, μ, εᵗ, ηₙ)
 
 # -------------------------------------------------------------------------------------------
 # External forces
 # -------------------------------------------------------------------------------------------
 
 # external force and applied dof
-loaded_dofs = T[]
+loaded_dofs = Float64[]
 force(t, node_idx) = 0
 
 ext_forces = ExternalForces(force, loaded_dofs)
@@ -95,17 +95,17 @@ constraints = build_constraints(nodespairs, kᶜᵒⁿ, ηᶜᵒⁿ)
 
 
 # Dirichlet boundary conditions: blocked positions
-fixed_dofs = T[]
+fixed_dofs = Float64[]
 free_dofs = setdiff(1:ndofs, fixed_dofs)
 
 # Dirichlet dof (x6)
 disp_dofs = Int[]
-disp_vals = T[]
+disp_vals = Float64[]
 disp(t, node_idx) = 0
 
 
 # boundary conditions strucutre
-bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
+bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs)
 
 # -------------------------------------------------------------------------------------------
 # SDF
@@ -130,7 +130,7 @@ max_Δt = 1.
 Δt_plot =  0.01
 tᵉⁿᵈ = 1
 
-params = Params{T}(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "examples/output3D", stop_on_energy_threshold=true, energy_threshold=1e-10)
+params = Params(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "examples/output3D", stop_on_energy_threshold=true, energy_threshold=1e-10)
 
 
 # -------------------------------------------------------------------------------------------
@@ -138,4 +138,4 @@ params = Params{T}(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "exampl
 # -------------------------------------------------------------------------------------------
 
 
-solver!(conf, params, T)
+solver!(conf, params);

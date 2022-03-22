@@ -1,6 +1,6 @@
 using EndoBeams
 
-const T = Float64
+
 
 #-------------------------------------------------------------------------------------------
 # Building the nodes
@@ -25,7 +25,7 @@ ẅ⁰ = zeros(Vec3, nnodes)
 
 
 # nodes StructArray
-nodes = build_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing, T)
+nodes = build_nodes(X₀, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, nothing)
 
 # -------------------------------------------------------------------------------------------
 # Building the beams
@@ -81,11 +81,11 @@ free_dofs = setdiff(1:ndofs, fixed_dofs)
 
 # Dirichlet dof (x6)
 disp_dofs = Int[]
-disp_vals = T[]
+disp_vals = Float64[]
 disp(t, node_idx) = 0
 
 # boundary conditions strucutre 
-bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, T)
+bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs)
 
 # -------------------------------------------------------------------------------------------
 # Configuration
@@ -103,7 +103,7 @@ max_Δt = 0.25
 Δt_plot =  0.25
 tᵉⁿᵈ = 30
 
-params = Params{T}(;ini_Δt, max_Δt, Δt_plot, tᵉⁿᵈ, output_dir = "examples/output3D")
+params = Params(;ini_Δt, max_Δt, Δt_plot, tᵉⁿᵈ, output_dir = "examples/output3D")
 
 
 # -------------------------------------------------------------------------------------------
@@ -111,4 +111,4 @@ params = Params{T}(;ini_Δt, max_Δt, Δt_plot, tᵉⁿᵈ, output_dir = "exampl
 # -------------------------------------------------------------------------------------------
 
 
-solver!(conf, params, T)   
+solver!(conf, params);

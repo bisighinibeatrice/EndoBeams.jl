@@ -4,6 +4,7 @@ function init(solvertype)
     if solvertype == :MKL
 
         ps = MKLPardisoSolver()
+        set_nprocs!(ps, Threads.nthreads())
         set_matrixtype!(ps, Pardiso.REAL_NONSYM)
         pardisoinit(ps)
 
