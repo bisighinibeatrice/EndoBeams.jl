@@ -357,7 +357,7 @@ struct VTKData
     intermediate_points::Int
 
     interpolated_points::Vector{Vec3{Float64}}
-    interpolated_lines::Vector{MeshCell{VTKCellType, Tuple{Int, Int}} }
+    interpolated_lines::Vector{MeshCell{WriteVTK.PolyData.Lines, UnitRange{Int}}}
 
     stress::Vector{Float64}
     strain::Vector{Float64}
@@ -371,13 +371,11 @@ struct VTKData
 
 end
 
-function VTKData(nbeams, output_dir, sdf)
-
-    intermediate_points = 5
+function VTKData(nbeams, output_dir, sdf, intermediate_points = 5)
 
     interpolated_points = zeros(Vec3{Float64}, nbeams*intermediate_points)
-    interpolated_lines = [MeshCell(VTKCellTypes.VTK_LINE, ((i-1)*intermediate_points+j, (i-1)*intermediate_points+(j+1))) for i in 1:nbeams for j in 1:intermediate_points-1]
 
+    interpolated_lines = [MeshCell(PolyData.Lines(), (i-1)*intermediate_points+1:i*intermediate_points) for i in 1:nbeams]
 
     stress = zeros(length(interpolated_points))
     strain = zeros(length(interpolated_points))

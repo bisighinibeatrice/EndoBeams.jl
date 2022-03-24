@@ -123,7 +123,7 @@ conf = Configuration(nodes, beams, constraints, ext_forces, bcs, contact, sdf)
 ini_Δt = 1e-5
 max_Δt = 1e-2
 Δt_plot =  1e-5
-tᵉⁿᵈ = 0.0001
+tᵉⁿᵈ = 1
 
 params = Params(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "examples/output3D", stop_on_energy_threshold=true, energy_threshold=1e-6, tol_res = 1e-3, tol_ΔD = 1e-3, record_timings=false)
 
