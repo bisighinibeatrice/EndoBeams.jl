@@ -8,8 +8,10 @@ function clean_folders(output_dir)
     if output_dir != ""
         dir = pwd()
         cd(output_dir)
-        foreach(rm, filter(endswith(".vtu"), readdir()))
+        foreach(rm, filter(endswith(".vtp"), readdir()))
+        foreach(rm, filter(endswith(".vtk"), readdir()))
         foreach(rm, filter(endswith(".pvd"), readdir()))
+        foreach(rm, filter(endswith(".txt"), readdir()))
         cd(dir)
     end 
     
@@ -24,7 +26,7 @@ function solver_initialisation(conf::Configuration, output_dir) where T
     matrices, nodes_sol = sparse_matrices!(conf)
 
     vtkdata = VTKData(length(conf.beams), output_dir, conf.sdf)
-
+    
     return solⁿ, solⁿ⁺¹, nodes_sol, matrices, energy, vtkdata
 
 end 
@@ -93,12 +95,68 @@ function apply_BCs!(nodes_sol, bcs)
     
 end
 
+# Covert carthesian coordinates into cylindrical 
+function dirichlet_to_cylindrical!(nodes_sol, nodes)
+
+    @inbounds for nₐ in nodes
+        
+        Ra = nₐ.R_global_to_local
+        RaT = Ra'
+        
+        adofs = nₐ.idof_disp
+
+        nodes_sol.r[adofs] .= Ra*nodes_sol.r[adofs]
+        nodes_sol.D[adofs] .= Ra*nodes_sol.D[adofs]
+
+        @timeit_debug "Update Ktan" begin 
+
+            @inbounds for nᵦ in nodes
+
+                bdofs = nᵦ.idof_disp
+
+                Kab_loc = Mat33( 
+                nodes_sol.Ktan_mat[adofs[1], bdofs[1]], nodes_sol.Ktan_mat[adofs[2], bdofs[1]], nodes_sol.Ktan_mat[adofs[3], bdofs[1]],
+                nodes_sol.Ktan_mat[adofs[1], bdofs[2]], nodes_sol.Ktan_mat[adofs[2], bdofs[2]], nodes_sol.Ktan_mat[adofs[3], bdofs[2]],
+                nodes_sol.Ktan_mat[adofs[1], bdofs[3]], nodes_sol.Ktan_mat[adofs[2], bdofs[3]], nodes_sol.Ktan_mat[adofs[3], bdofs[3]])
+                    
+                Kba_loc = Kab_loc'
+
+                Kab = Ra*Kab_loc
+                Kba = Kba_loc*RaT
+
+                @inbounds for (i, x) in enumerate(adofs)
+                    @inbounds for (j, y) in enumerate(bdofs)
+                        nodes_sol.Ktan_mat[x, y] = Kab[i, j]
+                        nodes_sol.Ktan_mat[y, x] = Kba[i, j]
+                    end
+
+                end
+            end 
+
+        end     
+
+    end
+    
+end
+
+# Covert cylindrical coordinates into carthesian 
+function dirichlet_to_carthesian!(nodes_sol, nodes)
+    
+    @inbounds for n in nodes
+        
+        Ra = n.R_global_to_local
+        RaT = Ra'
+        
+        nodes_sol.ΔD[n.idof_disp] = RaT*nodes_sol.ΔD[n.idof_disp]
+        nodes_sol.D[n.idof_disp] = RaT*nodes_sol.D[n.idof_disp]
+        
+    end
+    
+end
 
 #------------------------------------------------
 # FUNCTIONS USED IN THE CORRECTOR AND PREDICTOR
 #------------------------------------------------
-
-
 
 # At the end of the corrector, updates the Configuration local vectors with the NodalSolution global vectors computed during the current iteration
 function update_local_corrector!(nodes, nodes_sol, Δt, β, γ)
@@ -154,13 +212,16 @@ function update_local_predictor!(nodes, nodes_sol, Δt, β, γ)
 end 
 
 
-
-
 # Compute residual and increment vector residual in the corrector loop
-function compute_norms_corrector(k, nodes_sol, verbose = false)
+function compute_norms_corrector(k, nodes_sol, matrices, solⁿ⁺¹, verbose = false)
     
     res_norm = norm(nodes_sol.r_free)
     ΔD_norm = norm(nodes_sol.ΔD_free)
+    f_norm = norm(solⁿ⁺¹.fᵉˣᵗ .+ solⁿ⁺¹.Tᶜ .+ matrices.Tᶜᵒⁿ .-matrices.Tdamp)
+
+    if f_norm > 1e-1
+        res_norm = res_norm/f_norm
+    end
 
     if verbose
         k == 1 && @printf "%4s\t%8s\t%8s\n" "iter" "‖res‖" "‖ΔD‖"

@@ -254,9 +254,9 @@ function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇�
     # Superscript ³ means matrix or vector associated to u₂
     # Superscript ⁴ means matrix or vector associated to Θ₂
 
-    init, gausspoints, beamproperties, contactparams, sdf = constants
-    X₁, X₂, l₀, Rₑ⁰ = init
-    nG, ωG, zG = gausspoints
+    init, gausspoints_info, beamproperties, contactparams, sdf, Δt, gausspoints = constants
+    iB, X₁, X₂, l₀, Rₑ⁰ = init
+    nG, ωG, zG = gausspoints_info
     @unpack K̄ⁱⁿᵗ, Jᵨ, Aᵨ, damping = beamproperties
     
     contactsearch = !(isnothing(sdf) || isnothing(contactparams))
@@ -761,8 +761,6 @@ function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇�
             Cᵏ⁴² += Cᵏ⁴²G
             Cᵏ⁴⁴ += Cᵏ⁴⁴G
             
-
-
             # kinetic energy
             Īᵨᵍ = Rₑ*Īᵨ*Rₑ'
             kinetic_energy += ωᴳ/2 * (Aᵨ*u̇₀'*u̇₀ + ẇ₀'*Īᵨᵍ*ẇ₀)
@@ -770,6 +768,7 @@ function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇�
             if contactsearch
 
                 xᴳ = N₁*x₁ + N₂*x₂ + Rₑ*uᵗ
+                gausspoints.pos[(iB-1)*3 + iG] = xᴳ
 
                 ḡₙ = sdf.r/4
             
@@ -777,11 +776,11 @@ function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇�
 
                     gₙ, ∂gₙ∂x, ∂²gₙ∂x² = contact_gap(xᴳ, sdf)
 
-                    @unpack kₙ, ηₙ, μ, εᵗ = contactparams
+                    @unpack kₙ, ηₙ, μ, εᵗ, kₜ, ηₜ, u̇ₛ = contactparams
+                    μstick = 1E2
 
                     pₙ, p′ₙ, Πₑ = regularize_gₙ(gₙ, ḡₙ)
                     ηₙ, η′ₙ = smoothstep(ηₙ, gₙ, ḡₙ)
-
 
                     u̇ₙ_mag = dot(u̇₀, ∂gₙ∂x)
                     u̇ₙ = u̇ₙ_mag*∂gₙ∂x
@@ -791,12 +790,50 @@ function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇�
                     contact_energy += ωᴳ*kₙ*Πₑ
                     
                     𝓯ⁿ = kₙ * pₙ * ∂gₙ∂x - ηₙ * u̇ₙ
+
+                    δₜ =  gausspoints.δₜ[(iB-1)*3 + iG]
+                    δₜ = δₜ + Δt*norm(u̇ₜ)
+
                     μʳᵉᵍ = μ/sqrt(u̇ₜ²+εᵗ)
-                    𝓯ᵗ = - kₙ * pₙ * μʳᵉᵍ * u̇ₜ
+                    
+                    if  norm(u̇ₜ) <= u̇ₛ
+                        # if  gausspoints.status[(iB-1)*3 + iG] == 1
+                        #     δₜ = μʳᵉᵍ*pₙ/kₜ - ηₜ/kₜ*sqrt(u̇ₜ²+εᵗ)
+                        # end 
+                        gausspoints.status[(iB-1)*3 + iG] = 2
+                        # break
+                    elseif norm(u̇ₜ) > u̇ₛ
+                        gausspoints.status[(iB-1)*3 + iG] = 1
+                        # break
+                    end
+                    # elseif gausspoints.status[(iB-1)*3 + iG] == 1 && norm(u̇ₜ) <= u̇ₛ
 
+                    #     gausspoints.status[(iB-1)*3 + iG] = 2
+                    #     # δₜ = μʳᵉᵍ*pₙ/kₜ - ηₜ/kₜ*sqrt(u̇ₜ²+εᵗ)
+                    #     break
+                        
+                    # elseif gausspoints.status[(iB-1)*3 + iG] == 2
+                        
+                    #     𝓯ᵗ = - kₜ * δₜ * u̇ₜ/sqrt(u̇ₜ²+εᵗ) - ηₜ*u̇ₜ
 
+                    #     if norm(𝓯ᵗ) > μstick*pₙ && norm(u̇ₜ) > u̇ₛ
+                    #         gausspoints.status[(iB-1)*3 + iG] = 1
+                    #     end 
+                    #     break
+
+                    # end
+                    gausspoints.δₜ[(iB-1)*3 + iG] =  δₜ
+
+                    𝓯ᵗ = zeros(Vec3)
+                    if gausspoints.status[(iB-1)*3 + iG] == 1
+                        𝓯ᵗ = - kₙ * pₙ * μʳᵉᵍ * u̇ₜ   
+                    elseif gausspoints.status[(iB-1)*3 + iG] == 2
+                        𝓯ᵗ = - kₜ * δₜ * u̇ₜ/sqrt(u̇ₜ²+εᵗ) - ηₜ*u̇ₜ
+                    end
+
+              
                     𝓯ᶜ = 𝓯ⁿ + 𝓯ᵗ
-        
+
                     𝓕ᶜ = Rₑ' * 𝓯ᶜ
 
                     RₑH₁¹Rₑᵀ = Rₑ * H₁¹ * Rₑ'
@@ -959,8 +996,6 @@ function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇�
                     ∂u̇ₜ∂ḋ⁴ = ∂u̇₀∂ḋ⁴ - ∂u̇ₙ∂ḋ⁴
 
 
-
-
                     aux = kₙ*p′ₙ*nn + kₙ*pₙ*∂²gₙ∂x² - η′ₙ*u̇ₙ*∂gₙ∂x'
                     Kᶠⁿ¹ = aux * RₑH₁¹Rₑᵀ - ηₙ*∂u̇ₙ∂d¹
                     Kᶠⁿ² = aux * RₑH₁²Rₑᵀ - ηₙ*∂u̇ₙ∂d²
@@ -973,27 +1008,51 @@ function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇�
                     Cᶠⁿ⁴ = - ηₙ * nn * ∂u̇₀∂ḋ⁴
 
 
-                    aux1 = - μʳᵉᵍ * kₙ * p′ₙ * u̇ₜ * ∂gₙ∂x'
-                    aux2 = - μʳᵉᵍ * kₙ * pₙ*(ID3 - 1/(u̇ₜ²+εᵗ)*u̇ₜ*u̇ₜ')
-                    Kᶠᵗ¹ = aux1 * RₑH₁¹Rₑᵀ + aux2 * ∂u̇ₜ∂d¹
-                    Kᶠᵗ² = aux1 * RₑH₁²Rₑᵀ + aux2 * ∂u̇ₜ∂d²
-                    Kᶠᵗ³ = aux1 * RₑH₁³Rₑᵀ + aux2 * ∂u̇ₜ∂d³
-                    Kᶠᵗ⁴ = aux1 * RₑH₁⁴Rₑᵀ + aux2 * ∂u̇ₜ∂d⁴
+                    Kᶠᵗ¹ = zeros(Mat33)
+                    Kᶠᵗ² = zeros(Mat33)
+                    Kᶠᵗ³ = zeros(Mat33)
+                    Kᶠᵗ⁴ = zeros(Mat33)
 
-                    Cᶠᵗ¹ = aux2 * ∂u̇ₜ∂ḋ¹
-                    Cᶠᵗ² = aux2 * ∂u̇ₜ∂ḋ²
-                    Cᶠᵗ³ = aux2 * ∂u̇ₜ∂ḋ³
-                    Cᶠᵗ⁴ = aux2 * ∂u̇ₜ∂ḋ⁴
+                    Cᶠᵗ¹ = zeros(Mat33)
+                    Cᶠᵗ² = zeros(Mat33)
+                    Cᶠᵗ³ = zeros(Mat33)
+                    Cᶠᵗ⁴ = zeros(Mat33)
+
+                    if gausspoints.status[(iB-1)*3 + iG] == 1
 
 
+                        aux1 = - μʳᵉᵍ * kₙ * p′ₙ * u̇ₜ * ∂gₙ∂x'
+                        aux2 = - μʳᵉᵍ * kₙ * pₙ*(ID3 - 1/(u̇ₜ²+εᵗ)*u̇ₜ*u̇ₜ')
+                        Kᶠᵗ¹ = aux1 * RₑH₁¹Rₑᵀ + aux2 * ∂u̇ₜ∂d¹
+                        Kᶠᵗ² = aux1 * RₑH₁²Rₑᵀ + aux2 * ∂u̇ₜ∂d²
+                        Kᶠᵗ³ = aux1 * RₑH₁³Rₑᵀ + aux2 * ∂u̇ₜ∂d³
+                        Kᶠᵗ⁴ = aux1 * RₑH₁⁴Rₑᵀ + aux2 * ∂u̇ₜ∂d⁴
+
+                        Cᶠᵗ¹ = aux2 * ∂u̇ₜ∂ḋ¹
+                        Cᶠᵗ² = aux2 * ∂u̇ₜ∂ḋ²
+                        Cᶠᵗ³ = aux2 * ∂u̇ₜ∂ḋ³
+                        Cᶠᵗ⁴ = aux2 * ∂u̇ₜ∂ḋ⁴
+
+                    elseif gausspoints.status[(iB-1)*3 + iG] == 2
+
+                        aux = - kₜ * δₜ/sqrt(u̇ₜ²+εᵗ) * (ID3 - 1/(u̇ₜ²+εᵗ)*u̇ₜ*u̇ₜ' + ηₜ*ID3)
+                        Kᶠᵗ¹ = aux * ∂u̇ₜ∂d¹
+                        Kᶠᵗ² = aux * ∂u̇ₜ∂d²
+                        Kᶠᵗ³ = aux * ∂u̇ₜ∂d³
+                        Kᶠᵗ⁴ = aux * ∂u̇ₜ∂d⁴
+    
+                        Cᶠᵗ¹ = aux * ∂u̇ₜ∂ḋ¹
+                        Cᶠᵗ² = aux * ∂u̇ₜ∂ḋ²
+                        Cᶠᵗ³ = aux * ∂u̇ₜ∂ḋ³
+                        Cᶠᵗ⁴ = aux * ∂u̇ₜ∂ḋ⁴
+
+                    end 
 
                     Kᶠᶜ¹ = Kᶠⁿ¹ + Kᶠᵗ¹
                     Kᶠᶜ² = Kᶠⁿ² + Kᶠᵗ²
                     Kᶠᶜ³ = Kᶠⁿ³ + Kᶠᵗ³
                     Kᶠᶜ⁴ = Kᶠⁿ⁴ + Kᶠᵗ⁴
 
-
-        
 
                     t₄¹¹ = RₑH₁¹Rₑᵀ' * Kᶠᶜ¹
                     t₄¹² = RₑH₁¹Rₑᵀ' * Kᶠᶜ²
@@ -1064,6 +1123,9 @@ function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇�
                     Cᶜ⁴⁴ +=  ωᴳ * RₑH₁⁴Rₑᵀ' * Cᶠᶜ⁴
                 
                 
+                else
+                    gausspoints.δₜ[(iB-1)*3 + iG] = 0 
+                    gausspoints.status[(iB-1)*3 + iG] = 0 
                 end
 
 
@@ -1271,9 +1333,9 @@ end
 
 
 
-function assemble!(conf, matrices, energy, params) 
+function assemble!(conf, matrices, energy, params, Δt) 
 
-    @unpack nodes, beams, colors, contact, sdf = conf
+    @unpack nodes, beams, colors, contact, sdf, gausspoints = conf
     
         
     # initialise the matrices associate to the whole structure
@@ -1290,11 +1352,12 @@ function assemble!(conf, matrices, energy, params)
     energy.contact_energy = 0
 
     #Preparing constants
-    gausspoints = (params.nᴳ, params.ωᴳ, params.zᴳ)
+    gausspoints_info = (params.nᴳ, params.ωᴳ, params.zᴳ)
 
     for cidxs in colors
 
-        @batch for idx in cidxs
+        # @batch for idx in cidxs
+        Threads.@threads for idx in cidxs
 
             b = LazyRow(beams, idx)
             
@@ -1311,8 +1374,8 @@ function assemble!(conf, matrices, energy, params)
             ΔR₁, ΔR₂ = nodes.ΔR[n1], nodes.ΔR[n2]
 
             # Packing
-            init = (X₁, X₂, b.l₀, b.Rₑ⁰)      
-            constants = (init, gausspoints, b.properties, contact, sdf)
+            init = (b.ind, X₁, X₂, b.l₀, b.Rₑ⁰)      
+            constants = (init, gausspoints_info, b.properties, contact, sdf, Δt, gausspoints)
 
             strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ, Kⁱⁿᵗ, Kᶜ, M, Cᵏ, Cᶜ = compute(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, constants)
         
@@ -1344,7 +1407,4 @@ function assemble!(conf, matrices, energy, params)
 
     end
 
-
-
-    
 end 

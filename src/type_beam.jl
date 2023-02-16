@@ -61,8 +61,6 @@ function build_beams(nodes, connectivity::AbstractVector, E, ν, ρ, radius, dam
     return beams
     
 end 
-
-
     
 # Constructor of the one beam (Beam) given initial rotation
 function Beam(ind, node1::Node, node2::Node, E, ν, ρ, radius, damping, Rₑ⁰)
@@ -76,5 +74,25 @@ function Beam(ind, node1::Node, node2::Node, E, ν, ρ, radius, damping, Rₑ⁰
     
 end 
 
-Beam(ind, node1::Node, node2::Node, E, ν, ρ, radius, damping, Rₑ⁰::Nothing) = Beam(ind, node1, node2, E, ν, ρ, radius, damping, local_R⁰(node1.X₀, node2.X₀))
+Beam(ind, node1::Node, node2::Node, E, ν, ρ, radius, damping, Rₑ⁰::Nothing) = Beam(ind, node1, node2, E, ν, ρ, radius, damping, get_Rₑ⁰(node1.X₀, node2.X₀))
 
+function get_Rₑ⁰(X1, X2, T=Float64) 
+    
+    l0 = norm(X2-X1)
+    E1 = Vec3(1, 0, 0)
+    E1_0 = (X2-X1)/l0
+    v = cross(E1, E1_0)
+    
+    s = norm(v)
+    c = dot(E1, E1_0)
+    
+    if (c<-(1- 2*eps(T)))
+        return Mat33{T}(-1, 0, 0, 0, 1, 0, 0, 0, -1)
+    elseif (c > (1- 2*eps(T)))
+       return  ID3
+    else 
+        Sv = skew(v)
+        return ID3 + Sv + ((1-c)/s^2)*Sv*Sv
+    end 
+        
+end 

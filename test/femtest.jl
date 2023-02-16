@@ -6,12 +6,6 @@ using Test
 using EndoBeams
 using EndoBeams: Sphere_SDF, Plane_z_SDF, contact_gap, local_R⁰, rotation_matrix, compute, ID3, Tₛ⁻¹
 
-
-
-
-
-
-
 # # information from node 1 and 2
 const X₁ = @SVector [0.91, 0.58, 0.68]
 const X₂ = @SVector [0.97, 0.04, 0.41]

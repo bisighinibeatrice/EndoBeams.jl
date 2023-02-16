@@ -14,6 +14,8 @@
     accelerate_after_success_it::Int = 4
     stop_on_energy_threshold::Bool = false 
     energy_threshold::Float64 = 0.
+    tcompt_max::Float64 = 1800
+    stop_long_simulation::Bool = true 
 
     # HHT time stepping parameters
     α::Float64 = -0.05

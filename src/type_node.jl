@@ -31,6 +31,8 @@ struct Node
     Rⁿ::Mat33{Float64}
     ΔRⁿ::Mat33{Float64}
 
+    R_global_to_local::Mat33{Float64}
+
 end
 
 #----------------------------------
@@ -38,7 +40,7 @@ end
 #----------------------------------
 
 """
-nodes = nodes(X, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, Rₑ⁰=nothing) 
+nodes = nodes(X, u⁰, u̇⁰, ü⁰, w⁰, ẇ⁰, ẅ⁰, R=nothing) 
 
 Constructor of the nodes StructArray:
 - `X`: nodes StructArray (created with nodes);
@@ -48,11 +50,11 @@ Constructor of the nodes StructArray:
 - `w⁰`: initial rotations;
 - `ẇ⁰`: initial rotation velocities;
 - `ẅ⁰`: initial rotation acceleration;
-- `Rₑ⁰`: (not mandatory) initial rotation of the nodes.
+- `R`: (not mandatory) initial rotation of the nodes.
 
 Returns a StructArray{Node}, structure containing the information of the nodes. 
 """
-function build_nodes(X::AbstractMatrix, u⁰::AbstractMatrix, u̇⁰::AbstractMatrix, ü⁰::AbstractMatrix, w⁰::AbstractMatrix, ẇ⁰::AbstractMatrix, ẅ⁰::AbstractMatrix, Rₑ⁰=nothing) 
+function build_nodes(X::AbstractMatrix, u⁰::AbstractMatrix, u̇⁰::AbstractMatrix, ü⁰::AbstractMatrix, w⁰::AbstractMatrix, ẇ⁰::AbstractMatrix, ẅ⁰::AbstractMatrix, plane=nothing, R=nothing) 
 
     nodes = StructArray(Node(
             i, 
@@ -66,7 +68,7 @@ function build_nodes(X::AbstractMatrix, u⁰::AbstractMatrix, u̇⁰::AbstractMa
             Vec3(w⁰[i,:]), 
             Vec3(ẇ⁰[i,:]), 
             Vec3(ẅ⁰[i,:]), 
-            Rₑ⁰ isa AbstractMatrix ? Rₑ⁰[i,:] : ID3, 
+            R isa AbstractMatrix ? R[i,:] : ID3, 
             ID3,
             Vec3(u⁰[i,:]), 
             Vec3(u̇⁰[i,:]), 
@@ -74,15 +76,15 @@ function build_nodes(X::AbstractMatrix, u⁰::AbstractMatrix, u̇⁰::AbstractMa
             Vec3(w⁰[i,:]), 
             Vec3(ẇ⁰[i,:]), 
             Vec3(ẅ⁰[i,:]), 
-            Rₑ⁰ isa AbstractMatrix ? Rₑ⁰[i,:] : ID3,
-            ID3) for i in 1:size(X, 1))
-
+            R isa AbstractMatrix ? R[i,:] : ID3,
+            ID3,
+            plane isa String ? compute_local_to_global_matrix(X[i, :], plane) : ID3) for i in 1:size(X, 1))
     return nodes
 
 end
 
 
-function build_nodes(X::AbstractVector, u⁰::AbstractVector, u̇⁰::AbstractVector, ü⁰::AbstractVector, w⁰::AbstractVector, ẇ⁰::AbstractVector, ẅ⁰::AbstractVector, Rₑ⁰=nothing) 
+function build_nodes(X::AbstractVector, u⁰::AbstractVector, u̇⁰::AbstractVector, ü⁰::AbstractVector, w⁰::AbstractVector, ẇ⁰::AbstractVector, ẅ⁰::AbstractVector, plane=nothing, R=nothing) 
 
     nnodes = length(X)
     nodes = StructArray{Node}((
@@ -97,7 +99,7 @@ function build_nodes(X::AbstractVector, u⁰::AbstractVector, u̇⁰::AbstractVe
             convert(Vector{Vec3{Float64}}, w⁰),  
             convert(Vector{Vec3{Float64}}, ẇ⁰),  
             convert(Vector{Vec3{Float64}}, ẅ⁰),  
-            Rₑ⁰ isa AbstractVector ? convert(Vector{Mat33{Float64}}, Rₑ⁰) : [Mat33{Float64}(ID3) for i in 1:nnodes], 
+            R isa AbstractVector ? convert(Vector{Mat33{Float64}}, R) : [Mat33{Float64}(ID3) for i in 1:nnodes], 
             [Mat33{Float64}(ID3) for i in 1:nnodes],
             convert(Vector{Vec3{Float64}}, u⁰), 
             convert(Vector{Vec3{Float64}}, u̇⁰), 
@@ -105,11 +107,26 @@ function build_nodes(X::AbstractVector, u⁰::AbstractVector, u̇⁰::AbstractVe
             convert(Vector{Vec3{Float64}}, w⁰), 
             convert(Vector{Vec3{Float64}}, ẇ⁰), 
             convert(Vector{Vec3{Float64}}, ẅ⁰), 
-            Rₑ⁰ isa AbstractVector ? convert(Vector{Mat33{Float64}}, Rₑ⁰) : [Mat33{Float64}(ID3) for i in 1:nnodes],
-            [Mat33{Float64}(ID3) for i in 1:nnodes]))
+            R isa AbstractVector ? convert(Vector{Mat33{Float64}}, R) : [Mat33{Float64}(ID3) for i in 1:nnodes],
+            [Mat33{Float64}(ID3) for i in 1:nnodes],
+            plane isa String ? [Mat33(compute_local_to_global_matrix(X[i][:], plane)) for i in 1:nnodes] : [Mat33{Float64}(ID3) for i in 1:nnodes]))
 
     return nodes
 
 end
 
 
+function compute_local_to_global_matrix(Xi, plane)
+
+    if plane == "xy"
+        thetai = atan(Xi[2], Xi[1])
+        return Mat33(cos(thetai), -sin(thetai), 0, sin(thetai), cos(thetai), 0, 0, 0, 1)
+    elseif plane == "yz"
+        thetai = atan(Xi[3], Xi[2])
+        return Mat33(1, 0, 0, 0, cos(thetai), -sin(thetai), 0, sin(thetai), cos(thetai))
+    elseif plane == "xz"
+        thetai = atan(Xi[3], Xi[1])
+        return Mat33(cos(thetai), 0, -sin(thetai), 0, 1, 0, sin(thetai), 0, cos(thetai))
+    end 
+    
+end

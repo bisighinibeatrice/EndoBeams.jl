@@ -211,5 +211,68 @@ function read_VTK_sdf(filename)
     return nnodex, nnodey, nnodez, dx, dy, dz, dom, sdf
     
 end 
+function get_connectivity_centerline(gausspoints)
+    
+    conn = Vector{Vec2{Int}}()
+    aux1 = 1:size(gausspoints,1)-1
+    aux2 = 2:size(gausspoints,1)
+    for i in 1:size(gausspoints,1)-1
+        push!(conn, (aux1[i], aux2[i])) 
+    end
+    
+    return conn
+    
+end 
 
+function write_VTK_GP(write_counter, gausspoints, dirOutput) 
+    
+    filename = string(dirOutput * "/GP$write_counter.vtk");
+    fid = open(filename, "a")
+    
+    write(fid,"# vtk DataFile Version 3.0")
+    write(fid,"\nvtk output")
+    write(fid,"\nASCII")
+    write(fid,"\nDATASET POLYDATA")
+    
+    numberPoints = length(gausspoints)
+    write(fid,"\nPOINTS $numberPoints float")  
+    for i in 1: numberPoints
+        write(fid,"\n")
+        write(fid, string.(gausspoints.pos[i][1])) 
+        write(fid," ")
+        write(fid, string.(gausspoints.pos[i][2])) 
+        write(fid," ")
+        write(fid, string.(gausspoints.pos[i][3])) 
+    end 
+
+    conn = get_connectivity_centerline(gausspoints.pos)
+    
+    numberLines = size(conn, 1)
+    numberElementsPerLine = 2
+    numberElements= numberLines*(numberElementsPerLine+1)
+    write(fid,"\nLINES $numberLines $numberElements\n")
+    
+    for i in 1:numberLines
+        
+        write(fid, string.(numberElementsPerLine))
+        write(fid,"\n")
+        node1::Int64 = conn[i][1] - 1
+        write(fid, string.(node1)) 
+        write(fid,"\n")
+        node2::Int64 = conn[i][2] - 1
+        write(fid, string.(node2)) 
+        write(fid,"\n")
+    end
+    
+    write(fid,"\nPOINT_DATA $numberPoints")
+    write(fid,"\nSCALARS status float 1")
+    write(fid,"\nLOOKUP_TABLE default")
+    for i in 1: numberPoints
+        write(fid,"\n")
+        write(fid, string.(gausspoints.status[i])) 
+    end 
+
+    close(fid)
+    
+end 
 

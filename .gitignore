@@ -3,6 +3,9 @@
 *.jl.mem
 
 /examples/output3D/
+/stent/output3D/
+/stent/output3D/
+/test/stent/output3D/
 
 docs/build/
 Manifest.toml
