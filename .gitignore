@@ -1,12 +1,11 @@
 *.jl.*.cov
 *.jl.cov
 *.jl.mem
-*.vtk
-*.vtp
+# *.vtk
 *.vtp
 *.txt
 
-/examples/output3D/
+stent/output3D/
 
 docs/build/
 Manifest.toml

@@ -81,7 +81,7 @@ dynamics = false
 
 # time step and total time
 dt = 1
-dt_plot = 1
+dt_plot = 10
 tend = 100
 
 # tolerance and maximum number of iterations
