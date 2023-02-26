@@ -13,6 +13,8 @@ struct SimulationParameters{T}
     # numerical damping
     damping::T
     
+    dynamics::Bool
+
     # time step and total time
     dt::T
     dt_plot::T
@@ -285,9 +287,9 @@ Constructor of the structure containing the simulation parameters:
 
 Returns a SimulationParameters structure.
 """
-function constructor_simulation_parameters(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T=Float64)
+function constructor_simulation_parameters(alpha, beta, gamma, damping, dynamics, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T=Float64)
     
-    return SimulationParameters{T}(alpha, beta, gamma, damping, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric)
+    return SimulationParameters{T}(alpha, beta, gamma, damping, dynamics, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric)
     
 end 
 

@@ -7,26 +7,25 @@ const T = Float64
 # -------------------------------------------------------------------------------------------
 
 # positions
-dx = 2.5; L = 10
+L = 10
+nelem = 16
 
-pos =  Vec3{T}[]
-for x in 0:dx:L
-    push!(pos, Vec3(0, x, 0))
+pos = Vec3{T}[]
+for x in range(0.0, L, length=nelem + 1)
+    push!(pos, Vec3(x, 0, 0))
 end
-for x in dx:dx:L
-    push!(pos, Vec3(-x,  L, 0))
-end
+pos[9] = Vec3(range(0.0, L, length=nelem + 1)[9], 0, 0.01)
 
 # total number of nodes
-nnodes = size(pos,1)
+nnodes = size(pos, 1)
 
 # initial conditions
-u_0 = zeros(nnodes*3)
-udt_0 = zeros(nnodes*3)
-udtdt_0 = zeros(nnodes*3)
-w_0 = zeros(nnodes*3)
-wdt_0 = zeros(nnodes*3)
-wdtdt_0 = zeros(nnodes*3)
+u_0 = zeros(nnodes * 3)
+udt_0 = zeros(nnodes * 3)
+udtdt_0 = zeros(nnodes * 3)
+w_0 = zeros(nnodes * 3)
+wdt_0 = zeros(nnodes * 3)
+wdtdt_0 = zeros(nnodes * 3)
 
 # plane for cylindrical coordinates
 plane = fill("xy", length(pos))
@@ -39,33 +38,35 @@ allnodes = constructor_nodes(pos, u_0, udt_0, udtdt_0, w_0, wdt_0, wdtdt_0, plan
 # -------------------------------------------------------------------------------------------
 
 # total number of beams
-nbeams = nnodes-1
+nbeams = nnodes - 1
 
 # conn
 conn = Vec2{Int}[]
-aux1 =  1:nnodes-1
-aux2 =  2:nnodes
+aux1 = 1:nnodes-1
+aux2 = 2:nnodes
 
 for i in 1:nbeams
-    push!(conn, (aux1[i], aux2[i])) 
+    push!(conn, (aux1[i], aux2[i]))
 end
 
 # interpolation points per beam
 nbInterpolationPoints = 30
 
-# geometric and material properties
-E = 1e6
-G = 1e6
-Jrho = Mat33(20, 0, 0, 0, 10, 0, 0, 0, 10)
-Arho = 1
-A = 1
-I22 = 1e-3
-I33 = 1e-3
-Io = 0
-Irr = 0
-J = 1e-3
 
-geom = Geometry{T}(A, I22, I33, Io, Irr, J)
+E = 210 * 1e9               # [Pa]
+Iy = Iz = 4.7619 * 1e-7     # [m^4]
+A = 4.7619 * 1e-4           # [m^2]
+G = 78 * 1e9                # [Pa]
+It = 2 * Iy                 # [m^4]
+rho = 7750
+Io = It
+Irr = It
+J = It
+
+Jrho = Mat33(rho * J, 0, 0, 0, rho * Iz, 0, 0, 0, rho * Iy)
+Arho = rho * A
+
+geom = Geometry{T}(A, Iz, Iy, Io, Irr, J)
 mat = Material{T}(E, G, Arho, Jrho)
 
 # beams vector
@@ -77,15 +78,15 @@ allbeams = constructor_beams(allnodes, conn, mat, geom, nbInterpolationPoints, n
 
 # integration parameters
 alpha = -0.05
-beta = 0.25*(1-alpha)^2
-gamma = 0.5*(1-2*alpha)
+beta = 0.25 * (1 - alpha)^2
+gamma = 0.5 * (1 - 2 * alpha)
 damping = 0
-dynamics = true 
+dynamics = true
 
 # time step and total time
-dt = 0.001
-dt_plot = 0.001
-tend = 1
+dt = 0.25
+dt_plot = 0.25
+tend = 30
 
 # tolerance and maximum number of iterations
 tol_res = 1e-5
@@ -94,8 +95,8 @@ max_it = 10
 
 # Gauss points
 nG = 3
-wG = Vec3(5/9, 8/9, 5/9)
-zG = Vec3(-sqrt(3/5), 0, sqrt(3/5)) 
+wG = Vec3(5 / 9, 8 / 9, 5 / 9)
+zG = Vec3(-sqrt(3 / 5), 0, sqrt(3 / 5))
 
 # penalty parameters
 eps_C = 5000
@@ -110,9 +111,9 @@ comp = constructor_simulation_parameters(alpha, beta, gamma, damping, dynamics, 
 
 # external force and applied dof
 flag_crimping = false
-Fext(t) = 1*(t.<=1).*(50*t) .+1*((t.>1) .& (t.<=2)).*(-50*t.+100).+(t.>2).*0
+Fext(t) = - 20000 * t/tend
 dofs_load = Int[]
-push!(dofs_load, 6*size((0:dx:L),1)-3)
+push!(dofs_load, 6 * (nelem+ 1) - 5)
 
 ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load, T)
 
@@ -124,8 +125,8 @@ ext_forces = constructor_ext_force(flag_crimping, Fext, dofs_load, T)
 cons = T[]
 
 # Dirichlet boundary conditions: fixed positions
-ndofs = nnodes*6
-fixed_dofs = 1:6
+ndofs = nnodes * 6
+fixed_dofs = vcat(1:3, (ndofs-4):(ndofs-3))
 free_dofs = setdiff(1:ndofs, fixed_dofs)
 
 # Dirichlet boundary conditions: moving positions
@@ -156,5 +157,5 @@ conf = constructor_configuration(mat, geom, nnodes, ndofs, ext_forces, bcs, T)
 # Solve
 # -------------------------------------------------------------------------------------------
 
-params = Params(thisDirOutputPath = "examples/output3D")
-solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)       
+params = Params(thisDirOutputPath="examples/outputElastica")
+solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)

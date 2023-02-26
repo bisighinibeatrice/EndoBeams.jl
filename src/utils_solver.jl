@@ -9,6 +9,8 @@ function clean_folders(thisDirOutputPath)
         dir = pwd()
         cd(thisDirOutputPath)
         foreach(rm, filter(endswith(".vtk"), readdir()))
+        foreach(rm, filter(endswith(".vtp"), readdir()))
+        foreach(rm, filter(endswith(".pvd"), readdir()))
         cd(dir)
     end 
     
@@ -337,6 +339,18 @@ function update_local_corrector!(allnodes, ΔD_k, dt, nodes_sol, comp)
     
 end 
 
+function update_local_corrector_statics!(allnodes, ΔD_k, dt, nodes_sol, comp)
+    
+    @inbounds for i in 1:length(allnodes)
+
+        allnodes.u[i] = nodes_sol.D[allnodes.idof_disp[i]]
+        allnodes.Delt[i] = rotate_rod(allnodes.Delt[i], ΔD_k[allnodes.idof_ang[i]])
+        allnodes.R[i] = allnodes.Delt[i]*allnodes.R_n[i] 
+
+    end
+    
+end 
+
 # At the end of the predictor, updates the Configuration local vectors with the NodalSolution global vectors predicted for the current time step
 function update_local_predictor!(allnodes, nodes_sol)
     
@@ -365,6 +379,14 @@ function update_nodal_solutions_corrector!(nodes_sol, disp_dof, gamma, beta, dt)
         nodes_sol.D[i]  =  nodes_sol.D[i]  + nodes_sol.ΔD[i]
         nodes_sol.Ddt[i] =  nodes_sol.Ddt[i] + (gamma/(beta*dt))*nodes_sol.ΔD[i]
         nodes_sol.Ddtdt[i] = nodes_sol.Ddtdt[i] + (1/(beta*dt^2))*nodes_sol.ΔD[i]
+    end 
+    
+end 
+
+function update_nodal_solutions_corrector_statics!(nodes_sol, disp_dof)
+    
+    @inbounds for i in disp_dof
+        nodes_sol.D[i]  =  nodes_sol.D[i]  + nodes_sol.ΔD[i]
     end 
     
 end 
@@ -441,6 +463,14 @@ function compute_Ktan_sparse!(nodes_sol, matrices, alpha, beta, gamma, dt)
 
 end 
 
+function compute_Ktan_sparse_statics!(nodes_sol, matrices)
+    
+    @inbounds for i in 1:length(nodes_sol.Ktan.nzval)
+        nodes_sol.Ktan.nzval[i] = matrices.Kint.nzval[i] 
+    end 
+
+end 
+
 # Update residual in the corrector loop
 function compute_res_corrector!(nodes_sol, matrices, sol_n1, sol_n, alpha)
     
@@ -448,7 +478,16 @@ function compute_res_corrector!(nodes_sol, matrices, sol_n1, sol_n, alpha)
         nodes_sol.r[i] = (1+alpha) * (sol_n1.fext[i] + matrices.Tconstr[i] + matrices.Tct[i] - matrices.Tint[i]) - alpha * (sol_n.fext[i]  + sol_n.Tconstr[i]  + sol_n.Tct[i] - sol_n.Tint[i]) - matrices.Tk[i]
     end 
     
+end
+
+function compute_res_corrector_statics!(nodes_sol, matrices, sol_n1)
+    
+    @inbounds for i in 1:length(nodes_sol.r)
+        nodes_sol.r[i] = sol_n1.fext[i] - matrices.Tint[i]
+    end 
+    
 end 
+
 
 # Update nodal solutions in the corrector loop
 function update_nodal_solution_corrector_loop!(nodes_sol, disp_dof)
