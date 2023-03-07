@@ -41,6 +41,19 @@
 
 end
 
+@with_kw struct BraidedStentB2B
+
+    nbWires::Int = 20
+    rStent::Float64 = 2
+    rCrimpedStent::Float64 = 1
+    rWireSection::Float64 = 0.014
+    wireGap::Float64 = 0.01
+    lengthStent::Float64 = 5
+    nbTotalCells::Float64 = 10
+    braidingPattern::Int = 2
+
+end
+
 function helix!(positions, connectivity, nodeID, length, diameter, nbTotalCells, nbWires, rWireSection, braidingPattern, wireGap, wireID, clockwise)
     
     pitch = length / nbTotalCells
