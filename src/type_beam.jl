@@ -10,7 +10,6 @@ struct Beam{Tp}
     l₀::Float64 # initial beam length
     Rₑ⁰::Mat33{Float64} # initial beam rotation matrix
     properties::Tp # beam internal matrix
-    sparsity_map::SVector{144, Int} # sparsity map from local indices (beam matrix) to global indices (gloabl sparse matrix) -> computed in the constructor of the sparse matrices
 
 end
 
@@ -70,7 +69,7 @@ function Beam(ind, node1::Node, node2::Node, E, ν, ρ, radius, damping, Rₑ⁰
     l₀ = norm(node1.X₀ - node2.X₀)   
     beamprops = BeamProperties(l₀, E, ν, ρ, radius, damping)
     
-    return Beam{typeof(beamprops)}(ind, i1, i2, l₀, Rₑ⁰, beamprops, zeros(Int, 144))
+    return Beam{typeof(beamprops)}(ind, i1, i2, l₀, Rₑ⁰, beamprops)
     
 end 
 

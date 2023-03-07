@@ -55,15 +55,16 @@ Re₀ = readdlm("examples/input_large_stent/R0.txt")
 # beams vector
 beams = build_beams(nodes, connectivity, E, ν, ρ, radius, damping, Re₀)
 
-
-
 # contact parameters
 kₙ = 4/3 * 5/(1-0.5^2)*sqrt(radius) # Approximate Hertz contact with 5 MPa wall stiffness
 μ = 0.1
 εᵗ = 0.1 #regularized parameter for friction contact
 ηₙ = 0.01
+kₜ = kₙ
+ηₜ = ηₙ
+u̇ₛ = 0.005
 
-contact = ContactParameters(kₙ, μ, εᵗ, ηₙ)
+contact = ContactParameters(kₙ, μ, εᵗ, ηₙ, kₜ, ηₜ, u̇ₛ)
 
 # -------------------------------------------------------------------------------------------
 # External forces

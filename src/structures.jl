@@ -10,10 +10,15 @@ struct ContactParameters
     kₜ::Float64
     ηₜ::Float64
     u̇ₛ::Float64
+    beam2beam::Bool
 end
 
 
+function ContactParameters(kₙ, μ, εᵗ, ηₙ, kₜ, ηₜ, u̇ₛ, beam2beam=false)
 
+    return ContactParameters(kₙ, μ, εᵗ, ηₙ, kₜ, ηₜ, u̇ₛ, beam2beam)
+
+end
 
 # Dirichlet boundary conditions
 struct BoundaryConditions{TF}
@@ -99,6 +104,7 @@ end
 # Material properties
 struct BeamProperties{TK, TJ}
     
+    radius::Float64
     E::Float64
     K̄ⁱⁿᵗ::TK
     Jᵨ::TJ
@@ -131,7 +137,7 @@ function BeamProperties(l₀, E, ν, ρ, radius, damping)
     
     K̄ⁱⁿᵗ = K̄ⁱⁿᵗ_beam(E, G, Iₒ, A, I₂₂, I₃₃, l₀)
     
-    beamprops = BeamProperties{typeof(K̄ⁱⁿᵗ), typeof(Jᵨ)}(E, K̄ⁱⁿᵗ, Jᵨ, Aᵨ, damping)
+    beamprops = BeamProperties{typeof(K̄ⁱⁿᵗ), typeof(Jᵨ)}(radius, E, K̄ⁱⁿᵗ, Jᵨ, Aᵨ, damping)
     
     return beamprops
     
@@ -215,256 +221,208 @@ end
 conf = Configuration(material, geometry, nnodes, ndofs, ext_forces, bcs)
 
 Constructor of the structure collecting the information for the simulation:
-    - `material`: material properties (Material{Float64});
-    - `geometry`: geoltrical properties (Geometry{Float64});
-    - `nnodes`: number of nodes in the system;
-    - `ndofs`: number of DOFs in the system;
-    - `bcs`: Dirichlet BCs.
+- `material`: material properties (Material{Float64});
+- `geometry`: geoltrical properties (Geometry{Float64});
+- `nnodes`: number of nodes in the system;
+- `ndofs`: number of DOFs in the system;
+- `bcs`: Dirichlet BCs.
+
+Returns a Configuration structure.
+"""
+function Configuration(nodes::StructVector, beams::StructVector, constraints::Union{StructVector, Nothing}, ext_forces::ExternalForces, bcs::BoundaryConditions, contact::Union{ContactParameters, Nothing}, sdf::Union{SignedDistanceField, Nothing})
     
-    Returns a Configuration structure.
-    """
-    function Configuration(nodes::StructVector, beams::StructVector, constraints::Union{StructVector, Nothing}, ext_forces::ExternalForces, bcs::BoundaryConditions, contact::Union{ContactParameters, Nothing}, sdf::Union{SignedDistanceField, Nothing})
-        
-        ndofs = length(nodes)*6
-        
-        disp_dofs = [i for i in 1:ndofs if mod1(i, 6)≤3]
-        rot_dofs = [i for i in 1:ndofs if mod1(i, 6)>3]
-        
-        ngps = length(beams)*3
-        gausspoints = StructArray(GaussPoint(
-        (0,0,0),
-        0, 
-        0) for i in 1:ngps)
-        
-        return Configuration{typeof(nodes), typeof(beams), typeof(constraints), typeof(ext_forces), typeof(bcs), typeof(contact), typeof(sdf), typeof(gausspoints)}(nodes, beams, constraints, ndofs, disp_dofs, rot_dofs, ext_forces, bcs, contact, sdf, greedy_color(beams), gausspoints)
-        
-    end 
+    ndofs = length(nodes)*6
     
-    # Force vectors needed at the next time step by the solver
-    struct Solution 
-        
-        fᵉˣᵗ::Vector{Float64}
-        Tⁱⁿᵗ::Vector{Float64}
-        Tᵏ::Vector{Float64}
-        Tᶜ::Vector{Float64}
-        Tᶜᵒⁿ::Vector{Float64}
-        
-    end 
+    disp_dofs = [i for i in 1:ndofs if mod1(i, 6)≤3]
+    rot_dofs = [i for i in 1:ndofs if mod1(i, 6)>3]
     
-    # Constructor of the structure where the last force vectors are saved in order to be used in the next step by the solver
-    function Solution(conf::Configuration)
-        
-        ndofs = conf.ndofs
-        
-        # external force @t=0
-        fᵉˣᵗ  = zeros(ndofs)
-        for i in conf.ext_forces.loaded_dofs
-            fᵉˣᵗ[i] = conf.ext_forces.f(0, i)
-        end
-        
-        Tᵢₙₜ = zeros(ndofs)
-        Tₖ = zeros(ndofs)
-        Tₜ = zeros(ndofs)
-        Tₓ = zeros(ndofs)
-        
-        return Solution(fᵉˣᵗ, Tᵢₙₜ, Tₖ, Tₜ, Tₓ)
-        
-    end 
+    ngps = length(beams)*3
+    gausspoints = StructArray(GaussPoint(
+    (0,0,0),
+    0, 
+    0) for i in 1:ngps)
     
-    # Current nodal solutions (preallocation)
-    struct NodalSolution 
-        
-        D::Vector{Float64}
-        Ḋ::Vector{Float64}
-        D̈::Vector{Float64}
-        
-        r::Vector{Float64}
-        Ktan_mat::SparseMatrixCSC{Float64,Int}
-        Ktan::Vector{Float64}
-        ΔD::Vector{Float64}    
-        temp::Vector{Float64}
-        
-        r_free::Vector{Float64}
-        Ktan_free::SparseMatrixCSC{Float64,Int}
-        ΔD_free::Vector{Float64}
-        
-    end 
+    return Configuration{typeof(nodes), typeof(beams), typeof(constraints), typeof(ext_forces), typeof(bcs), typeof(contact), typeof(sdf), typeof(gausspoints)}(nodes, beams, constraints, ndofs, disp_dofs, rot_dofs, ext_forces, bcs, contact, sdf, greedy_color(beams), gausspoints)
     
+end 
+
+# Force vectors needed at the next time step by the solver
+struct Solution 
     
-    # Constructor of the structure containing the preallocated variables used in the solver
-    function NodalSolution(Ktan, Ktan_free, ndofs, nfreedofs)
+    fᵉˣᵗ::Vector{Float64}
+    Tⁱⁿᵗ::Vector{Float64}
+    Tᵏ::Vector{Float64}
+    Tᶜ::Vector{Float64}
+    Tᶜᵒⁿ::Vector{Float64}
+    
+end 
+
+# Constructor of the structure where the last force vectors are saved in order to be used in the next step by the solver
+function Solution(conf::Configuration)
+    
+    ndofs = conf.ndofs
+    
+    # external force @t=0
+    fᵉˣᵗ  = zeros(ndofs)
+    for i in conf.ext_forces.loaded_dofs
+        fᵉˣᵗ[i] = conf.ext_forces.f(0, i)
+    end
+    
+    Tᵢₙₜ = zeros(ndofs)
+    Tₖ = zeros(ndofs)
+    Tₜ = zeros(ndofs)
+    Tₓ = zeros(ndofs)
+    
+    return Solution(fᵉˣᵗ, Tᵢₙₜ, Tₖ, Tₜ, Tₓ)
+    
+end 
+
+# Current nodal solutions (preallocation)
+struct NodalSolution 
+    
+    D::Vector{Float64}
+    Ḋ::Vector{Float64}
+    D̈::Vector{Float64}
+    
+    r::Vector{Float64}
+    Ktan::Matrix{Float64}
+    ΔD::Vector{Float64}    
+    temp::Vector{Float64}
+    
+    r_free::Vector{Float64}
+    Ktan_free::Matrix{Float64}
+    ΔD_free::Vector{Float64}
+    
+end 
+
+
+# Constructor of the structure containing the preallocated variables used in the solver
+function NodalSolution(ndofs, nfreedofs)
+
+    return NodalSolution(
+    
+    zeros(ndofs), #D
+    zeros(ndofs), #Ḋ 
+    zeros(ndofs), #D̈ 
+    
+    zeros(ndofs), #r
+    zeros(ndofs, ndofs), #Ktan
+    zeros(ndofs), #ΔD    
+    zeros(ndofs), #temp vector
+    
+    zeros(nfreedofs), #r_free
+    zeros(nfreedofs, nfreedofs), #Ktan_free
+    zeros(nfreedofs)) #ΔD_free
+    
+end
+
+
+# Global matrices structure 
+struct Matrices
+    
+    K ::Matrix{Float64}
+    C::Matrix{Float64}
+    M::Matrix{Float64}
+    
+    Tⁱⁿᵗ::Vector{Float64}
+    Tᵏ::Vector{Float64}
+    Tᵛ::Vector{Float64}
+    Tᶜ::Vector{Float64}
+    Tᶜᵒⁿ::Vector{Float64}
         
-        return NodalSolution(
-        
-        zeros(ndofs), #D
-        zeros(ndofs), #Ḋ 
-        zeros(ndofs), #D̈ 
-        
-        zeros(ndofs), #r
-        Ktan, #Ktan_mat
-        nonzeros(Ktan), #Ktan
-        zeros(ndofs), #ΔD    
-        zeros(ndofs), #temp vector
-        
-        zeros(nfreedofs), #r_free
-        Ktan_free, #Ktan_free
-        zeros(nfreedofs)) #ΔD_free
-        
+end 
+
+# Constructor of the structure containing the global matrices 
+function Matrices(ndofs)
+    
+    C = zeros(ndofs, ndofs)
+    M = zeros(ndofs, ndofs)
+    K =  zeros(ndofs, ndofs)
+    
+    Tⁱⁿᵗ = zeros(ndofs)
+    Tᵏ =  zeros(ndofs)
+    Tᵛ =  zeros(ndofs)
+    Tᶜ = zeros(ndofs)
+    Tᶜᵒⁿ = zeros(ndofs)
+    
+    return Matrices(K, C, M, Tⁱⁿᵗ, Tᵏ, Tᵛ, Tᶜ, Tᶜᵒⁿ)
+    
+end 
+
+# Energy contributions structure
+mutable struct Energy
+    
+    strain_energy::Float64
+    kinetic_energy::Float64
+    contact_energy::Float64
+    
+end
+
+# Constructor of the structure containing the energy contributions
+function Energy()
+    
+    return Energy(0, 0, 0)
+    
+end
+
+struct VTKData
+    
+    VTKcollection::WriteVTK.CollectionFile
+    output_dir::String
+    
+    intermediate_points::Int
+    
+    interpolated_points::Vector{Vec3{Float64}}
+    interpolated_lines::Vector{MeshCell{WriteVTK.PolyData.Lines, UnitRange{Int}}}
+    
+    stress::Vector{Float64}
+    strain::Vector{Float64}
+    displacement::Vector{Vec3{Float64}}
+    velocity::Vector{Vec3{Float64}}
+    
+    contact_distance::Vector{Float64}
+    normal_contact_force::Vector{Vec3{Float64}}
+    tangential_contact_force::Vector{Vec3{Float64}}
+    tangential_velocity::Vector{Float64}
+    incontact::Vector{Int}
+    status::Vector{Int}
+    
+end
+
+function VTKData(nbeams, output_dir, sdf, intermediate_points = 5)
+    
+    interpolated_points = zeros(Vec3{Float64}, nbeams*intermediate_points)
+    
+    interpolated_lines = [MeshCell(PolyData.Lines(), (i-1)*intermediate_points+1:i*intermediate_points) for i in 1:nbeams]
+    
+    stress = zeros(length(interpolated_points))
+    strain = zeros(length(interpolated_points))
+    displacement = zeros(Vec3{Float64}, length(interpolated_points))
+    velocity = zeros(Vec3{Float64}, length(interpolated_points))
+    
+    if !isnothing(sdf)
+        contact_distance = zeros(length(interpolated_points))
+        normal_contact_force = zeros(Vec3{Float64}, length(interpolated_points))
+        tangential_contact_force = zeros(Vec3{Float64}, length(interpolated_points))
+        tangential_velocity = zeros(length(interpolated_points))
+        incontact = zeros(Int, length(interpolated_points))
+        status = zeros(Int, length(interpolated_points))
+    else
+        contact_distance = Float64[]
+        normal_contact_force = Vec3{Float64}[]
+        tangential_contact_force = Vec3{Float64}[]
+        tangential_velocity = Float64[]
+        incontact = Int[]
+        status = Int[]
     end
     
     
-    # Global matrices structure (sparse arrays)
-    struct Matrices
-        
-        K_mat ::SparseMatrixCSC{Float64,Int}
-        K::Vector{Float64}
-        C_mat::SparseMatrixCSC{Float64,Int}
-        C::Vector{Float64}
-        M_mat::SparseMatrixCSC{Float64,Int}
-        M::Vector{Float64}
-        
-        Tⁱⁿᵗ::Vector{Float64}
-        Tᵏ::Vector{Float64}
-        Tdamp::Vector{Float64}
-        Tᶜ::Vector{Float64}
-        Tᶜᵒⁿ::Vector{Float64}
-        
-        sparsity_free::Vector{Int}
-        
-    end 
+    clean_folders(output_dir)
     
-    # Constructor of the structure containing the global matrices 
-    function Matrices(I, J, sparsity_free, ndofs)
-        
-        C_mat = sparse(I, J, 0.)
-        C = nonzeros(C_mat)
-        
-        M_mat = sparse(I, J, 0.)
-        M = nonzeros(M_mat)
-        
-        K_mat = sparse(I, J, 0.)
-        K =  nonzeros(K_mat)
-        
-        Tⁱⁿᵗ = zeros(ndofs)
-        Tᵏ =  zeros(ndofs)
-        Tdamp =  zeros(ndofs)
-        Tᶜ = zeros(ndofs)
-        Tᶜᵒⁿ = zeros(ndofs)
-        
-        return Matrices(K_mat, K, C_mat, C, M_mat, M, Tⁱⁿᵗ, Tᵏ, Tdamp, Tᶜ, Tᶜᵒⁿ, sparsity_free)
-        
-    end 
+    collection = paraview_collection("$output_dir/simulation")
     
-    # Energy contributions structure
-    mutable struct Energy
-        
-        strain_energy::Float64
-        kinetic_energy::Float64
-        contact_energy::Float64
-        
-    end
+    return VTKData(collection, output_dir, intermediate_points, interpolated_points, interpolated_lines, stress, strain, displacement, velocity, contact_distance, normal_contact_force, tangential_contact_force, tangential_velocity, incontact, status)
     
-    
-    
-    # Constructor of the structure containing the energy contributions
-    function Energy()
-        
-        return Energy(0, 0, 0)
-        
-    end
-    
-    
-    
-    
-    
-    
-    struct VTKData
-        
-        VTKcollection::WriteVTK.CollectionFile
-        output_dir::String
-        
-        intermediate_points::Int
-        
-        interpolated_points::Vector{Vec3{Float64}}
-        interpolated_lines::Vector{MeshCell{WriteVTK.PolyData.Lines, UnitRange{Int}}}
-        
-        stress::Vector{Float64}
-        strain::Vector{Float64}
-        displacement::Vector{Vec3{Float64}}
-        velocity::Vector{Vec3{Float64}}
-        
-        contact_distance::Vector{Float64}
-        normal_contact_force::Vector{Vec3{Float64}}
-        tangential_contact_force::Vector{Vec3{Float64}}
-        tangential_velocity::Vector{Float64}
-        incontact::Vector{Int}
-        status::Vector{Int}
-        
-    end
-    
-    function VTKData(nbeams, output_dir, sdf, intermediate_points = 5)
-        
-        interpolated_points = zeros(Vec3{Float64}, nbeams*intermediate_points)
-        
-        interpolated_lines = [MeshCell(PolyData.Lines(), (i-1)*intermediate_points+1:i*intermediate_points) for i in 1:nbeams]
-        
-        stress = zeros(length(interpolated_points))
-        strain = zeros(length(interpolated_points))
-        displacement = zeros(Vec3{Float64}, length(interpolated_points))
-        velocity = zeros(Vec3{Float64}, length(interpolated_points))
-        
-        if !isnothing(sdf)
-            contact_distance = zeros(length(interpolated_points))
-            normal_contact_force = zeros(Vec3{Float64}, length(interpolated_points))
-            tangential_contact_force = zeros(Vec3{Float64}, length(interpolated_points))
-            tangential_velocity = zeros(length(interpolated_points))
-            incontact = zeros(Int, length(interpolated_points))
-            status = zeros(Int, length(interpolated_points))
-        else
-            contact_distance = Float64[]
-            normal_contact_force = Vec3{Float64}[]
-            tangential_contact_force = Vec3{Float64}[]
-            tangential_velocity = Float64[]
-            incontact = Int[]
-            status = Int[]
-        end
-        
-        
-        clean_folders(output_dir)
-        
-        collection = paraview_collection("$output_dir/simulation")
-        
-        return VTKData(collection, output_dir, intermediate_points, interpolated_points, interpolated_lines, stress, strain, displacement, velocity, contact_distance, normal_contact_force, tangential_contact_force, tangential_velocity, incontact, status)
-        
-    end
-    
-    
-    
-    
-    
-    
-    
-    # Constructor of the sparse matrices
-    function sparse_matrices!(conf::Configuration)
-        
-        @unpack beams, nodes, constraints, bcs, ndofs = conf
-        
-        free_dofs = bcs.free_dofs
-        fixed_dofs = bcs.fixed_dofs
-        nfreedofs = length(free_dofs)
-        
-        I, J, sparsity_free = sparsity(nodes, beams, constraints, fixed_dofs)
-        
-        Ktan = sparse(I, J, 0.)
-        
-        print(size(Ktan))
-        Ktan_free = Ktan[free_dofs, free_dofs]
-        
-        matrices = Matrices(I, J, sparsity_free, ndofs)
-        nodes_sol = NodalSolution(Ktan, Ktan_free, ndofs, nfreedofs)
-        
-        return matrices, nodes_sol
-        
-    end 
-    
-    
+end
+
+

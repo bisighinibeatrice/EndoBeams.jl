@@ -207,9 +207,14 @@ end
 
 
 # Quadratically regulise penalty
-@inline function regularize_gₙ(gₙ::T, ḡₙ) where T
+@inline function regularize_gₙ(gₙ::T, radius) where T
     
+    ḡₙ = radius/4
     p̄ₙ = ḡₙ/2
+    
+    pₙ = 0
+    p′ₙ = 0
+    Πₑ = 0
 
     if gₙ≤0
 
@@ -217,21 +222,18 @@ end
         p′ₙ = -one(T)
         Πₑ = gₙ^2/2 - p̄ₙ*gₙ + (ḡₙ^2)/6
 
-    else
-        
+    elseif ḡₙ>=gₙ && gₙ>0
+
         aux = (ḡₙ-p̄ₙ)/(ḡₙ^2)
         pₙ =  aux*gₙ^2 - gₙ + p̄ₙ
         p′ₙ = 2*aux*gₙ - 1
         Πₑ = (ḡₙ-p̄ₙ)/(3*ḡₙ^2)*gₙ^3 - gₙ^2/2 + p̄ₙ*gₙ - ḡₙ^2/6
 
     end
-    
+
     return pₙ, p′ₙ, Πₑ
     
 end 
-
-
-
 
 @inline function smoothstep(v::T, x, xᵘ) where T
     

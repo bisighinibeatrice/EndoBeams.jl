@@ -20,11 +20,15 @@ end
 # Cleans folders, pre-allocate and initialise the variables used during the simulation and save the VTKs of the initial configuration
 function solver_initialisation(conf::Configuration, output_dir) where T
 
+    ndofs = conf.ndofs
+    free_dofs = conf.bcs.free_dofs
+
     solⁿ = Solution(conf)
     solⁿ⁺¹ = deepcopy(solⁿ)
     energy = Energy() 
-    matrices, nodes_sol = sparse_matrices!(conf)
-
+    matrices = Matrices(ndofs)
+    nodes_sol = NodalSolution(ndofs, length(free_dofs))
+    
     vtkdata = VTKData(length(conf.beams), output_dir, conf.sdf)
     
     return solⁿ, solⁿ⁺¹, nodes_sol, matrices, energy, vtkdata
@@ -85,14 +89,12 @@ function apply_BCs!(nodes_sol, bcs)
         ΔD_imposed = D_imposed - D_prev            
         nodes_sol.ΔD[idof] = ΔD_imposed
 
-        for j in nzrange(nodes_sol.Ktan_mat, idof)
-            nodes_sol.r[nodes_sol.Ktan_mat.rowval[j]] -= ΔD_imposed * nodes_sol.Ktan[j]
-        end
+        @inbounds for i in 1:length(nodes_sol.r) 
+            nodes_sol.r[i] = nodes_sol.r[i] .- ΔD_imposed .* nodes_sol.Ktan[i, idof] 
+        end 
 
-        
     end
 
-    
 end
 
 # Covert carthesian coordinates into cylindrical 
@@ -115,9 +117,9 @@ function dirichlet_to_cylindrical!(nodes_sol, nodes)
                 bdofs = nᵦ.idof_disp
 
                 Kab_loc = Mat33( 
-                nodes_sol.Ktan_mat[adofs[1], bdofs[1]], nodes_sol.Ktan_mat[adofs[2], bdofs[1]], nodes_sol.Ktan_mat[adofs[3], bdofs[1]],
-                nodes_sol.Ktan_mat[adofs[1], bdofs[2]], nodes_sol.Ktan_mat[adofs[2], bdofs[2]], nodes_sol.Ktan_mat[adofs[3], bdofs[2]],
-                nodes_sol.Ktan_mat[adofs[1], bdofs[3]], nodes_sol.Ktan_mat[adofs[2], bdofs[3]], nodes_sol.Ktan_mat[adofs[3], bdofs[3]])
+                nodes_sol.Ktan[adofs[1], bdofs[1]], nodes_sol.Ktan[adofs[2], bdofs[1]], nodes_sol.Ktan[adofs[3], bdofs[1]],
+                nodes_sol.Ktan[adofs[1], bdofs[2]], nodes_sol.Ktan[adofs[2], bdofs[2]], nodes_sol.Ktan[adofs[3], bdofs[2]],
+                nodes_sol.Ktan[adofs[1], bdofs[3]], nodes_sol.Ktan[adofs[2], bdofs[3]], nodes_sol.Ktan[adofs[3], bdofs[3]])
                     
                 Kba_loc = Kab_loc'
 
@@ -126,8 +128,8 @@ function dirichlet_to_cylindrical!(nodes_sol, nodes)
 
                 @inbounds for (i, x) in enumerate(adofs)
                     @inbounds for (j, y) in enumerate(bdofs)
-                        nodes_sol.Ktan_mat[x, y] = Kab[i, j]
-                        nodes_sol.Ktan_mat[y, x] = Kba[i, j]
+                        nodes_sol.Ktan[x, y] = Kab[i, j]
+                        nodes_sol.Ktan[y, x] = Kba[i, j]
                     end
 
                 end
@@ -217,7 +219,7 @@ function compute_norms_corrector(k, nodes_sol, matrices, solⁿ⁺¹, verbose = 
     
     res_norm = norm(nodes_sol.r_free)
     ΔD_norm = norm(nodes_sol.ΔD_free)
-    f_norm = norm(solⁿ⁺¹.fᵉˣᵗ .+ solⁿ⁺¹.Tᶜ .+ matrices.Tᶜᵒⁿ .-matrices.Tdamp)
+    f_norm = norm(solⁿ⁺¹.fᵉˣᵗ .+ solⁿ⁺¹.Tᶜ .+ matrices.Tᶜᵒⁿ .-matrices.Tᵛ)
 
     if f_norm > 1e-1
         res_norm = res_norm/f_norm
@@ -237,27 +239,20 @@ end
 function tangent_and_residuals_predictor!(nodes_sol, matrices, solⁿ, solⁿ⁺¹, Δt, α, β, γ)
         
     @. nodes_sol.Ktan = (1+α) * matrices.K + (1/(β*Δt^2)) * matrices.M + (γ/(β*Δt)) * matrices.C
-
     @. nodes_sol.r =  (1+α) * solⁿ⁺¹.fᵉˣᵗ - matrices.Tⁱⁿᵗ - matrices.Tᶜ - matrices.Tᶜᵒⁿ - matrices.Tᵏ - α * solⁿ.fᵉˣᵗ
     @. nodes_sol.temp = γ/β * nodes_sol.Ḋ - (Δt/2*(2*β-γ)/β) * nodes_sol.D̈
-    mul!(nodes_sol.r, matrices.C_mat, nodes_sol.temp, 1, 1)
+    mul!(nodes_sol.r, matrices.C, nodes_sol.temp, 1, 1)
     @. nodes_sol.temp =  Δt * nodes_sol.Ḋ + Δt^2/2 * nodes_sol.D̈
-    mul!(nodes_sol.r, matrices.M_mat, nodes_sol.temp, 1/(β*Δt^2), 1)
+    mul!(nodes_sol.r, matrices.M, nodes_sol.temp, 1/(β*Δt^2), 1)
 
 end
-
-
-
-
 
 function tangent_and_residuals_corrector!(nodes_sol, matrices, solⁿ, solⁿ⁺¹, Δt, α, β, γ)
         
-    @. nodes_sol.Ktan = (1+α) * matrices.K + (1/(β*Δt^2)) * matrices.M + (γ/(β*Δt)) * matrices.C
-    @. nodes_sol.r = (1+α) * (solⁿ⁺¹.fᵉˣᵗ + matrices.Tᶜᵒⁿ + matrices.Tᶜ - matrices.Tⁱⁿᵗ) - α * (solⁿ.fᵉˣᵗ + solⁿ.Tᶜᵒⁿ + solⁿ.Tᶜ - solⁿ.Tⁱⁿᵗ) - matrices.Tᵏ
+    @. nodes_sol.Ktan .= (1+α) * matrices.K .+ (1/(β*Δt^2)) * matrices.M .+ (γ/(β*Δt)) * matrices.C
+    @. nodes_sol.r .= (1+α) * (solⁿ⁺¹.fᵉˣᵗ .+ matrices.Tᶜᵒⁿ .+ matrices.Tᶜ .- matrices.Tⁱⁿᵗ) .- α * (solⁿ.fᵉˣᵗ + solⁿ.Tᶜᵒⁿ + solⁿ.Tᶜ - solⁿ.Tⁱⁿᵗ) .- matrices.Tᵏ
 
 end
-
-
 
 function residuals_corrector!(nodes_sol, matrices, solⁿ, solⁿ⁺¹, Δt, α, β, γ)
         

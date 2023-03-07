@@ -14,6 +14,7 @@ include("sparse_matrices.jl")
 include("fem.jl")
 include("params.jl")
 include("IO.jl")
+include("contact_beam2beam.jl")
 
 export build_nodes, build_beams, build_constraints, Params, solver!, Material, Geometry, ContactParameters, BeamProperties, ExternalForces, BoundaryConditions, Configuration, Vec3, Vec2, Mat33, Discrete_SDF, Plane_z_SDF, Plane_y_SDF, Sphere_SDF, Cylinder_SDF, ID3, get_Rₑ⁰
 

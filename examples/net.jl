@@ -54,8 +54,11 @@ kₙ = 0.1 #penalty parameter
 μ = 0.1
 εᵗ = 0.1 #regularized parameter for friction contact
 ηₙ = 0.1
+kₜ = kₙ
+ηₜ = ηₙ
+u̇ₛ = 0.005
+contact = ContactParameters(kₙ, μ, εᵗ, ηₙ, kₜ, ηₜ, u̇ₛ)
 
-contact = ContactParameters(kₙ, μ, εᵗ, ηₙ)
   
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -112,11 +115,8 @@ tᵉⁿᵈ = 100
 
 params = Params(;ini_Δt, Δt_plot, max_Δt, tᵉⁿᵈ, output_dir = "examples/output3D")
 
-
-
 # -------------------------------------------------------------------------------------------
 # Solve
 # -------------------------------------------------------------------------------------------
-
 
 solver!(conf, params);

@@ -63,12 +63,14 @@ beams = build_beams(nodes, connectivity, E, ν, ρ, radius, damping, Re₀)
 
 
 # contact parameters
-kₙ = 10 #penalty parameter
-μ = 0.3
-εᵗ = 0.1 #regularized parameter for friction contact
+kₙ = 4/3 * 5/(1-0.5^2)*sqrt(radius) # Approximate Hertz contact with 5 MPa wall stiffness
+μ = 0.001
+εᵗ = 0.001 #regularized parameter for friction contact
 ηₙ = 0.1
-
-contact = ContactParameters(kₙ, μ, εᵗ, ηₙ)
+kₜ = kₙ
+ηₜ = ηₙ
+u̇ₛ = 0.005
+contact = ContactParameters(kₙ, μ, εᵗ, ηₙ, kₜ, ηₜ, u̇ₛ)
 
 # -------------------------------------------------------------------------------------------
 # External forces
@@ -125,7 +127,7 @@ conf = Configuration(nodes, beams, constraints, ext_forces, bcs, contact, sdf)
 # -------------------------------------------------------------------------------------------
 
 # initial time step and total time
-ini_Δt = 0.01
+ini_Δt = 0.0001
 max_Δt = 1.
 Δt_plot =  0.01
 tᵉⁿᵈ = 1

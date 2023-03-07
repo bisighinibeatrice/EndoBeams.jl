@@ -40,20 +40,20 @@ filename_sdf = "stent/input/sdf.vtk"
 # Geometrical positioning centerline
 # -------------------------------------------------------------------------------------------
 
-initial_cl_stent = positioning_cl(initial_positions_stent, connectivity_stent, nb_iterations, deploy_pos, filename_cl, output_dir_crimping, output_dir_positioning_cl)
+# initial_cl_stent = positioning_cl(initial_positions_stent, connectivity_stent, nb_iterations, deploy_pos, filename_cl, output_dir_crimping, output_dir_positioning_cl)
 
 # -------------------------------------------------------------------------------------------
 # Physical positioning stent
 # -------------------------------------------------------------------------------------------
 
-positioning(initial_positions_stent, connectivity_stent, nb_iterations, initial_cl_stent[1], output_dir_crimping, output_dir_positioning_cl, output_dir_positioning)
+# positioning(initial_positions_stent, connectivity_stent, nb_iterations, initial_cl_stent[1], output_dir_crimping, output_dir_positioning_cl, output_dir_positioning)
 
-crimped_positions_stent = initial_positions_stent .+  read_ics_vec(readdlm(output_dir_crimping * "u.txt"))
-positions_cl =  get_centerline_stent(crimped_positions_stent)
-set_origin!(crimped_positions_stent, positions_cl[1]-initial_cl_stent[1])
-open(output_dir_positioning * "/crimped.txt", "w") do io
-    writedlm(io, crimped_positions_stent)
-end
+# crimped_positions_stent = initial_positions_stent .+  read_ics_vec(readdlm(output_dir_crimping * "u.txt"))
+# positions_cl =  get_centerline_stent(crimped_positions_stent)
+# set_origin!(crimped_positions_stent, positions_cl[1]-initial_cl_stent[1])
+# open(output_dir_positioning * "/crimped.txt", "w") do io
+#     writedlm(io, crimped_positions_stent)
+# end
 
 # -------------------------------------------------------------------------------------------
 # Deployment

@@ -215,7 +215,7 @@ function predictor!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹,
     
     @timeit_debug "Initialization" begin
 
-        @unpack nodes, beams, constraints, bcs = conf
+        @unpack nodes, beams, constraints, bcs, contact = conf
         
         # dofs
         free_dofs = bcs.free_dofs
@@ -244,8 +244,13 @@ function predictor!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹,
     
     @timeit_debug "Assemble element contributions" assemble!(conf, matrices, energy, params, Δt)
     
-    @timeit_debug "Compute penalty constraints contributions" constraints!(matrices, nodes, constraints, tⁿ⁺¹)     
-        
+    @timeit_debug "Compute beam2beam contact" begin
+        if !isnothing(contact) && contact.beam2beam 
+            @timeit_debug "Search canditates" candidate_elements = beams2beam_search_canditates(conf)
+            @timeit_debug "Compute contributions" beam2beam_compute!(candidate_elements, conf, matrices)
+        end 
+    end 
+
     @timeit_debug "Compute tangent matrix and residuals" tangent_and_residuals_predictor!(nodes_sol, matrices, solⁿ, solⁿ⁺¹, Δt, α, β, γ)
 
     @timeit_debug "Trasform carthesian to cylindrical" begin 
@@ -261,14 +266,16 @@ function predictor!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹,
     @timeit_debug "Compute free tangent matrix and residual" begin
 
         @views nodes_sol.r_free .= nodes_sol.r[free_dofs]              
-        @views nodes_sol.Ktan_free.nzval .= nodes_sol.Ktan[matrices.sparsity_free]
+        @views nodes_sol.Ktan_free .= nodes_sol.Ktan[free_dofs, free_dofs]
 
     end 
     
     @timeit_debug "Linear solve" begin
-        analyze!(solver, nodes_sol.Ktan_free, nodes_sol.r_free)
-        solve!(solver, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
         # nodes_sol.ΔD_free .= nodes_sol.Ktan_free\nodes_sol.r_free
+        prob = LinearProblem(nodes_sol.Ktan_free, nodes_sol.r_free)
+        sol = LinearSolve.solve(prob)   
+        nodes_sol.ΔD_free .= sol.u
+
     end
     
     @timeit_debug "Update" begin 
@@ -299,7 +306,7 @@ function predictor!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹,
 end 
 
 # Corrects the solution at the current step
-function corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹, nodes_sol, solver, params) 
+function corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹, nodes_sol, solver, params)
     
     # -------------------------------------------------------------------------------------------
     # INITIALISATION
@@ -308,9 +315,7 @@ function corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹,
     @timeit_debug "Initialization" begin
         
         # tolerances
-        @unpack nodes, beams, constraints, bcs, disp_dofs = conf
-        
-        # dofs
+        @unpack nodes, beams, constraints, bcs, disp_dofs, contact = conf
         free_dofs = bcs.free_dofs
 
         # parameters for the numerical integration 
@@ -346,9 +351,14 @@ function corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹,
         while ( res_norm>tol_res || ΔD_norm>tol_ΔD ) && k≤max_it        
             
             @timeit_debug "Assemble element contributions" assemble!(conf, matrices, energy, params, Δt)
-            
-            @timeit_debug "Compute constraints contributions" constraints!(matrices, nodes, constraints, tⁿ⁺¹)      
-            
+
+            @timeit_debug "Compute beam2beam contact" begin
+                if !isnothing(contact) && contact.beam2beam 
+                    @timeit_debug "Search canditates" candidate_elements = beams2beam_search_canditates(conf)
+                    @timeit_debug "Compute contributions" beam2beam_compute!(candidate_elements, conf, matrices)
+                end
+            end 
+        
             @timeit_debug "Compute tangent matrix and residual" tangent_and_residuals_corrector!(nodes_sol, matrices, solⁿ, solⁿ⁺¹, Δt, α, β, γ)
 
             @timeit_debug "Trasform carthesian to cylindrical" begin 
@@ -363,12 +373,14 @@ function corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹,
                 
             @timeit_debug "Compute free tangent matrix and residual" begin
                 @views nodes_sol.r_free .= nodes_sol.r[free_dofs]               
-                @views nodes_sol.Ktan_free.nzval .= nodes_sol.Ktan[matrices.sparsity_free]
+                @views nodes_sol.Ktan_free .= nodes_sol.Ktan[free_dofs, free_dofs]
             end 
             
             @timeit_debug "Linear solve" begin 
                 # nodes_sol.ΔD_free .= nodes_sol.Ktan_free\nodes_sol.r_free 
-                solve!(solver, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
+                prob = LinearProblem(nodes_sol.Ktan_free, nodes_sol.r_free)
+                sol = LinearSolve.solve(prob)   
+                nodes_sol.ΔD_free .= sol.u
             end 
             
             @timeit_debug "Update global and local variables" begin
@@ -406,7 +418,6 @@ function corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹,
     end 
     
     release!(solver)
-    
     return k
     
 end 

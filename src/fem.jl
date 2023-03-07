@@ -845,7 +845,6 @@ function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇�
                     Tᶜ² += ωᴳ * (RₑH₁²Rₑᵀ' * 𝓯ᶜ)
                     Tᶜ³ += ωᴳ * (RₑH₁³Rₑᵀ' * 𝓯ᶜ)
                     Tᶜ⁴ += ωᴳ * (RₑH₁⁴Rₑᵀ' * 𝓯ᶜ)
-
         
                     ŜH₁ᵀ𝓕ᶜ¹ = skew(H₁¹' * 𝓕ᶜ)
                     ŜH₁ᵀ𝓕ᶜ² = skew(H₁²' * 𝓕ᶜ)
@@ -1101,7 +1100,6 @@ function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇�
                     Kᶜ⁴³ +=  ωᴳ * (t₁⁴³ + t₂⁴³ + t₃⁴³ + t₄⁴³)
                     Kᶜ⁴⁴ +=  ωᴳ * (t₁⁴⁴ + t₂⁴⁴ + t₃⁴⁴ + t₄⁴⁴)
         
-        
                     Cᶜ¹¹ +=  ωᴳ * RₑH₁¹Rₑᵀ' * Cᶠᶜ¹
                     Cᶜ¹² +=  ωᴳ * RₑH₁¹Rₑᵀ' * Cᶠᶜ²
                     Cᶜ¹³ +=  ωᴳ * RₑH₁¹Rₑᵀ' * Cᶠᶜ³
@@ -1316,8 +1314,7 @@ function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇�
     
     Tᶜ = [Tᶜ¹; Tᶜ²; Tᶜ³; Tᶜ⁴]
     Kᶜ = hcat(vcat(Kᶜ¹¹, Kᶜ²¹, Kᶜ³¹, Kᶜ⁴¹), vcat(Kᶜ¹², Kᶜ²², Kᶜ³², Kᶜ⁴²), vcat(Kᶜ¹³, Kᶜ²³, Kᶜ³³, Kᶜ⁴³), vcat(Kᶜ¹⁴, Kᶜ²⁴, Kᶜ³⁴, Kᶜ⁴⁴))
-    Cᶜ = hcat(vcat(Cᶜ¹¹, Cᶜ²¹, Cᶜ³¹, Cᶜ⁴¹), vcat(Cᶜ¹², Cᶜ²², Cᶜ³², Cᶜ⁴²), vcat(Cᶜ¹³, Cᶜ²³, Cᶜ³³, Cᶜ⁴³), vcat(Cᶜ¹⁴, Cᶜ²⁴, Cᶜ³⁴, Cᶜ⁴⁴))
-
+    Cᶜ = hcat(vcat(Cᶜ¹¹, Cᶜ²¹, Cᶜ³¹, Cᶜ⁴¹), vcat(Cᶜ¹², Cᶜ²², Cᶜ³², Cᶜ⁴²), vcat(Cᶜ¹³, Cᶜ²³, Cᶜ³³, Cᶜ⁴³), vcat(Cᶜ¹⁴, Cᶜ²⁴, Cᶜ³⁴, Cᶜ⁴⁴))    
 
     return strain_energy, kinetic_energy, contact_energy, Tⁱⁿᵗ, Tᵏ, Tᶜ, Kⁱⁿᵗ, Kᶜ, M, Cᵏ, Cᶜ
 
@@ -1328,16 +1325,10 @@ function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇�
 end
 
 
-
-
-
-
-
 function assemble!(conf, matrices, energy, params, Δt) 
 
     @unpack nodes, beams, colors, contact, sdf, gausspoints = conf
     
-        
     # initialise the matrices associate to the whole structure
     fill!(matrices.K, 0)
     fill!(matrices.C, 0)
@@ -1356,8 +1347,7 @@ function assemble!(conf, matrices, energy, params, Δt)
 
     for cidxs in colors
 
-        # @batch for idx in cidxs
-        Threads.@threads for idx in cidxs
+        @batch for idx in cidxs
 
             b = LazyRow(beams, idx)
             
@@ -1388,20 +1378,19 @@ function assemble!(conf, matrices, energy, params, Δt)
             idof1 = nodes.idof_6[n1]
             idof2 = nodes.idof_6[n2]
             
-            dofs = vcat(idof1, idof2)
+            idofs = vcat(idof1, idof2)
 
             energy.strain_energy +=  strain_energy
             energy.kinetic_energy += kinetic_energy
             energy.contact_energy += contact_energy
 
-            matrices.Tᵏ[dofs] += Tᵏ
-            matrices.Tⁱⁿᵗ[dofs] += Tⁱⁿᵗ
-            matrices.Tᶜ[dofs] += Tᶜ
+            matrices.Tᵏ[idofs] += Tᵏ
+            matrices.Tⁱⁿᵗ[idofs] += Tⁱⁿᵗ
+            matrices.Tᶜ[idofs] += Tᶜ
 
-            matrices.K[b.sparsity_map] += vec(K)
-            matrices.C[b.sparsity_map] += vec(C)
-            matrices.M[b.sparsity_map] += vec(M)
-
+            matrices.K[idofs, idofs] += K
+            matrices.C[idofs, idofs] += C
+            matrices.M[idofs, idofs] += M
                                 
         end
 
