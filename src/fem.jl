@@ -14,7 +14,6 @@
 
 end
 
-
 @inline function local_R⁰(x₁, x₂)
 
     v₁ = x₂ - x₁
@@ -38,11 +37,6 @@ end
     return Rₑ
 
 end
-
-
-    
-
-
 
 @inline function local_Rₑ_and_aux(x₁, x₂, R₁, R₂, Rₑ⁰E₂, lₙ)
 
@@ -81,9 +75,6 @@ end
     return Rₑ, ru₁, ru₂, η, Gᵀu₁, GᵀΘ₁, Gᵀu₂, GᵀΘ₂, D₃
 end
 
-
-
-
 @inline function toangle(R::AbstractMatrix{T}) where T
 
     if abs((tr(R)-1)/2) < 1
@@ -97,7 +88,6 @@ end
     return norm_v*n_v
 
 end
-
 
 @inline function skew(vec)
 
@@ -124,7 +114,6 @@ end
 
 end
 
-
 @inline function Tₛ(Θ::AbstractVector{T}) where T
 
     Θ_norm = norm(Θ)
@@ -139,7 +128,6 @@ end
     return Tₛ
 
 end
-
 
 @inline function compute_Kᵥ(Θ::AbstractVector{T}, v) where T
 
@@ -170,7 +158,6 @@ end
 
 end
 
-
 #  Compute Kint matrix
 @inline function K̄ⁱⁿᵗ_beam(E, G, Iₒ, A, I₂₂, I₃₃, l₀)
     
@@ -181,9 +168,6 @@ end
     return K̄ⁱⁿᵗū, K̄ⁱⁿᵗΘ̅, K̄ⁱⁿᵗΘ̅Θ̅
     
 end
-
-
-
 
 @inline function compute_η_μ(Θ̄::AbstractVector{T}) where T
 
@@ -203,9 +187,6 @@ end
 
 end
 
-
-
-
 @inline function compute_K̄ₕ(Θ̅, M̄, Tₛ⁻¹Θ̅, η, μ)
 
     Θ̅M̄ᵀ = Θ̅*M̄'
@@ -219,9 +200,6 @@ end
     return K̄ₕ
 
 end
-
-
-
 
 @inline function Pmatrices(N₁, N₂, N₃, N₄, N₅, N₆, lₙ, η, η₁₁, η₁₂, η₂₁, η₂₂)
 
@@ -239,13 +217,6 @@ end
     return P₁P¹, P₁P², P₁P³, P₁P⁴, P₂P¹, P₂P², P₂P³, P₂P⁴
 
 end
-
-
-
-
-
-
-
 
 function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, ẇ₁, ẇ₂, ü₁, ü₂, ẅ₁, ẅ₂, constants, exact=true, isdynamic=true) where T
 
@@ -777,7 +748,6 @@ function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇�
                     gₙ, ∂gₙ∂x, ∂²gₙ∂x² = contact_gap(xᴳ, sdf)
 
                     @unpack kₙ, ηₙ, μ, εᵗ, kₜ, ηₜ, u̇ₛ = contactparams
-                    μstick = 1E2
 
                     pₙ, p′ₙ, Πₑ = regularize_gₙ(gₙ, ḡₙ)
                     ηₙ, η′ₙ = smoothstep(ηₙ, gₙ, ḡₙ)
@@ -1323,7 +1293,6 @@ function compute(u₁::AbstractVector{T}, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇�
 
     
 end
-
 
 function assemble!(conf, matrices, energy, params, Δt) 
 

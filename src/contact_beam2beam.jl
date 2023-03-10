@@ -2,7 +2,6 @@ function get_beam_info(beam, nodes)
      
     Nₐ = beam.node1
     Nᵦ = beam.node2
-    radius = beam.properties.radius
 
     # information from node 1 and 2
     X₁, X₂ = nodes.X₀[Nₐ], nodes.X₀[Nᵦ]
@@ -10,7 +9,7 @@ function get_beam_info(beam, nodes)
     R₁, R₂ = nodes.R[Nₐ], nodes.R[Nᵦ]
 
     init = (X₁, X₂, beam.l₀, beam.Rₑ⁰)      
-    beaminfo = (u₁, u₂, R₁, R₂, init, radius)
+    beaminfo = (u₁, u₂, R₁, R₂, init)
 
     return beaminfo
 
@@ -186,104 +185,95 @@ function beam2beam_compute_dist_candidate(beaminfoₐ, beaminfoᵦ)
 
 end 
 
-function beam2beam_compute_Kc_Tc(beaminfoₐ, beaminfoᵦ, dᵇˡ, ξᶜₐ, ξᶜᵦ)
+function beam2beam_compute_Kc_Tc(beaminfoₐ, beaminfoᵦ, ξᶜₐ, ξᶜᵦ, pₙ, p′ₙ)
 
-    @timeit_debug "Compute forces" begin
+    u₁ₐ, u₂ₐ, R₁ₐ, R₂ₐ, initₐ = beaminfoₐ
+    u₁ᵦ, u₂ᵦ, R₁ᵦ, R₂ᵦ, initᵦ = beaminfoᵦ
 
-        u₁ₐ, u₂ₐ, R₁ₐ, R₂ₐ, initₐ, radius = beaminfoₐ
-        u₁ᵦ, u₂ᵦ, R₁ᵦ, R₂ᵦ, initᵦ, radius = beaminfoᵦ
+    xᶜₐ, dxᶜₐ, ddxᶜₐ  = beam2beam_get_derivatives(ξᶜₐ, u₁ₐ, u₂ₐ, R₁ₐ, R₂ₐ, initₐ)
+    xᶜᵦ, dxᶜᵦ, ddxᶜᵦ  = beam2beam_get_derivatives(ξᶜᵦ, u₁ᵦ, u₂ᵦ, R₁ᵦ, R₂ᵦ, initᵦ)
 
-        pₙ, p′ₙ, _ = regularize_gₙ(dᵇˡ, radius) 
+    RₑH₁¹Rₑᵀₐ, RₑH₁²Rₑᵀₐ, RₑH₁³Rₑᵀₐ, RₑH₁⁴Rₑᵀₐ, RₑdH₁¹Rₑᵀₐ, RₑdH₁²Rₑᵀₐ, RₑdH₁³Rₑᵀₐ, RₑdH₁⁴Rₑᵀₐ = beam2beam_get_RₑH₁Rₑᵀ_and_RₑdH₁Rₑᵀ(ξᶜₐ, u₁ₐ, u₂ₐ, R₁ₐ, R₂ₐ, initₐ) 
+    RₑH₁¹Rₑᵀᵦ, RₑH₁²Rₑᵀᵦ, RₑH₁³Rₑᵀᵦ, RₑH₁⁴Rₑᵀᵦ, RₑdH₁¹Rₑᵀᵦ, RₑdH₁²Rₑᵀᵦ, RₑdH₁³Rₑᵀᵦ, RₑdH₁⁴Rₑᵀᵦ = beam2beam_get_RₑH₁Rₑᵀ_and_RₑdH₁Rₑᵀ(ξᶜᵦ, u₁ᵦ, u₂ᵦ, R₁ᵦ, R₂ᵦ, initᵦ)
 
-        xᶜₐ, dxᶜₐ, ddxᶜₐ  = beam2beam_get_derivatives(ξᶜₐ, u₁ₐ, u₂ₐ, R₁ₐ, R₂ₐ, initₐ)
-        xᶜᵦ, dxᶜᵦ, ddxᶜᵦ  = beam2beam_get_derivatives(ξᶜᵦ, u₁ᵦ, u₂ᵦ, R₁ᵦ, R₂ᵦ, initᵦ)
+    xᶜₐᵦ = xᶜₐ-xᶜᵦ
+    lₐᵦ = norm(xᶜₐᵦ)
+    n = xᶜₐᵦ/norm(xᶜₐᵦ)
 
-        RₑH₁¹Rₑᵀₐ, RₑH₁²Rₑᵀₐ, RₑH₁³Rₑᵀₐ, RₑH₁⁴Rₑᵀₐ, RₑdH₁¹Rₑᵀₐ, RₑdH₁²Rₑᵀₐ, RₑdH₁³Rₑᵀₐ, RₑdH₁⁴Rₑᵀₐ = beam2beam_get_RₑH₁Rₑᵀ_and_RₑdH₁Rₑᵀ(ξᶜₐ, u₁ₐ, u₂ₐ, R₁ₐ, R₂ₐ, initₐ) 
-        RₑH₁¹Rₑᵀᵦ, RₑH₁²Rₑᵀᵦ, RₑH₁³Rₑᵀᵦ, RₑH₁⁴Rₑᵀᵦ, RₑdH₁¹Rₑᵀᵦ, RₑdH₁²Rₑᵀᵦ, RₑdH₁³Rₑᵀᵦ, RₑdH₁⁴Rₑᵀᵦ = beam2beam_get_RₑH₁Rₑᵀ_and_RₑdH₁Rₑᵀ(ξᶜᵦ, u₁ᵦ, u₂ᵦ, R₁ᵦ, R₂ᵦ, initᵦ)
+    kᶜ = 1 
+    Tᶜ¹ₐ = kᶜ * pₙ * RₑH₁¹Rₑᵀₐ' * n
+    Tᶜ²ₐ = kᶜ * pₙ * RₑH₁²Rₑᵀₐ' * n
+    Tᶜ³ₐ = kᶜ * pₙ * RₑH₁³Rₑᵀₐ' * n
+    Tᶜ⁴ₐ = kᶜ * pₙ * RₑH₁⁴Rₑᵀₐ' * n
 
-        xᶜₐᵦ = xᶜₐ-xᶜᵦ
-        lₐᵦ = norm(xᶜₐᵦ)
-        n = xᶜₐᵦ/norm(xᶜₐᵦ)
+    Tᶜ¹ᵦ = kᶜ * pₙ * RₑH₁¹Rₑᵀᵦ' * n
+    Tᶜ²ᵦ = kᶜ * pₙ * RₑH₁²Rₑᵀᵦ' * n
+    Tᶜ³ᵦ = kᶜ * pₙ * RₑH₁³Rₑᵀᵦ' * n
+    Tᶜ⁴ᵦ = kᶜ * pₙ * RₑH₁⁴Rₑᵀᵦ' * n
 
-        kᶜ = 500 
-        Tᶜ¹ₐ = kᶜ * pₙ * RₑH₁¹Rₑᵀₐ' * n
-        Tᶜ²ₐ = kᶜ * pₙ * RₑH₁²Rₑᵀₐ' * n
-        Tᶜ³ₐ = kᶜ * pₙ * RₑH₁³Rₑᵀₐ' * n
-        Tᶜ⁴ₐ = kᶜ * pₙ * RₑH₁⁴Rₑᵀₐ' * n
+    Tᶜₐ = [Tᶜ¹ₐ; Tᶜ²ₐ; Tᶜ³ₐ; Tᶜ⁴ₐ]
+    Tᶜᵦ = [Tᶜ¹ᵦ; Tᶜ²ᵦ; Tᶜ³ᵦ; Tᶜ⁴ᵦ]
 
-        Tᶜ¹ᵦ = kᶜ * pₙ * RₑH₁¹Rₑᵀᵦ' * n
-        Tᶜ²ᵦ = kᶜ * pₙ * RₑH₁²Rₑᵀᵦ' * n
-        Tᶜ³ᵦ = kᶜ * pₙ * RₑH₁³Rₑᵀᵦ' * n
-        Tᶜ⁴ᵦ = kᶜ * pₙ * RₑH₁⁴Rₑᵀᵦ' * n
+    Nₐ = [RₑH₁¹Rₑᵀₐ; RₑH₁²Rₑᵀₐ; RₑH₁³Rₑᵀₐ; RₑH₁⁴Rₑᵀₐ]'
+    Nᵦ = [RₑH₁¹Rₑᵀᵦ; RₑH₁²Rₑᵀᵦ; RₑH₁³Rₑᵀᵦ; RₑH₁⁴Rₑᵀᵦ]'
+    # Nₐᵦ= [Nₐ'; -Nᵦ']'
+    
+    Nₐᵦ = Mat324(
+        Nₐ[1,1], Nₐ[2,1], Nₐ[3,1], 
+        Nₐ[1,2], Nₐ[2,2], Nₐ[3,2], 
+        Nₐ[1,3], Nₐ[2,3], Nₐ[3,3], 
+        Nₐ[1,4], Nₐ[2,4], Nₐ[3,4], 
+        Nₐ[1,5], Nₐ[2,5], Nₐ[3,5], 
+        Nₐ[1,6], Nₐ[2,6], Nₐ[3,6], 
+        Nₐ[1,7], Nₐ[2,7], Nₐ[3,7], 
+        Nₐ[1,8], Nₐ[2,8], Nₐ[3,8], 
+        Nₐ[1,9], Nₐ[2,9], Nₐ[3,9], 
+        Nₐ[1,10], -Nₐ[2,10], Nₐ[3,10], 
+        Nₐ[1,11], -Nₐ[2,11], Nₐ[3,11], 
+        Nₐ[1,12], -Nₐ[2,12], Nₐ[3,12], 
+        -Nᵦ[1,1], -Nᵦ[2,1], -Nᵦ[3,1], 
+        -Nᵦ[1,2], -Nᵦ[2,2], -Nᵦ[3,2], 
+        -Nᵦ[1,3], -Nᵦ[2,3], -Nᵦ[3,3], 
+        -Nᵦ[1,4], -Nᵦ[2,4], -Nᵦ[3,4], 
+        -Nᵦ[1,5],- Nᵦ[2,5], -Nᵦ[3,5], 
+        -Nᵦ[1,6], -Nᵦ[2,6], -Nᵦ[3,6], 
+        -Nᵦ[1,7], -Nᵦ[2,7], -Nᵦ[3,7], 
+        -Nᵦ[1,8], -Nᵦ[2,8], -Nᵦ[3,8], 
+        -Nᵦ[1,9], -Nᵦ[2,9], -Nᵦ[3,9], 
+        -Nᵦ[1,10], -Nᵦ[2,10], -Nᵦ[3,10], 
+        -Nᵦ[1,11], -Nᵦ[2,11], -Nᵦ[3,11], 
+        -Nᵦ[1,12], -Nᵦ[2,12], -Nᵦ[3,12])
 
-        Tᶜₐ = [Tᶜ¹ₐ; Tᶜ²ₐ; Tᶜ³ₐ; Tᶜ⁴ₐ]
-        Tᶜᵦ = [Tᶜ¹ᵦ; Tᶜ²ᵦ; Tᶜ³ᵦ; Tᶜ⁴ᵦ]
-    end
+    dNₐ = [RₑdH₁¹Rₑᵀₐ; RₑdH₁²Rₑᵀₐ; RₑdH₁³Rₑᵀₐ; RₑdH₁⁴Rₑᵀₐ]'
+    dNᵦ = [RₑdH₁¹Rₑᵀᵦ; RₑdH₁²Rₑᵀᵦ; RₑdH₁³Rₑᵀᵦ; RₑdH₁⁴Rₑᵀᵦ]'
 
-    @timeit_debug "Compute matrices" begin
+    dgddₐᵦ = n'*Nₐᵦ
+    dndₐᵦ = 1/lₐᵦ*(ID3.-n'*n)*Nₐᵦ
+    dTᶜₐdₐᵦ = p′ₙ*(Nₐ'*n*dgddₐᵦ + pₙ*Nₐ'*dndₐᵦ)
+    dTᶜᵦdₐᵦ = p′ₙ*(Nᵦ'*n*dgddₐᵦ + pₙ*Nᵦ'*dndₐᵦ)
 
-        Nₐ = [RₑH₁¹Rₑᵀₐ; RₑH₁²Rₑᵀₐ; RₑH₁³Rₑᵀₐ; RₑH₁⁴Rₑᵀₐ]'
-        Nᵦ = [RₑH₁¹Rₑᵀᵦ; RₑH₁²Rₑᵀᵦ; RₑH₁³Rₑᵀᵦ; RₑH₁⁴Rₑᵀᵦ]'
-        # Nₐᵦ= [Nₐ'; -Nᵦ']'
-        
-        Nₐᵦ = Mat324(
-            Nₐ[1,1], Nₐ[2,1], Nₐ[3,1], 
-            Nₐ[1,2], Nₐ[2,2], Nₐ[3,2], 
-            Nₐ[1,3], Nₐ[2,3], Nₐ[3,3], 
-            Nₐ[1,4], Nₐ[2,4], Nₐ[3,4], 
-            Nₐ[1,5], Nₐ[2,5], Nₐ[3,5], 
-            Nₐ[1,6], Nₐ[2,6], Nₐ[3,6], 
-            Nₐ[1,7], Nₐ[2,7], Nₐ[3,7], 
-            Nₐ[1,8], Nₐ[2,8], Nₐ[3,8], 
-            Nₐ[1,9], Nₐ[2,9], Nₐ[3,9], 
-            Nₐ[1,10], -Nₐ[2,10], Nₐ[3,10], 
-            Nₐ[1,11], -Nₐ[2,11], Nₐ[3,11], 
-            Nₐ[1,12], -Nₐ[2,12], Nₐ[3,12], 
-            -Nᵦ[1,1], -Nᵦ[2,1], -Nᵦ[3,1], 
-            -Nᵦ[1,2], -Nᵦ[2,2], -Nᵦ[3,2], 
-            -Nᵦ[1,3], -Nᵦ[2,3], -Nᵦ[3,3], 
-            -Nᵦ[1,4], -Nᵦ[2,4], -Nᵦ[3,4], 
-            -Nᵦ[1,5],- Nᵦ[2,5], -Nᵦ[3,5], 
-            -Nᵦ[1,6], -Nᵦ[2,6], -Nᵦ[3,6], 
-            -Nᵦ[1,7], -Nᵦ[2,7], -Nᵦ[3,7], 
-            -Nᵦ[1,8], -Nᵦ[2,8], -Nᵦ[3,8], 
-            -Nᵦ[1,9], -Nᵦ[2,9], -Nᵦ[3,9], 
-            -Nᵦ[1,10], -Nᵦ[2,10], -Nᵦ[3,10], 
-            -Nᵦ[1,11], -Nᵦ[2,11], -Nᵦ[3,11], 
-            -Nᵦ[1,12], -Nᵦ[2,12], -Nᵦ[3,12])
+    dndξₐ = 1/lₐᵦ*(ID3.-n'*n)*dxᶜₐ
+    dndξᵦ = -1/lₐᵦ*(ID3.-n'*n)*dxᶜᵦ
 
-        dNₐ = [RₑdH₁¹Rₑᵀₐ; RₑdH₁²Rₑᵀₐ; RₑdH₁³Rₑᵀₐ; RₑdH₁⁴Rₑᵀₐ]'
-        dNᵦ = [RₑdH₁¹Rₑᵀᵦ; RₑdH₁²Rₑᵀᵦ; RₑdH₁³Rₑᵀᵦ; RₑdH₁⁴Rₑᵀᵦ]'
+    dTᶜₐdξₐ = pₙ*(dNₐ'*n + Nₐ'*dndξₐ)
+    dTᶜₐdξᵦ= pₙ*(Nₐ'*dndξᵦ)
+    dTᶜᵦdξₐ = pₙ*(Nᵦ'*dndξₐ)
+    dTᶜᵦdξᵦ = pₙ*(dNᵦ'*n + Nᵦ'*dndξᵦ)
 
-        dgddₐᵦ = n'*Nₐᵦ
-        dndₐᵦ = 1/lₐᵦ*(ID3.-n'*n)*Nₐᵦ
-        dTᶜₐdₐᵦ = p′ₙ*(Nₐ'*n*dgddₐᵦ + pₙ*Nₐ'*dndₐᵦ)
-        dTᶜᵦdₐᵦ = p′ₙ*(Nᵦ'*n*dgddₐᵦ + pₙ*Nᵦ'*dndₐᵦ)
+    A = Mat22(dot(dxᶜₐ, dxᶜₐ)+dot((xᶜₐ-xᶜᵦ),ddxᶜₐ), dot(dxᶜₐ,dxᶜᵦ), -dot(dxᶜₐ,dxᶜᵦ), -dot(dxᶜᵦ,dxᶜᵦ) + dot((xᶜₐ-xᶜᵦ),ddxᶜᵦ))
+    aux1 = (xᶜₐ-xᶜᵦ)'*dNₐ + dxᶜₐ'*Nₐ
+    aux2 = -dxᶜₐ'*Nᵦ
+    aux3 = dxᶜᵦ'*Nₐ
+    aux4 = (xᶜₐ-xᶜᵦ)'*dNᵦ - dxᶜᵦ'*Nᵦ
+    B = Mat224(aux1[1], aux3[1], aux1[2], aux3[2], aux1[3], aux3[3], aux1[4], aux3[4], aux1[5], aux3[5], aux1[6], aux3[6],aux1[7], aux3[7], aux1[8], aux3[8], aux1[9], aux3[9], aux1[10], aux3[10],  aux1[11], aux3[11], aux1[12], aux3[12], aux2[1], aux4[1], aux2[2], aux4[2], aux2[3], aux4[3],  aux2[4], aux4[4], aux2[5], aux4[5], aux2[6], aux4[6],aux2[7], aux4[7], aux2[8], aux4[8], aux2[9], aux4[9], aux2[10], aux4[10], aux2[11], aux4[11], aux2[12], aux4[12])
+    
+    aux = A\(-B)
 
-        dndξₐ = 1/lₐᵦ*(ID3.-n'*n)*dxᶜₐ
-        dndξᵦ = -1/lₐᵦ*(ID3.-n'*n)*dxᶜᵦ
+    dξₐdₐᵦ = Vec24(aux[1,1], aux[1,2], aux[1,3], aux[1,4], aux[1,5], aux[1,6], aux[1,7], aux[1,8], aux[1,9], aux[1,10], aux[1,11], aux[1,12], aux[1,13], aux[1,14], aux[1,15], aux[1,16], aux[1,17], aux[1,18], aux[1,19], aux[1,20],aux[1,21],aux[1,22],aux[1,23],aux[1,24])
+    dξᵦdₐᵦ = Vec24(aux[2,1], aux[2,2], aux[2,3], aux[2,4], aux[2,5], aux[2,6], aux[2,7], aux[2,8], aux[2,9], aux[2,10], aux[2,11], aux[2,12], aux[2,13], aux[2,14], aux[2,15], aux[2,16], aux[2,17], aux[2,18], aux[2,19], aux[2,20],aux[2,21],aux[2,22],aux[2,23],aux[2,24])
 
-        dTᶜₐdξₐ = pₙ*(dNₐ'*n + Nₐ'*dndξₐ)
-        dTᶜₐdξᵦ= pₙ*(Nₐ'*dndξᵦ)
-        dTᶜᵦdξₐ = pₙ*(Nᵦ'*dndξₐ)
-        dTᶜᵦdξᵦ = pₙ*(dNᵦ'*n + Nᵦ'*dndξᵦ)
-
-        A = Mat22(dot(dxᶜₐ, dxᶜₐ)+dot((xᶜₐ-xᶜᵦ),ddxᶜₐ), dot(dxᶜₐ,dxᶜᵦ), -dot(dxᶜₐ,dxᶜᵦ), -dot(dxᶜᵦ,dxᶜᵦ) + dot((xᶜₐ-xᶜᵦ),ddxᶜᵦ))
-        aux1 = (xᶜₐ-xᶜᵦ)'*dNₐ + dxᶜₐ'*Nₐ
-        aux2 = -dxᶜₐ'*Nᵦ
-        aux3 = dxᶜᵦ'*Nₐ
-        aux4 = (xᶜₐ-xᶜᵦ)'*dNᵦ - dxᶜᵦ'*Nᵦ
-        B = Mat224(aux1[1], aux3[1], aux1[2], aux3[2], aux1[3], aux3[3], aux1[4], aux3[4], aux1[5], aux3[5], aux1[6], aux3[6],aux1[7], aux3[7], aux1[8], aux3[8], aux1[9], aux3[9], aux1[10], aux3[10],  aux1[11], aux3[11], aux1[12], aux3[12], aux2[1], aux4[1], aux2[2], aux4[2], aux2[3], aux4[3],  aux2[4], aux4[4], aux2[5], aux4[5], aux2[6], aux4[6],aux2[7], aux4[7], aux2[8], aux4[8], aux2[9], aux4[9], aux2[10], aux4[10], aux2[11], aux4[11], aux2[12], aux4[12])
-        
-        aux = A\(-B)
-
-        dξₐdₐᵦ = Vec24(aux[1,1], aux[1,2], aux[1,3], aux[1,4], aux[1,5], aux[1,6], aux[1,7], aux[1,8], aux[1,9], aux[1,10], aux[1,11], aux[1,12], aux[1,13], aux[1,14], aux[1,15], aux[1,16], aux[1,17], aux[1,18], aux[1,19], aux[1,20],aux[1,21],aux[1,22],aux[1,23],aux[1,24])
-        dξᵦdₐᵦ = Vec24(aux[2,1], aux[2,2], aux[2,3], aux[2,4], aux[2,5], aux[2,6], aux[2,7], aux[2,8], aux[2,9], aux[2,10], aux[2,11], aux[2,12], aux[2,13], aux[2,14], aux[2,15], aux[2,16], aux[2,17], aux[2,18], aux[2,19], aux[2,20],aux[2,21],aux[2,22],aux[2,23],aux[2,24])
-
-        Kᶜₐ = dTᶜₐdₐᵦ + dTᶜₐdξₐ*dξₐdₐᵦ' + dTᶜₐdξᵦ*dξᵦdₐᵦ'
-        Kᶜᵦ = dTᶜᵦdₐᵦ + dTᶜᵦdξₐ*dξₐdₐᵦ' + dTᶜᵦdξᵦ*dξᵦdₐᵦ'
-
-    end
+    Kᶜₐ = dTᶜₐdₐᵦ + dTᶜₐdξₐ*dξₐdₐᵦ' + dTᶜₐdξᵦ*dξᵦdₐᵦ'
+    Kᶜᵦ = dTᶜᵦdₐᵦ + dTᶜᵦdξₐ*dξₐdₐᵦ' + dTᶜᵦdξᵦ*dξᵦdₐᵦ'
 
     return Tᶜₐ, Tᶜᵦ, Kᶜₐ, Kᶜᵦ
 
@@ -322,7 +312,7 @@ function beams2beam_search_canditates(conf)
 
     ind = findall(!iszero, Xlist[:,2])
  
-    for i = 1:length(ind)
+    for i = eachindex(ind)
         e_neigh = Xlist[ind[i],:]
         beamₐ = e_neigh[1]
         beamᵦ = e_neigh[2]
@@ -377,7 +367,7 @@ function beams2beam_search_canditates(conf)
     aux = findall(x->x==1, check_final) 
 
     candidate_elements = Vec2[]
-    for i in 1:length(aux)
+    for i in eachindex(aux)
         push!(candidate_elements, sort([aux[i][1],aux[i][2]]))
     end 
 
@@ -400,23 +390,32 @@ function beam2beam_compute!(candidate_elements, conf, matrices)
         beaminfoᵦ = get_beam_info(beamᵦ, nodes)
 
         @timeit_debug "Compute distance candidates" dᵇˡ, ξᶜₐ, ξᶜᵦ =  beam2beam_compute_dist_candidate(beaminfoₐ, beaminfoᵦ)
-        Tᶜₐ, Tᶜᵦ, Kᶜₐ, Kᶜᵦ =  beam2beam_compute_Kc_Tc(beaminfoₐ, beaminfoᵦ, dᵇˡ - 2*beamₐ.properties.radius, ξᶜₐ, ξᶜᵦ)
-        
-        idofₐ₁ = nodes.idof_6[beamₐ.node1]
-        idofₐ₂ = nodes.idof_6[beamₐ.node2]
-        idofₐ = vcat(idofₐ₁, idofₐ₂)
 
-        idofᵦ₁ = nodes.idof_6[beamᵦ.node1]
-        idofᵦ₂ = nodes.idof_6[beamᵦ.node2]
-        idofᵦ = vcat(idofᵦ₁, idofᵦ₂)
+        if dᵇˡ < 1e9
 
-        matrices.Tᶜ[idofₐ] += Tᶜₐ
-        matrices.Tᶜ[idofᵦ] += -Tᶜᵦ
+            pₙ, p′ₙ, _ = regularize_gₙ(dᵇˡ - 2*beamₐ.radius, beamₐ.radius) 
 
-        idofₐᵦ = vcat(idofₐ, idofᵦ)
-        matrices.K[idofₐ, idofₐᵦ] += -Kᶜₐ
-        matrices.K[idofᵦ, idofₐᵦ] += Kᶜᵦ
+            if pₙ !=0 
+                @timeit_debug "Compute force and matrix"  Tᶜₐ, Tᶜᵦ, Kᶜₐ, Kᶜᵦ =  beam2beam_compute_Kc_Tc(beaminfoₐ, beaminfoᵦ, ξᶜₐ, ξᶜᵦ, pₙ, p′ₙ)
 
+                @timeit_debug "Assemble" begin
+                    idofₐ₁ = nodes.idof_6[beamₐ.node1]
+                    idofₐ₂ = nodes.idof_6[beamₐ.node2]
+                    idofₐ = vcat(idofₐ₁, idofₐ₂)
+
+                    idofᵦ₁ = nodes.idof_6[beamᵦ.node1]
+                    idofᵦ₂ = nodes.idof_6[beamᵦ.node2]
+                    idofᵦ = vcat(idofᵦ₁, idofᵦ₂)
+
+                    matrices.Tᶜ[idofₐ] .+= Tᶜₐ
+                    matrices.Tᶜ[idofᵦ] .+= -Tᶜᵦ
+
+                    idofₐᵦ = vcat(idofₐ, idofᵦ)
+                    matrices.K[idofₐ, idofₐᵦ] .+= -Kᶜₐ
+                    matrices.K[idofᵦ, idofₐᵦ] .+= Kᶜᵦ
+                end
+            end 
+        end 
     end
 end 
 

@@ -2,35 +2,9 @@
 # Stent
 # -------------------------------------------------------------------------------------------
 
-# @with_kw struct Surpass 
-
-#     nbWires::Int = 20
-#     rStent::Float64 = 1.35 
-#     rCrimpedStent::Float64 = 0.9
-#     rWireSection::Float64 = 0.014
-#     wireGap::Float64 = 0
-#     lengthStent::Float64 = 10
-#     nbTotalCells::Float64 = 40.5
-#     braidingPattern::Int = 2
-
-# end
-
-# @with_kw struct BraidedStent 
-
-#     nbWires::Int = 20
-#     rStent::Float64 = 2.5
-#     rCrimpedStent::Float64 = 1.25
-#     rWireSection::Float64 = 0.014
-#     wireGap::Float64 = 0
-#     lengthStent::Float64 = 10
-#     nbTotalCells::Float64 = 20
-#     braidingPattern::Int = 2
-
-# end
-
 @with_kw struct BraidedStent 
 
-    nbWires::Int = 24
+    nbWires::Int = 20
     rStent::Float64 = 2.3
     rCrimpedStent::Float64 = 1.1
     rWireSection::Float64 = 0.014
@@ -41,14 +15,14 @@
 
 end
 
-@with_kw struct BraidedStentB2B
+@with_kw struct WallStent
 
-    nbWires::Int = 20
-    rStent::Float64 = 2
-    rCrimpedStent::Float64 = 1
-    rWireSection::Float64 = 0.014
-    wireGap::Float64 = 0.01
-    lengthStent::Float64 = 5
+    nbWires::Int = 12
+    rStent::Float64 = 4
+    rCrimpedStent::Float64 = 1.85
+    rWireSection::Float64 = 0.065
+    wireGap::Float64 = 0.0
+    lengthStent::Float64 = 10
     nbTotalCells::Float64 = 10
     braidingPattern::Int = 2
 
@@ -91,11 +65,8 @@ function helix!(positions, connectivity, nodeID, length, diameter, nbTotalCells,
             offsetBraiding = -offsetBraiding
         end 
         
-        if wireGap != 0
-            r = diameter/2 + offsetBraiding * orient * (rWireSection+wireGap/2)
-        else 
-            r = diameter/2
-        end 
+        r = diameter/2 + offsetBraiding * orient * (rWireSection + wireGap/2)
+        
         x_n = r*cos(orient*i*dTheta+offsetTheta)
         y_n = r*sin(orient*i*dTheta+offsetTheta)
         z_n = i*pitch/2
@@ -105,8 +76,66 @@ function helix!(positions, connectivity, nodeID, length, diameter, nbTotalCells,
         if i != 0 
             push!(connectivity, [nodeID[end-1], nodeID[end]])
         end 
+
     end
  
+end 
+
+"Generate one wire part with an helix shape, 2 elements per braiding cell, given length"
+function helix2!(pos, conn, nodeID, length, diameter, nbTotalCells, nbWires, rWireSection, braidingPattern, wireGap, wireID, clockwise)
+    
+    pitch = length / nbTotalCells
+    if clockwise
+        orient = 1
+        alternateBraiding = 1
+    else
+        orient = -1
+        alternateBraiding = -1
+    end 
+    
+    onTop = ones(2*braidingPattern)
+    onTop[end] = 0
+    onBottom = -1*onTop
+    drBraiding = [onTop; onBottom]
+    
+    dTheta = 2*pi/(4*nbWires)
+    offsetTheta = 2*pi/(nbWires)*wireID
+    braidingAngle = 360/(2*pi)*tan(pitch/(dTheta*diameter))*2
+    invBraidingAngle = 180 - braidingAngle
+    nbZ = 4*nbTotalCells+1
+    
+    if wireID%2 == 1
+        drBraiding = circshift(drBraiding, 2*braidingPattern)
+    end 
+    
+    if !clockwise
+        drBraiding = circshift(drBraiding, -braidingPattern)
+    end 
+    
+    for i in 0:nbZ-1
+        
+        if nodeID == []
+            push!(nodeID, 1)
+        else 
+            push!(nodeID, nodeID[end]+1)
+        end 
+        
+        offsetBraiding = drBraiding[Int(i%(4*braidingPattern)+1)]
+        if wireGap != 0
+            r = diameter/2 + offsetBraiding * orient * (rWireSection+wireGap/2)
+        else 
+            r = diameter/2 
+        end
+        x_n = r*cos(orient*i*dTheta+offsetTheta)
+        y_n = r*sin(orient*i*dTheta+offsetTheta)
+        z_n = i*pitch/4
+        
+        push!(pos, [x_n, y_n, z_n])
+        
+        if i != 0 
+            push!(conn, [nodeID[end-1], nodeID[end]]) 
+        end 
+    end 
 end 
 
 function compute_bs_geom_given_nbTotalCells(nbWires, radius, rWireSection, wireGap, length, nbTotalCells, braidingPattern)
@@ -129,6 +158,30 @@ function compute_bs_geom_given_nbTotalCells(nbWires, radius, rWireSection, wireG
 
 
 end
+
+
+function make_stent_close_ends!(positions, connectivity, rWireSection)
+
+    ringInit = get_nodespairs_stent_first_ring(rWireSection, positions) 
+
+    for i in eachindex(ringInit)
+
+        nodepair = ringInit[i]
+        deleteat!(positions, nodepair[2])
+        replace(connectivity, nodepair[2] => nodepair[1])
+
+    end 
+
+    # for i in eachindex(ringLast)
+        
+    #     nodepair = ringLast[i]
+    #     deleteat!(positions, nodepair[2])
+    #     replace!(connectivity, nodepair[2] => nodepair[1])
+
+    # end 
+
+end 
+
 
 function get_rings(positions)
     
@@ -158,17 +211,17 @@ end
 function get_nodespairs_stent(positions)
     
     constraints = Vector{Vec2{Int}}()
-    toll = 0.06
+    toll = rWireSection*2.1
     rings = get_rings(positions)
 
-    for r in 1:length(rings)
+    for r in eachindex(rings)
         
-        for i in 1:length(rings[r])
-            
+        for i in eachindex(rings[r])
+             
             index_i = rings[r][i]
             pos_i = positions[index_i]
             
-            for j in 1:length(rings[r])
+            for j in eachindex(rings[r])
                 
                 index_j = rings[r][j]
                 pos_j = positions[index_j]
@@ -185,7 +238,64 @@ function get_nodespairs_stent(positions)
     
     return constraints
     
-end 
+end
+
+function get_nodespairs_stent_first_ring(rWireSection, positions)
+    
+    constraints = Vector{Vec2{Int}}()
+    toll = rWireSection*2.1
+    rings = get_rings(positions)
+
+    for i in eachindex(rings[1])
+            
+        index_i = rings[1][i]
+        pos_i = positions[index_i]
+
+        for j in eachindex(rings[1])
+            
+            index_j = rings[1][j]
+            pos_j = positions[index_j]
+
+            dist = norm(pos_i-pos_j)            
+            if index_j != index_i && dist < toll && !([index_j, index_i] in constraints)
+                push!(constraints, [index_i, index_j])
+            end 
+            
+        end
+    end 
+    
+    return constraints
+    
+end
+
+function get_nodespairs_stent_last_ring(rWireSection, positions)
+    
+    constraints = Vector{Vec2{Int}}()
+    toll = rWireSection*2.1
+    rings = get_rings(positions)
+        
+    for i in eachindex(rings[end])
+            
+        index_i = rings[end][i]
+        pos_i = positions[index_i]
+        
+        for j in eachindex(rings[end])
+            
+            index_j = rings[end][j]
+            pos_j = positions[index_j]
+            
+            dist = norm(pos_i-pos_j)
+            
+            if index_j != index_i && dist < toll && !([index_j, index_i] in constraints)
+                push!(constraints, [index_i, index_j])
+            end 
+            
+        end
+    end 
+    
+    return constraints
+    
+end
 
 # -------------------------------------------------------------------------------------------
 # Centerline
@@ -342,26 +452,24 @@ end
 # Guides
 # -------------------------------------------------------------------------------------------
 
-function get_internal_nodes(positions_stent, rStent, rWireSection, wireGap)
-    
-    toll = (rWireSection + wireGap/2)/2
-    
+function get_internal_and_external_nodes(positions_stent, rStent, rWireSection, wireGap)
+
     Rint = rStent - rWireSection - wireGap/2
     Rext = rStent + rWireSection + wireGap/2
-    
+
     intnodes = []
     extnodes = []
     
-    for i in 1:length(positions_stent)
+    for i in eachindex(positions_stent)
         
         r = sqrt(positions_stent[i][1]^2 + positions_stent[i][2]^2)
         
-        if isapprox(r, Rint; atol = toll) 
+        if isapprox(r, Rint; atol = 0.001) 
             push!(intnodes, i)
-        elseif isapprox(r, Rext; atol = toll) 
+        elseif isapprox(r, Rext; atol = 0.001) 
             push!(extnodes, i)
         end 
-        
+
     end 
     
     return intnodes, extnodes
@@ -610,7 +718,7 @@ function write_vtk_configuration(filename, positions, connectivity)
         write(fid, string.(n[3])) 
     end 
     
-    numberLines = length(connectivity)
+    numberLines = size(connectivity, 1)
     numberElementsPerLine = 2
     numberElements= numberLines*(numberElementsPerLine + 1)
     write(fid,"\nLINES $numberLines $numberElements\n")
@@ -620,11 +728,11 @@ function write_vtk_configuration(filename, positions, connectivity)
         write(fid, string.(numberElementsPerLine))
         write(fid,"\n")
         
-        node = connectivity[i][1] -1
+        node = connectivity[i,1] -1
         write(fid, string.(node)) 
         write(fid,"\n")
         
-        node = connectivity[i][2] -1
+        node = connectivity[i,2] -1
         write(fid, string.(node)) 
         write(fid,"\n")
         

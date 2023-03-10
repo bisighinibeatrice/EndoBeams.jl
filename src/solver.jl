@@ -30,7 +30,7 @@ function solver!(conf, params)
         solⁿ, solⁿ⁺¹, nodes_sol, matrices, energy, vtkdata = solver_initialisation(conf, output_dir)
 
         write_VTK(write_counter, 0, t, conf, energy, vtkdata)
-        write_VTK_GP(write_counter, conf.gausspoints, output_dir) 
+        # write_VTK_GP(write_counter, conf.gausspoints, output_dir) 
         write_counter += 1
         
         # Linear solver
@@ -108,7 +108,7 @@ function solver!(conf, params)
                 # save VTK with frequency 1/Δt_plot: 
                 if  tⁿ⁺¹ > write_t + Δt_plot  ||  tⁿ⁺¹ ≈ write_t + Δt_plot
                     write_VTK(write_counter, step, tⁿ⁺¹, conf, energy, vtkdata)
-                    write_VTK_GP(write_counter, conf.gausspoints, output_dir) 
+                    # write_VTK_GP(write_counter, conf.gausspoints, output_dir) 
                     write_counter += 1
                     write_t = tⁿ⁺¹
                 end
@@ -275,7 +275,6 @@ function predictor!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹,
         prob = LinearProblem(nodes_sol.Ktan_free, nodes_sol.r_free)
         sol = LinearSolve.solve(prob)   
         nodes_sol.ΔD_free .= sol.u
-
     end
     
     @timeit_debug "Update" begin 

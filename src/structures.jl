@@ -104,7 +104,6 @@ end
 # Material properties
 struct BeamProperties{TK, TJ}
     
-    radius::Float64
     E::Float64
     K̄ⁱⁿᵗ::TK
     Jᵨ::TJ
@@ -125,7 +124,7 @@ Constructor of the structure containing the material properties:
 
 Returns a Material structure.
 """
-function BeamProperties(l₀, E, ν, ρ, radius, damping)
+function BeamProperties(l₀, E, ν, ρ, radius, damping) where T
     
     G = E/(2*(1+ν))
     A = pi*radius^2
@@ -136,8 +135,8 @@ function BeamProperties(l₀, E, ν, ρ, radius, damping)
     Aᵨ = ρ*A
     
     K̄ⁱⁿᵗ = K̄ⁱⁿᵗ_beam(E, G, Iₒ, A, I₂₂, I₃₃, l₀)
-    
-    beamprops = BeamProperties{typeof(K̄ⁱⁿᵗ), typeof(Jᵨ)}(radius, E, K̄ⁱⁿᵗ, Jᵨ, Aᵨ, damping)
+
+    beamprops = BeamProperties{typeof(K̄ⁱⁿᵗ), typeof(Jᵨ)}(E, K̄ⁱⁿᵗ, Jᵨ, Aᵨ, damping)
     
     return beamprops
     

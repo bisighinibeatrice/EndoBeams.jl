@@ -1,19 +1,5 @@
-
-#----------------------------------
-# STRUCTURES
-#----------------------------------
-
 abstract type SignedDistanceField end
 
-"""
-    sdf = struct Plane_z_SDF
-
-Constructor of the structure containing the properties of the analytical SDF of a z-normal plane:
-- `r`: beam radius;
-- `z0`: plane position along z.
-
-Returns a structure containing the information of the created sdf. 
-"""
 struct Plane_z_SDF <: SignedDistanceField
     
     r::Float64  # beams radius
@@ -21,15 +7,6 @@ struct Plane_z_SDF <: SignedDistanceField
     
 end 
 
-"""
-    sdf = struct Plane_y_SDF
-
-Constructor of the structure containing the properties  of the analytical SDF of a y-normal plane.
-- `r`: beam radius;
-- `y0`: plane position along y.
-
-Returns a structure containing the information of the created sdf.  
-"""
 struct Plane_y_SDF <: SignedDistanceField
     
     r::Float64  # beams radius
@@ -37,18 +14,6 @@ struct Plane_y_SDF <: SignedDistanceField
     
 end 
 
-"""
-    sdf = struct Sphere_SDF
-
-Constructor of the structure containing the properties  of the analytical SDF of a sphere.
-- `r`: beam radius;
-- `R`: sphere radius;
-- `x0`: sphere centre position along x;
-- `y0`: sphere centre position along y;
-- `z0`: sphere centre position along z.
-    
-Returns a structure containing the information of the created sdf. 
-"""
 struct Sphere_SDF <: SignedDistanceField
     
     r::Float64 # beams radius
@@ -59,20 +24,10 @@ struct Sphere_SDF <: SignedDistanceField
     
 end 
 
-"""
-    sdf = struct Cylinder_SDF
-
-Constructor of the structure containing the properties of the analytical SDF of an infinite cylinder oriented along z.
-- `r`: beam radius;
-- `R`: cylinder radius.
-    
-Returns a structure containing the information of the created sdf. 
-"""
 struct Cylinder_SDF <: SignedDistanceField
     
     r::Float64 # beams radius
     R::Float64 # cylinder radius
-    
     
 end  
 
@@ -88,19 +43,6 @@ struct Discrete_SDF{F} <: SignedDistanceField
     
 end 
 
-#----------------------------------
-# CONSTRUCTOR DISCRETE SDF
-#----------------------------------
-"""
-    sdf = Discrete_SDF(filename, radius, inside)
-
-Constructor of the discrete SDF from a vtk file.
-- `filename`: sdf file (all files with extensions .vtk are accepted);
-- `radius`: cylinder radius;
-- `inside`: true if the sdf is negative inside.
-
-Returns a structure containing the information of the created sdf. 
-"""
 function Discrete_SDF(filename, radius, inside)
     
     # Read sdf from file
@@ -134,7 +76,6 @@ function Discrete_SDF(filename, radius, inside)
 
 end 
 
-
 # Get gap, gradient and hession of sphere analytical SDF at point 
 @inline function contact_gap(point, sdf::Sphere_SDF)
     
@@ -160,7 +101,31 @@ end
     
 end
 
+# Get gap, gradient and hession of sphere analytical SDF at point 
+@inline function contact_gap(point, sdf::Cylinder_SDF)
+    
+    aux = Vec3(point[1], point[2], 0)
+    
+    norm_aux = norm(aux)
+    invnorm = 1/norm_aux
+    
+    gₙ = norm_aux - sdf.R + sdf.r
+    ∂gₙ∂x = invnorm * aux
+    ∂²gₙ∂x² = invnorm*ID3 + (invnorm^3)*(aux*aux')
+    
+    return -gₙ, -∂gₙ∂x, -∂²gₙ∂x²
+    
+end
 
+@inline function incontact(point, sdf::Cylinder_SDF, ḡₙ)
+    
+    aux = Vec3(point[1], point[2], 0)
+    norm_aux = norm(aux)
+    gₙ = norm_aux - sdf.R + sdf.r
+    
+    return -gₙ - sdf.r ≤ ḡₙ
+    
+end
 
 
 @inline function isinside(point, dom)
@@ -196,15 +161,12 @@ end
         
 end 
 
-
 @inline function incontact(point, sdf::Discrete_SDF, ḡₙ)
 
     sitp = sdf.sitp
     return isinside(point, sdf.dom) && (sitp(point...) - sdf.r) ≤ ḡₙ
         
 end 
-
-
 
 # Quadratically regulise penalty
 @inline function regularize_gₙ(gₙ::T, radius) where T

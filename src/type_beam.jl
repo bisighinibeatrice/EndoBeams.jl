@@ -8,6 +8,7 @@ struct Beam{Tp}
     node1::Int # index of node 1   
     node2::Int # index of node 2
     l₀::Float64 # initial beam length
+    radius::Float64 # beam radius
     Rₑ⁰::Mat33{Float64} # initial beam rotation matrix
     properties::Tp # beam internal matrix
 
@@ -55,7 +56,7 @@ function build_beams(nodes, connectivity::AbstractVector, E, ν, ρ, radius, dam
                             ρ isa AbstractVector ? ρ[i] : ρ,
                             radius isa AbstractVector ? radius[i] : radius,
                             damping isa AbstractVector ? damping[i] : damping,
-                            Rₑ⁰ isa AbstractVector ? Rₑ⁰[i] : Rₑ⁰) for i in 1:length(connectivity))
+                            Rₑ⁰ isa AbstractVector ? Rₑ⁰[i] : Rₑ⁰) for i in eachindex(connectivity))
 
     return beams
     
@@ -68,8 +69,8 @@ function Beam(ind, node1::Node, node2::Node, E, ν, ρ, radius, damping, Rₑ⁰
     i2 = node2.i  
     l₀ = norm(node1.X₀ - node2.X₀)   
     beamprops = BeamProperties(l₀, E, ν, ρ, radius, damping)
-    
-    return Beam{typeof(beamprops)}(ind, i1, i2, l₀, Rₑ⁰, beamprops)
+
+    return Beam{typeof(beamprops)}(ind, i1, i2, l₀, radius, Rₑ⁰, beamprops)
     
 end 
 
