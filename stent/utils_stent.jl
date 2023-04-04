@@ -2,18 +2,6 @@
 # Stent
 # -------------------------------------------------------------------------------------------
 
-@with_kw struct BraidedStent 
-
-    nbWires::Int = 20
-    rStent::Float64 = 2.3
-    rCrimpedStent::Float64 = 1.1
-    rWireSection::Float64 = 0.014
-    wireGap::Float64 = 0
-    lengthStent::Float64 = 7.5
-    nbTotalCells::Float64 = 35
-    braidingPattern::Int = 2
-
-end
 
 @with_kw struct WallStent
 
@@ -22,11 +10,24 @@ end
     rCrimpedStent::Float64 = 1.85
     rWireSection::Float64 = 0.065
     wireGap::Float64 = 0.0
-    lengthStent::Float64 = 10
-    nbTotalCells::Float64 = 10
+    lengthStent::Float64 = 5
+    nbTotalCells::Float64 = 4
     braidingPattern::Int = 2
 
 end
+
+# @with_kw struct WallStent
+
+#     nbWires::Int = 12
+#     rStent::Float64 = 4
+#     rCrimpedStent::Float64 = 1.85
+#     rWireSection::Float64 = 0.065
+#     wireGap::Float64 = 0.0
+#     lengthStent::Float64 = 20
+#     nbTotalCells::Float64 = 18
+#     braidingPattern::Int = 2
+
+# end
 
 function helix!(positions, connectivity, nodeID, length, diameter, nbTotalCells, nbWires, rWireSection, braidingPattern, wireGap, wireID, clockwise)
     
@@ -121,11 +122,12 @@ function helix2!(pos, conn, nodeID, length, diameter, nbTotalCells, nbWires, rWi
         end 
         
         offsetBraiding = drBraiding[Int(i%(4*braidingPattern)+1)]
-        if wireGap != 0
-            r = diameter/2 + offsetBraiding * orient * (rWireSection+wireGap/2)
-        else 
-            r = diameter/2 
-        end
+        # if wireGap != 0
+        r = diameter/2 + offsetBraiding * orient * (rWireSection+wireGap/2)
+        # else 
+        #     r = diameter/2 
+        # end
+        
         x_n = r*cos(orient*i*dTheta+offsetTheta)
         y_n = r*sin(orient*i*dTheta+offsetTheta)
         z_n = i*pitch/4
@@ -145,12 +147,12 @@ function compute_bs_geom_given_nbTotalCells(nbWires, radius, rWireSection, wireG
     nodeID = Vector{Int}()
     
     for n in 1:nbWires
-        helix!(positions, connectivity, nodeID, length, radius*2, nbTotalCells, nbWires, rWireSection, braidingPattern, wireGap, n, true)
+        helix2!(positions, connectivity, nodeID, length, radius*2, nbTotalCells, nbWires, rWireSection, braidingPattern, wireGap, n, true)
 
     end 
     
     for n in 1:nbWires
-        helix!(positions, connectivity, nodeID, length, radius*2, nbTotalCells, nbWires, rWireSection, braidingPattern, wireGap, n, false)
+        helix2!(positions, connectivity, nodeID, length, radius*2, nbTotalCells, nbWires, rWireSection, braidingPattern, wireGap, n, false)
     end
 
 
@@ -794,7 +796,7 @@ function write_vtk_configuration(filename, positions, connectivity, value)
     
 end 
 
-function write_txt_solution(nodes, beams, nnodes, nbeams, output_dir, CLEAN_FOLDER=true)
+function write_txt_solution(nodes, beams, output_dir, CLEAN_FOLDER=true)
     
     if CLEAN_FOLDER
         if output_dir != ""
@@ -808,7 +810,7 @@ function write_txt_solution(nodes, beams, nnodes, nbeams, output_dir, CLEAN_FOLD
         end 
     end
 
-    for i in 1:nnodes
+    for i in eachindex(nodes)
     
         open(output_dir * "/u.txt", "a") do io
             writedlm(io, [nodes.u[i][1] nodes.u[i][2] nodes.u[i][3]])
@@ -820,7 +822,7 @@ function write_txt_solution(nodes, beams, nnodes, nbeams, output_dir, CLEAN_FOLD
 
     end 
     
-    for i in 1:nbeams
+    for i in eachindex(beams)
 
         open(output_dir * "/Re0.txt", "a") do io
             writedlm(io, [beams.Rₑ⁰[i][1,1] beams.Rₑ⁰[i][2,1] beams.Rₑ⁰[i][3,1] beams.Rₑ⁰[i][1,2] beams.Rₑ⁰[i][2,2] beams.Rₑ⁰[i][3,2] beams.Rₑ⁰[i][1,3] beams.Rₑ⁰[i][2,3] beams.Rₑ⁰[i][3,3]])

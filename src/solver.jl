@@ -156,7 +156,7 @@ end
 #  Solves the current step
 function solve_step_dynamics!(conf, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, nodes_sol, matrices, energy, solver, params) 
 
-    @unpack ext_forces, bcs, sdf = conf
+    @unpack ext_forces, bcs, sdf, nodes = conf
 
     # -------------------------------------------------------------------------------------------
     # INITIALIZATION
@@ -164,12 +164,21 @@ function solve_step_dynamics!(conf, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, nodes_s
     
     @timeit_debug "Time step initialization" begin
         
-        
         # update external force value 
         for i in ext_forces.loaded_dofs
-            solⁿ⁺¹.fᵉˣᵗ[i] = ext_forces.f(tⁿ⁺¹, i)     
+            if !ext_forces.flag_cylindrical
+                 solⁿ⁺¹.fᵉˣᵗ[i] = ext_forces.f(tⁿ⁺¹, i)     
+            else
+                for n in nodes
+                    idof_disp_n = n.idof_disp
+                    fᵉˣᵗ_n =  [ext_forces.f(tⁿ⁺¹, i), 0, 0] 
+                    fᵉˣᵗ_n = (n.R_global_to_local)' * fᵉˣᵗ_n
+                    solⁿ⁺¹.fᵉˣᵗ[idof_disp_n] .= fᵉˣᵗ_n   
+                end 
+            end 
         end
 
+        # update Dirichlet boundary conditions
         if bcs.flag_load_from_file == false
             for i in bcs.disp_dofs
                 bcs.disp_vals[i] = bcs.u(tⁿ⁺¹, i)     
@@ -179,6 +188,12 @@ function solve_step_dynamics!(conf, tⁿ⁺¹, Δt, solⁿ, solⁿ⁺¹, nodes_s
             bcs.disp_vals[bcs.disp_dofs] .= reshape(readdlm(bcs.dir_folder_load * "/u$t⁺.txt")', (length(bcs.disp_dofs),))
 
         end
+
+        if tⁿ⁺¹> 5.00e-02 
+            conf.contact.kₙ = 0 
+        end 
+
+
     end
     
     # -------------------------------------------------------------------------------------------

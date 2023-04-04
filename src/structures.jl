@@ -2,7 +2,7 @@
 # STRUCTURES
 #----------------------------------
 
-struct ContactParameters
+mutable struct ContactParameters
     kₙ::Float64
     μ::Float64
     εᵗ::Float64
@@ -80,6 +80,9 @@ struct ExternalForces{TF}
     
     # dofs where the concentrated force is applied
     loaded_dofs::Vector{Int}
+
+    # dofs where the concentrated force is applied
+    flag_cylindrical::Bool
     
 end 
 
@@ -93,9 +96,9 @@ Constructor of the structure containing the information about the external load,
 
 Returns a ExternalForces structure.
 """
-function ExternalForces(force_fun::TF, loaded_dofs) where TF
+function ExternalForces(force_fun::TF, loaded_dofs, flag_cylindrical=false) where TF
     
-    return ExternalForces{TF}(force_fun, loaded_dofs)
+    return ExternalForces{TF}(force_fun, loaded_dofs, flag_cylindrical)
     
 end 
 

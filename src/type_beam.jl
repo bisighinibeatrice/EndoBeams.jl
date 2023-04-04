@@ -40,7 +40,7 @@ function build_beams(nodes, connectivity::AbstractMatrix, E, ν, ρ, radius, dam
                             ρ isa AbstractVector ? ρ[i] : ρ,
                             radius isa AbstractVector ? radius[i] : radius,
                             damping isa AbstractVector ? damping[i] : damping,
-                            Rₑ⁰ isa AbstractMatrix ? Rₑ⁰[i,:] : Rₑ⁰) for i in 1:size(connectivity, 1))
+                            Rₑ⁰ isa AbstractVector ? Rₑ⁰[i] : Rₑ⁰) for i in 1:size(connectivity, 1))
 
     return beams
     

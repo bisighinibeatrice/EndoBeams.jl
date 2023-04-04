@@ -24,7 +24,7 @@ struct Sphere_SDF <: SignedDistanceField
     
 end 
 
-struct Cylinder_SDF <: SignedDistanceField
+mutable struct Cylinder_SDF <: SignedDistanceField
     
     r::Float64 # beams radius
     R::Float64 # cylinder radius
