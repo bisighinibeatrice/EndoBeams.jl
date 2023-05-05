@@ -1,0 +1,180 @@
+% Loads stmaryrd symbols for 10pt plain TeX documents.
+% Use \stmaryrdninepoint for nine point documents.
+% Use \stmaryrdelevenpoint for eleven point documents.
+% Use \stmaryrdtwelvepoint for twelve point documents.
+%
+% See stmaryrd docs for the symbols available and the commands to
+% access them.
+
+\edef\restoreallcatcodes{%
+   \catcode`\noexpand\@=\number\catcode`\@\relax
+   \catcode`\noexpand\!=\number\catcode`\!\relax}
+
+\newfam\stmaryrdfam
+
+\font\stmaryfiv  stmary5
+\font\stmarysix  stmary6
+\font\stmarysev  stmary7
+\font\stmaryegt  stmary8
+\font\stmarynin  stmary9
+\font\stmaryten  stmary10
+\font\stmaryelv  stmary10 at10.95pt
+\font\stmarytwl  stmary10 at12pt
+
+\def\stmaryrdninepoint{%
+  \textfont\stmaryrdfam\stmarynin
+  \scriptfont\stmaryrdfam\stmarysev
+  \scriptscriptfont\stmaryrdfam\stmaryfiv}
+
+\def\stmaryrdtenpoint{%
+  \textfont\stmaryrdfam\stmaryten
+  \scriptfont\stmaryrdfam\stmarysev
+  \scriptscriptfont\stmaryrdfam\stmaryfiv}
+
+\def\stmaryrdelevenpoint{%
+  \textfont\stmaryrdfam\stmaryelv
+  \scriptfont\stmaryrdfam\stmarysegt
+  \scriptscriptfont\stmaryrdfam\stmarysix}
+
+\def\stmaryrdtwelvepoint{%
+  \textfont\stmaryrdfam\stmarytwl
+  \scriptfont\stmaryrdfam\stmaryegt
+  \scriptscriptfont\stmaryrdfam\stmarysix}
+
+\catcode`\@=11
+\def\hexnumber@#1{\ifcase#1%
+  0\or 1\or 2\or 3\or 4\or 5\or 6\or 7\or
+  8\or 9\or A\or B\or C\or D\or E\or F\fi}
+
+\catcode`\!\active
+\edef!{\hexnumber@\stmaryrdfam}
+
+\mathchardef\shortleftarrow"3!00
+\mathchardef\shortrightarrow"3!01
+\mathchardef\shortuparrow"3!02
+\mathchardef\shortdownarrow"3!03
+\mathchardef\Yup"2!04
+\mathchardef\Ydown"2!05
+\mathchardef\Yleft"2!06
+\mathchardef\Yright"2!07
+\mathchardef\varcurlyvee"2!08
+\mathchardef\varcurlywedge"2!09
+\mathchardef\minuso"2!0A
+\mathchardef\baro"2!0B
+\mathchardef\sslash"2!0C
+\mathchardef\bbslash"2!0D
+\mathchardef\moo"2!0E
+\mathchardef\varotimes"2!0F
+\mathchardef\varoast"2!10
+\mathchardef\varobar"2!11
+\mathchardef\varodot"2!12
+\mathchardef\varoslash"2!13
+\mathchardef\varobslash"2!14
+\mathchardef\varocircle"2!15
+\mathchardef\varoplus"2!16
+\mathchardef\varominus"2!17
+\mathchardef\boxast"2!18
+\mathchardef\boxbar"2!19
+\mathchardef\boxdot"2!1A
+\mathchardef\boxslash"2!1B
+\mathchardef\boxbslash"2!1C
+\mathchardef\boxcircle"2!1D
+\mathchardef\boxbox"2!1E
+\mathchardef\boxempty"2!1F
+\mathchardef\lightning"0!20
+\mathchardef\merge"2!21
+\mathchardef\vartimes"2!22
+\mathchardef\fatsemi"2!23
+\mathchardef\sswarrow"3!24
+\mathchardef\ssearrow"3!25
+\mathchardef\curlywedgeuparrow"3!26
+\mathchardef\curlywedgedownarrow"3!27
+\mathchardef\fatslash"2!28
+\mathchardef\fatbslash"2!29
+\mathchardef\lbag"2!2A
+\mathchardef\rbag"2!2B
+\mathchardef\varbigcirc"2!2C
+\mathchardef\leftrightarroweq"3!2D
+\mathchardef\curlyveedownarrow"3!2E
+\mathchardef\curlyveeuparrow"3!2F
+\mathchardef\nnwarrow"3!30
+\mathchardef\nnearrow"3!31
+\mathchardef\leftslice"2!32
+\mathchardef\rightslice"2!33
+\mathchardef\varolessthan"2!34
+\mathchardef\varogreaterthan"2!35
+\mathchardef\varovee"2!36
+\mathchardef\varowedge"2!37
+\mathchardef\talloblong"2!38
+\mathchardef\interleave"2!39
+\mathchardef\obar"2!3A
+\mathchardef\obslash"2!3B
+\mathchardef\olessthan"2!3C
+\mathchardef\ogreaterthan"2!3D
+\mathchardef\ovee"2!3E
+\mathchardef\owedge"2!3F
+\mathchardef\oblong"2!40
+\mathchardef\inplus"3!41
+\mathchardef\niplus"3!42
+\mathchardef\nplus"2!43
+\mathchardef\subsetplus"3!44
+\mathchardef\supsetplus"3!45
+\mathchardef\subsetpluseq"3!46
+\mathchardef\supsetpluseq"3!47
+\mathchardef\Lbag"4!48
+\mathchardef\Rbag"5!49
+
+\mathchardef\llparenthesis"4!4C
+\mathchardef\rrparenthesis"5!4D
+\mathchardef\binampersand"4!4E
+\mathchardef\bindnasrepma"5!4F
+\mathchardef\trianglelefteqslant"3!50
+\mathchardef\trianglerighteqslant"3!51
+\mathchardef\ntrianglelefteqslant"3!52
+\mathchardef\ntrianglerighteqslant"3!53
+\mathchardef\llfloor"4!54
+\mathchardef\rrfloor"5!55
+\mathchardef\llceil"4!56
+\mathchardef\rrceil"5!57
+\mathchardef\arrownot"3!58
+\mathchardef\Arrownot"3!59
+\mathchardef\Mapstochar"3!5A
+\mathchardef\mapsfromchar"3!5B
+\mathchardef\Mapsfromchar"3!5C
+\mathchardef\leftrightarrowtriangle"2!5D
+\mathchardef\leftarrowtriangle"3!5E
+\mathchardef\rightarrowtriangle"3!5F
+\mathchardef\bigtriangledown"1!60
+\mathchardef\bigtriangleup"1!61
+\mathchardef\bigcurlyvee"1!62
+\mathchardef\bigcurlywedge"1!63
+\mathchardef\bigsqcap"1!64
+\mathchardef\bigbox"1!65
+\mathchardef\bigparallel"1!66
+\mathchardef\biginterleave"1!67
+\mathchardef\bignplus"1!70
+
+\edef\llbracket{\delimiter"4!4A!71}
+\edef\rrbracket{\delimiter"5!4B!79}
+
+\def\@tempa#1{
+  \def\varcopyright{{\ooalign{\hfil\raise.07ex\hbox{c}\hfil\crcr\mathhexbox#12C}}}}
+\expandafter\@tempa!
+
+% The long arrow negations.
+
+\def\longarrownot{\mathrel{\mkern5.5mu\arrownot\mkern-5.5mu}}
+\def\Longarrownot{\mathrel{\mkern5.5mu\Arrownot\mkern-5.5mu}}
+
+% The variants on \mapsto:
+
+\def\Mapsto{\Mapstochar\Rightarrow}
+\def\mapsfrom{\leftarrow\mapsfromchar}
+\def\Mapsfrom{\Leftarrow\Mapsfromchar}
+\def\Longmapsto{\Mapstochar\Longrightarrow}
+\def\longmapsfrom{\longleftarrow\mapsfromchar}
+\def\Longmapsfrom{\Longleftarrow\Mapsfromchar}
+
+\restoreallcatcodes
+
+\stmaryrdtenpoint

@@ -37,10 +37,7 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params, T=F
         
         # preallocation of the vectors and matrices used in the computaion
         sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp = solver_initialisation(conf, allnodes, allbeams, int_pos, int_conn, comp, pn_constrains, thisDirOutputPath, SAVE_INTERPOLATION_VTK, SAVE_GP_VTK, SAVE_NODES_VTK, T)
-        
-        # Linear solver
-        ps = MKLPardisoSolver()
-        
+                
     end 
     
     # -------------------------------------------------------------------------------------------
@@ -66,9 +63,9 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params, T=F
                 
                 # solve system @t_n
                 if dynamics
-                   flag_conv = solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, ps, SHOW_COMP_TIME, T)
+                   flag_conv = solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, SHOW_COMP_TIME, T)
                 else
-                    flag_conv = solve_step_statics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, ps, SHOW_COMP_TIME, T)
+                    flag_conv = solve_step_statics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, SHOW_COMP_TIME, T)
                 end
 
                 # if not converged, halve the time step and re-solve the system until it converges
@@ -94,9 +91,9 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params, T=F
                     update_nodes_not_converged!(allnodes)
                     
                     if dynamics
-                        flag_conv = solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, ps, SHOW_COMP_TIME, T)
+                        flag_conv = solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, SHOW_COMP_TIME, T)
                     else
-                        flag_conv = solve_step_statics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, ps, SHOW_COMP_TIME, T)
+                        flag_conv = solve_step_statics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, SHOW_COMP_TIME, T)
                     end
 
                     k_count_OKit = 0
@@ -173,7 +170,7 @@ function solver!(allnodes, allbeams, conf, comp, sdf, pn_constrains, params, T=F
 end
 
 #  Solves the current step
-function solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, ps, SHOW_COMP_TIME, T=Float64) 
+function solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, SHOW_COMP_TIME, T=Float64) 
 
     # -------------------------------------------------------------------------------------------
     # INITIALIZATION
@@ -207,7 +204,7 @@ function solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n
     @timeit_debug to "Predictor" begin
         
         # predict the solution @n+1
-        predictor!(allnodes, allbeams, pn_constrains, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to, ps, T) 
+        predictor!(allnodes, allbeams, pn_constrains, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to, T) 
         
     end
     
@@ -218,7 +215,7 @@ function solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n
     @timeit_debug to "Corrector" begin
         
         # corrector loop: output = number of iterations
-        k = corrector_loop!(allnodes, allbeams, pn_constrains, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to, ps, SHOW_COMP_TIME, T)
+        k = corrector_loop!(allnodes, allbeams, pn_constrains, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to, SHOW_COMP_TIME, T)
         
     end
     
@@ -226,7 +223,7 @@ function solve_step_dynamics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n
     
 end 
 
-function solve_step_statics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, ps, SHOW_COMP_TIME, T=Float64) 
+function solve_step_statics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, u_imp, conf, comp, sdf, to, SHOW_COMP_TIME, T=Float64) 
 
     # -------------------------------------------------------------------------------------------
     # INITIALIZATION
@@ -329,7 +326,7 @@ function solve_step_statics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n,
             
             @timeit_debug to "Linear solve" begin
                 
-                solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
+                nodes_sol.ΔD_free .= nodes_sol.Ktan_free\nodes_sol.r_free
 
             end 
             
@@ -374,7 +371,7 @@ function solve_step_statics!(allnodes, allbeams, pn_constrains, t_n1, dt, sol_n,
 end 
 
 # Predicts the solution at the current step
-function predictor!(allnodes, allbeams, pencons, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to, ps, T=Float64)
+function predictor!(allnodes, allbeams, pencons, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to, T=Float64)
     
     # -------------------------------------------------------------------------------------------
     # INITIALISATION
@@ -460,7 +457,7 @@ function predictor!(allnodes, allbeams, pencons, matrices, energy, sol_n1, sol_n
     
     @timeit_debug to "Linear solve" begin 
 
-        solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
+        nodes_sol.ΔD_free .= nodes_sol.Ktan_free\nodes_sol.r_free
 
     end
     
@@ -484,7 +481,7 @@ function predictor!(allnodes, allbeams, pencons, matrices, energy, sol_n1, sol_n
 end 
 
 # Corrects the solution at the current step
-function corrector_loop!(allnodes, allbeams, pncons, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to, ps, SHOW_COMP_TIME, T=Float64) 
+function corrector_loop!(allnodes, allbeams, pncons, matrices, energy, sol_n1, sol_n, sol_GP, u_imp, dt, conf, comp, sdf, fixed_matrices, nodes_sol, t_n1, to, SHOW_COMP_TIME, T=Float64) 
     
     # -------------------------------------------------------------------------------------------
     # INITIALISATION
@@ -584,7 +581,7 @@ function corrector_loop!(allnodes, allbeams, pncons, matrices, energy, sol_n1, s
             
             @timeit_debug to "Linear solve" begin
                 
-                solve!(ps, nodes_sol.ΔD_free, nodes_sol.Ktan_free, nodes_sol.r_free)
+                nodes_sol.ΔD_free .= nodes_sol.Ktan_free\nodes_sol.r_free
 
             end 
             

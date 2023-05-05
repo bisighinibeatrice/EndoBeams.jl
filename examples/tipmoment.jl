@@ -61,6 +61,8 @@ rho = 7750
 Io = It
 Irr = It
 J = It
+Arho = A*rho
+Jrho = Mat33(rho*Io, 0, 0, 0, rho*Iy, 0, 0, 0, rho*Iz)
 
 geom = Geometry{T}(A, Iz, Iy, Io, Irr, J)
 mat = Material{T}(E, G, Arho, Jrho)

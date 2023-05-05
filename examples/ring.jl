@@ -118,7 +118,8 @@ eps_C = 1E6
 mu_T = 0.3
 eps_tol_fric = 0.5
 
-comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T)
+dynamics = true 
+comp = constructor_simulation_parameters(alpha, beta, gamma, damping, dynamics, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T)
 
 # -------------------------------------------------------------------------------------------
 # External forces

@@ -99,7 +99,7 @@ function test_angle()
     mu_T = 0
     eps_tol_fric = 0.1
 
-    comp = constructor_simulation_parameters(alpha, beta, gamma, damping,  dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T)
+    comp = constructor_simulation_parameters(alpha, beta, gamma, damping, true, dt, dt_plot, tend, tol_res, tol_ddk, max_it, nG, wG, zG, eps_C, mu_T, eps_tol_fric, T)
 
     # -------------------------------------------------------------------------------------------
     # External forces
@@ -153,7 +153,7 @@ function test_angle()
     # Solve
     # -------------------------------------------------------------------------------------------
 
-    params = ParamsTest()
+    params = Params(thisDirOutputPath = "test/output3D", SHOW_COMP_TIME=false)
     solver!(allnodes, allbeams, conf, comp, sdf, cons, params, T)       
 
     # -------------------------------------------------------------------------------------------

@@ -1,0 +1,85 @@
+\begin{thebibliography}{10}
+\expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
+\providecommand{\bibinfo}[2]{#2}
+\ifx\xfnm\relax \def\xfnm[#1]{\unskip,\space#1}\fi
+%Type = Article
+\bibitem[{Geilinger et~al.(2020)Geilinger, Hahn, Zehnder, B{\"{a}}cher,
+  Thomaszewski, and Coros}]{Geilinger2020}
+\bibinfo{author}{M.~Geilinger}, \bibinfo{author}{D.~Hahn},
+  \bibinfo{author}{J.~Zehnder}, \bibinfo{author}{M.~B{\"{a}}cher},
+  \bibinfo{author}{B.~Thomaszewski}, \bibinfo{author}{S.~Coros},
+\newblock \bibinfo{title}{{ADD: Analytically differentiable dynamics for
+  multi-body systems with frictional contact}},
+\newblock \bibinfo{journal}{ACM Transactions on Graphics} \bibinfo{volume}{39}
+  (\bibinfo{year}{2020}).
+%Type = Article
+\bibitem[{Aguirre and Avril(2020)}]{Aguirre2020}
+\bibinfo{author}{M.~Aguirre}, \bibinfo{author}{S.~Avril},
+\newblock \bibinfo{title}{{An implicit 3D corotational formulation for
+  frictional contact dynamics of beams against rigid surfaces using discrete
+  signed distance fields}},
+\newblock \bibinfo{journal}{Computer Methods in Applied Mechanics and
+  Engineering} \bibinfo{volume}{371} (\bibinfo{year}{2020})
+  \bibinfo{pages}{113275}.
+%Type = Book
+\bibitem[{Wriggers(2006)}]{Wriggers2006}
+\bibinfo{author}{P.~Wriggers}, \bibinfo{title}{{Computational contact
+  mechanics}}, \bibinfo{publisher}{Springer Berlin Heidelberg},
+  \bibinfo{address}{Berlin, Heidelberg}, \bibinfo{year}{2006}.
+%Type = Article
+\bibitem[{Zavarise and Wriggers(2000)}]{Zavarise2000}
+\bibinfo{author}{G.~Zavarise}, \bibinfo{author}{P.~Wriggers},
+\newblock \bibinfo{title}{{Contact with friction between beams in 3-D space}},
+\newblock \bibinfo{journal}{International Journal for Numerical Methods in
+  Engineering} \bibinfo{volume}{49} (\bibinfo{year}{2000})
+  \bibinfo{pages}{977--1006}.
+%Type = Article
+\bibitem[{Ortega et~al.(2017)Ortega, {Garc{\'{i}}a Orden}, Cruchaga, and
+  Garc{\'{i}}a}]{Ortega2017}
+\bibinfo{author}{R.~Ortega}, \bibinfo{author}{J.~C. {Garc{\'{i}}a Orden}},
+  \bibinfo{author}{M.~Cruchaga}, \bibinfo{author}{C.~Garc{\'{i}}a},
+\newblock \bibinfo{title}{{Energy-consistent simulation of frictional contact
+  in rigid multibody systems using implicit surfaces and penalty method}},
+\newblock \bibinfo{journal}{Multibody System Dynamics} \bibinfo{volume}{41}
+  (\bibinfo{year}{2017}) \bibinfo{pages}{275--295}.
+%Type = Article
+\bibitem[{Durville(2012)}]{Durville2012}
+\bibinfo{author}{D.~Durville},
+\newblock \bibinfo{title}{{Contact-friction modeling within elastic beam
+  assemblies: an application to knot tightening}},
+\newblock \bibinfo{journal}{Computational Mechanics} \bibinfo{volume}{49}
+  (\bibinfo{year}{2012}) \bibinfo{pages}{687--707}.
+%Type = Article
+\bibitem[{Meier et~al.(2016)Meier, Popp, and Wall}]{Meier2016}
+\bibinfo{author}{C.~Meier}, \bibinfo{author}{A.~Popp}, \bibinfo{author}{W.~A.
+  Wall},
+\newblock \bibinfo{title}{{A finite element approach for the line-to-line
+  contact interaction of thin beams with arbitrary orientation}},
+\newblock \bibinfo{journal}{Computer Methods in Applied Mechanics and
+  Engineering} \bibinfo{volume}{308} (\bibinfo{year}{2016})
+  \bibinfo{pages}{377--413}.
+%Type = Misc
+\bibitem[{Meier et~al.(2017{\natexlab{a}})Meier, Popp, and Wall}]{Meier2017}
+\bibinfo{author}{C.~Meier}, \bibinfo{author}{A.~Popp}, \bibinfo{author}{W.~A.
+  Wall}, \bibinfo{title}{{Geometrically Exact Finite Element Formulations for
+  Slender Beams: Kirchhoff–Love Theory Versus Simo–Reissner Theory}},
+  \bibinfo{year}{2017}{\natexlab{a}}.
+%Type = Article
+\bibitem[{Meier et~al.(2017{\natexlab{b}})Meier, Grill, Wall, and
+  Popp}]{Meier2017b}
+\bibinfo{author}{C.~Meier}, \bibinfo{author}{M.~J. Grill},
+  \bibinfo{author}{W.~A. Wall}, \bibinfo{author}{A.~Popp},
+\newblock \bibinfo{title}{{Geometrically exact beam elements and smooth contact
+  schemes for the modeling of fiber-based materials and structures}},
+\newblock \bibinfo{journal}{International Journal of Solids and Structures}
+  (\bibinfo{year}{2017}{\natexlab{b}}).
+%Type = Article
+\bibitem[{Meier et~al.(2017{\natexlab{c}})Meier, Wall, and Popp}]{Meier2017a}
+\bibinfo{author}{C.~Meier}, \bibinfo{author}{W.~A. Wall},
+  \bibinfo{author}{A.~Popp},
+\newblock \bibinfo{title}{{A unified approach for beam-to-beam contact}},
+\newblock \bibinfo{journal}{Computer Methods in Applied Mechanics and
+  Engineering} \bibinfo{volume}{315} (\bibinfo{year}{2017}{\natexlab{c}})
+  \bibinfo{pages}{972--1010}.
+
+\end{thebibliography}
