@@ -1,21 +1,24 @@
-### **Boundary Conditions and Loads**
+# EndoBeams
 
-Currently, the system supports two types of **boundary conditions**: 
-- **Encastre** (where the degrees of freedom are fixed)
-- **Time-dependent displacements** (where displacements change over time).
+ `EndoBeams.jl` is a Julia finite element package for beam-to-surface contact problems. The package is based on a 3D FE corotational formulation for frictional contact dynamics of beams where the target surface, supposed rigid, is described implicitly using a Signed Distance Field (SDF), predefined in a volumetric grid.
 
-For **loads**, the system currently supports only **time-dependent concentrated forces**.
+----------------------------
 
-✔️ If no loads are applied to the structure, you can pass `nothing` for the loads argument in the `Configuration` structure. 
+## Basic usage
+First, add the Endobeams.jl package with `using Pkg, Pkg.add(url="https://github.com/beatricebisighiniEMSE/EndoBeams.jl")`.
+Run one of the examples present in the "examples" folder:
+- `angle.jl`: Right-angle cantilever beam subject to out-of-plane loading;
+- `ring.jl`: Impact of a ring against a rigid surface;
+- `net.jl`: Dropping a net on a rigid sphere;
+- `stent.jl`: Deployment of braided stent.
 
-✔️ However, even in the absence of boundary conditions, you must still pass a `BoundaryConditions` structure. This structure should include only the **total number of DOFs** in the system. This is necessary to generate the `free_dofs`, which are used later in the code.
+----------------------------
+## Branches
+- `main`: The latest package version;
+- `original-version-article`: The package version from [1];
+- `FEM-stent-deployment`: Stick-slip friction + all the utils to perform patient-specific simualation of braided stent deployment (one case provided);
+----------------------------
 
-**Future Improvements:**
-- Implement automatic handling of empty boundary conditions: if `nothing` is passed for the boundary conditions in the `Configuration` structure, the system will automatically create only the free DOFs in the backend (without requiring input from the user).
-- Expand support for different types of loads beyond just concentrated forces.
-
-### **Extra**
-
-**To Be Fixed:**
-- Energy computation: Determine whether energy should be associated directly with the configuration.
-- When reading VTK files, **CELL-TYPES** need to be removed manually now.
+## References
+[1] Aguirre M, Avril S. 2020. An implicit 3D corotational formulation for frictional contact dynamics of beams against rigid surfaces using discrete signed distance fields. Comput Methods Appl Mech Eng. 371:113275.
+[2] Bisighini, B., Aguirre, M., Pierrat, B., & Perrin, D. (2022). Advances in Engineering Software EndoBeams . jl : A Julia finite element package for beam-to-surface contact problems in cardiovascular mechanics. 171(July). https://doi.org/10.1016/j.advengsoft.2022.103173
