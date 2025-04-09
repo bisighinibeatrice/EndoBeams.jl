@@ -1,529 +1,299 @@
-#----------------------------------
-# FUNCTIONS USED IN THE TIME LOOP 
-#----------------------------------
+# ---------------------------------------------------------------
+# This function ensures displacement, velocity, and acceleration states are 
+# correctly set up for the next time step.
+# ---------------------------------------------------------------
 
-# Cleans the output folders from files of the precedent computation
-function clean_folders(thisDirOutputPath)
+function initialize_global_corrector!(conf::BeamsConfiguration, state::SimulationState)
+    for n in LazyRows(conf.nodes)
+        # Reset incremental displacement for translational DOFs
+        state.solⁿ⁺¹.ΔD[n.global_dofs_disp] .= 0  
+        
+        # Set displacement, velocity, and acceleration from nodal values
+        state.solⁿ⁺¹.D[n.global_dofs_disp] .= n.u
+        state.solⁿ⁺¹.Ḋ[n.global_dofs_disp] .= n.u̇
+        state.solⁿ⁺¹.D̈[n.global_dofs_disp] .= n.ü
+        
+        # Reset incremental displacement for rotational DOFs
+        state.solⁿ⁺¹.ΔD[n.global_dofs_rot] .= 0  
+        
+        # Set rotational displacement, velocity, and acceleration
+        state.solⁿ⁺¹.D[n.global_dofs_rot] .= n.w
+        state.solⁿ⁺¹.Ḋ[n.global_dofs_rot] .= n.ẇ
+        state.solⁿ⁺¹.D̈[n.global_dofs_rot] .= n.ẅ
+    end
+end
 
-    if thisDirOutputPath != ""
-        dir = pwd()
-        cd(thisDirOutputPath)
-        foreach(rm, filter(endswith(".vtk"), readdir()))
-        foreach(rm, filter(endswith(".vtp"), readdir()))
-        foreach(rm, filter(endswith(".pvd"), readdir()))
-        cd(dir)
-    end 
-    
+# ---------------------------------------------------------------
+# This function sets initial guesses for displacements, velocities, and accelerations.
+# ---------------------------------------------------------------
+
+function initialize_global_predictor!(conf::BeamsConfiguration, state::SimulationState)
+    for n in LazyRows(conf.nodes)
+        # Reset incremental displacement for translational DOFs
+        state.solⁿ⁺¹.ΔD[n.global_dofs_disp] .= 0  
+        
+        # Set initial displacement, velocity, and acceleration for translational DOFs
+        state.solⁿ⁺¹.D[n.global_dofs_disp] .= n.u
+        state.solⁿ⁺¹.Ḋ[n.global_dofs_disp] .= n.u̇
+        state.solⁿ⁺¹.D̈[n.global_dofs_disp] .= n.ü
+        
+        # Reset incremental displacement for rotational DOFs
+        state.solⁿ⁺¹.ΔD[n.global_dofs_rot] .= 0  
+        
+        # Predict rotational displacement as zero but keep velocity and acceleration
+        state.solⁿ⁺¹.D[n.global_dofs_rot] .= 0
+        state.solⁿ⁺¹.Ḋ[n.global_dofs_rot] .= n.ẇ
+        state.solⁿ⁺¹.D̈[n.global_dofs_rot] .= n.ẅ
+    end
 end 
 
-# Calls the functions saving the VTKs related to the nodes and beams positions i-snapshot
-function save_VTK(i, allnodes, allbeams, sol_GP, int_pos, int_conn, dirOutput, SAVE_INTERPOLATION_VTK = false, SAVE_GP_VTK = false, SAVE_NODES_VTK = false)
+# ---------------------------------------------------------------
+# Computes the tangent matrix and residual forces in the predictor step.
+# Uses Newmark parameters (α, β, γ) to construct the system.
+# ---------------------------------------------------------------
+function compute_tangent_and_residuals_predictor!(state::SimulationState, Δt, α, β, γ)
+
+    # Compute tangent stiffness matrix (Ktan) at predictor step
+    # Ktan = (1+α) * K + (γ/(βΔt)) * C + (1/(βΔt²)) * M
+    @. state.solⁿ⁺¹.Ktan.nzval = (1 + α) * state.matricesⁿ⁺¹.K.nzval + (γ / (β * Δt)) * state.matricesⁿ⁺¹.C.nzval + (1 / (β * Δt^2)) * state.matricesⁿ⁺¹.M.nzval
     
-    if SAVE_INTERPOLATION_VTK    
-        write_VTK_beams(i, allnodes, allbeams, int_pos, int_conn, dirOutput)
-    end 
-    
-    if SAVE_GP_VTK 
-        write_VTK_GP(i, sol_GP, dirOutput) 
-    end 
-    
-    if SAVE_NODES_VTK 
-        write_VTK_nodes(i, allnodes, allbeams, dirOutput)
-    end 
+    # Compute residual vector (r) at predictor step
+    # r = (1+α) * external forces - (internal forces + contact forces) - α * previous external forces
+    @. state.solⁿ⁺¹.r = (1 + α) * state.forcesⁿ⁺¹.fᵉˣᵗ - state.forcesⁿ.Tⁱⁿᵗ - state.forcesⁿ.Tᵏ - α * state.forcesⁿ.fᵉˣᵗ
 
-end 
+    # Add contribution from damping matrix (C)
+    # temp = (γ/β) * Ḋ - (Δt/2 * (2β - γ) / β) * D̈
+    @. state.solⁿ⁺¹.temp = (γ / β) * state.solⁿ⁺¹.Ḋ - (Δt / 2 * (2β - γ) / β) * state.solⁿ⁺¹.D̈
+    mul!(state.solⁿ⁺¹.r, state.matricesⁿ⁺¹.C, state.solⁿ⁺¹.temp, 1, 1)  # r += C * temp
 
-# Cleans folders, pre-allocate and initialise the variables used during the simulation and save the VTKs of the initial configuration
-function solver_initialisation(conf, allnodes, allbeams, int_pos, int_conn, comp, cons, thisDirOutputPath, SAVE_INTERPOLATION_VTK = false, SAVE_GP_VTK = false, SAVE_NODES_VTK = false, T=Float64)
-
-    clean_folders(thisDirOutputPath)
-
-    sol_n = constructor_solution(conf, T)
-    sol_n1 = constructor_solution(conf, T)
-    sol_GP = constructor_solution_GP(length(allbeams), T)
-    energy = constructor_energy(T) 
-    fixed_matrices = constructor_preallocated_matrices_fixed(allbeams, comp, T)
-    uimp = zeros(T, length(conf.bc.fixed_dofs))
-    matrices, nodes_sol = constructor_sparse_matrices!(allbeams, allnodes, cons, conf, T)
-
-    save_VTK(0, allnodes, allbeams, sol_GP, int_pos, int_conn, thisDirOutputPath, SAVE_INTERPOLATION_VTK,  SAVE_GP_VTK, SAVE_NODES_VTK)
-
-    return sol_n, sol_n1, sol_GP, nodes_sol, matrices, energy, fixed_matrices, uimp
-
-end 
-
-# Save energy evolution in text file
-function save_energy(plot_Phi_energy, plot_K_energy, plot_C_energy, outputDir)
-
-    open(outputDir * "/PHI ENERGY.txt", "w") do io
-        writedlm(io, plot_Phi_energy)
-    end
-
-    open(outputDir * "/K ENERGY.txt", "w") do io
-        writedlm(io, plot_K_energy)
-    end
-
-    open(outputDir * "/C ENERGY.txt", "w") do io
-        writedlm(io, plot_C_energy)
-    end
+    # Add contribution from mass matrix (M)
+    # temp = Δt * Ḋ + (Δt² / 2) * D̈
+    @. state.solⁿ⁺¹.temp = Δt * state.solⁿ⁺¹.Ḋ + (Δt^2 / 2) * state.solⁿ⁺¹.D̈
+    mul!(state.solⁿ⁺¹.r, state.matricesⁿ⁺¹.M, state.solⁿ⁺¹.temp, 1 / (β * Δt^2), 1)  # r += (1 / (βΔt²)) * M * temp
 
 end
 
-# Update nodes values @n if converged
-function  update_nodes_converged!(allnodes)
+# ---------------------------------------------------------------
+# Computes the tangent matrix and residual forces in the corrector step.
+# Used to refine the solution after the predictor step.
+# ---------------------------------------------------------------
+function compute_tangent_and_residuals_corrector!(state::SimulationState, Δt, α, β, γ)
 
-    @inbounds for i in 1:length(allnodes)      
+    # Compute tangent stiffness matrix (Ktan) at corrector step (same as in predictor)
+    @. state.solⁿ⁺¹.Ktan.nzval = (1 + α) * state.matricesⁿ⁺¹.K.nzval + (γ / (β * Δt)) * state.matricesⁿ⁺¹.C.nzval + (1 / (β * Δt^2)) * state.matricesⁿ⁺¹.M.nzval
 
-        allnodes.u_n[i] = deepcopy(allnodes.u[i])
-        allnodes.udt_n[i] = deepcopy(allnodes.udt[i])
-        allnodes.udtdt_n[i] = deepcopy(allnodes.udtdt[i])
-        allnodes.w_n[i] = deepcopy(allnodes.w[i])
-        allnodes.wdt_n[i] = deepcopy(allnodes.wdt[i])
-        allnodes.wdtdt_n[i] = deepcopy(allnodes.wdtdt[i])
-        allnodes.R_n[i] = deepcopy(allnodes.R[i])
-        allnodes.Delt_n[i] = deepcopy(allnodes.Delt[i])
-
-    end
+    # Compute residual vector (r) at corrector step
+    # r = (1+α) * (external + contact - internal forces) - α * (previous external + contact - internal forces) - previous contact force
+    @. state.solⁿ⁺¹.r = (1 + α) * (state.forcesⁿ⁺¹.fᵉˣᵗ + state.forcesⁿ⁺¹.Tᶜ - state.forcesⁿ⁺¹.Tⁱⁿᵗ) - α * (state.forcesⁿ.fᵉˣᵗ + state.forcesⁿ.Tᶜ - state.forcesⁿ.Tⁱⁿᵗ) - state.forcesⁿ⁺¹.Tᵏ
 
 end
 
-# Update nodes values @n+1 if NOT converged
-function update_nodes_not_converged!(allnodes)
-
-    @inbounds for i in 1:length(allnodes)
-
-        allnodes.u[i] = deepcopy(allnodes.u_n[i])
-        allnodes.udt[i] = deepcopy(allnodes.udt_n[i])
-        allnodes.udtdt[i] = deepcopy(allnodes.udtdt_n[i])
-        allnodes.w[i] = deepcopy(allnodes.w_n[i])
-        allnodes.wdt[i] = deepcopy(allnodes.wdt_n[i])
-        allnodes.wdtdt[i] = deepcopy(allnodes.wdtdt_n[i])
-        allnodes.R[i] = deepcopy(allnodes.R_n[i])
-        allnodes.Delt[i] = deepcopy(allnodes.Delt_n[i])
-
-    end
-
-end
-
-#----------------------------------------
-# FUNCTIONS TO UPDATE THE EXTERNAL LOADS
-#----------------------------------------
-
-# Replaces fext with the external force @t
-function get_current_external_force!(fext, t, conf)
-
-    for i in conf.ext_forces.dof_load
-        fext[i] = conf.ext_forces.Fext(t)     
-    end
-
-end 
-
-# Replaces fext with the external force @t for the radial crimping
-function get_current_external_force_crimping!(fext, t, conf, allnodes)
+# ---------------------------------------------------------------
+# Extracts the residual and tangent stiffness matrix for the free DOFs.
+# ---------------------------------------------------------------
+function extract_free_dofs!(conf::SimulationConfiguration, state::SimulationState)
     
-    update_local_to_global_matrix!(allnodes)
-    
-    for n in allnodes
+    # Extract the residual vector (r) for free DOFs
+    @views state.solⁿ⁺¹.r_free .= state.solⁿ⁺¹.r[conf.bcs.free_dofs]
 
-        dof_disp_n = n.idof_disp
-        fext_n =  [conf.ext_forces.Fext(t), 0, 0] 
-        fext_n = (n.R_global_to_local)' * fext_n
-        fext[dof_disp_n] .= fext_n   
-
-    end 
-   
-end 
-
-# Update the solution external force @t
-function update_current_solution_external_force!(sol_n1, t, conf)
-
-    get_current_external_force!(sol_n1.fext, t, conf)
-
-end 
-
-# Update the solution external force @t for the radial crimping
-function update_current_solution_external_force_crimping!(sol_n1, t, conf, allnodes)
-
-    get_current_external_force_crimping!(sol_n1.fext, t, conf, allnodes)
-    
-end 
-
-#----------------------------------------
-# FUNCTIONS TO UPDATE AND IMPOSED THE BCs
-#----------------------------------------
-
-# Convert the tangent matrix and the residual from carthesian to cylindrical coordinates
-function dirichlet_global_to_local!(nodes_sol, allnodes)
-    
-    @inbounds for a = 1:length(allnodes)
-        
-        Ra = allnodes.R_global_to_local[a]    
-        RaT = Ra'
-        
-        adof = 6*(a-1) .+ Vec3(1,2,3)
-
-        nodes_sol.r[adof] .= Ra*nodes_sol.r[adof]
-        nodes_sol.asol[adof] .= Ra*nodes_sol.asol[adof]
-        
-        @inbounds for b = 1:length(allnodes)
-            
-            bdof = 6*(b-1) .+ Vec3(1,2,3)
-
-            Kab_loc = Mat33( 
-            nodes_sol.Ktan[adof[1], bdof[1]], nodes_sol.Ktan[adof[2], bdof[1]], nodes_sol.Ktan[adof[3], bdof[1]],
-            nodes_sol.Ktan[adof[1], bdof[2]], nodes_sol.Ktan[adof[2], bdof[2]], nodes_sol.Ktan[adof[3], bdof[2]],
-            nodes_sol.Ktan[adof[1], bdof[3]], nodes_sol.Ktan[adof[2], bdof[3]], nodes_sol.Ktan[adof[3], bdof[3]])
-                
-            Kba_loc = Kab_loc'
-
-            Kab = Ra*Kab_loc
-            Kba = Kba_loc*RaT
-
-            @inbounds for (i, x) in enumerate(adof)
-                @inbounds for (j, y) in enumerate(bdof)
-        
-                    nodes_sol.Ktan[x, y] = Kab[i, j]
-                    nodes_sol.Ktan[y, x] = Kba[i, j]
-        
-                end 
-            end
-
-        end   
-        
-    end
+    # Extract the corresponding entries of the tangent stiffness matrix (Ktan)
+    @views state.solⁿ⁺¹.Ktan_free.nzval .= state.solⁿ⁺¹.Ktan.nzval[state.matricesⁿ⁺¹.sparsity_free]
     
 end
 
-# Convert the tangent matrix and the residual from cylindrical to carthesian coordinates
-function dirichlet_local_to_global!(nodes_sol, allnodes)
+# ---------------------------------------------------------------
+# Solves for the displacement increments at the free DOFs.
+# ---------------------------------------------------------------
+function solve_free_dofs!(conf::SimulationConfiguration, state::SimulationState, solver)
     
-    @inbounds for a = 1:length(allnodes)
-        
-        Ra = allnodes.R_global_to_local[a]       
-        RaT = Ra'
-        
-        adof = 6*(a-1) .+ Vec3(1,2,3) 
-        nodes_sol.ΔD[adof] .= RaT*nodes_sol.ΔD[adof]
-        
-    end
+    # 🔹 Perform symbolic analysis on the reduced stiffness matrix
+    # This step prepares the solver for the system K ΔD = r.
+    analyze!(solver, state.solⁿ⁺¹.Ktan_free, state.solⁿ⁺¹.r_free)
     
+    # Solve for displacement increments at free DOFs
+    # The solver finds ΔD_free by solving Ktan_free * ΔD_free = r_free
+    solve!(solver, state.solⁿ⁺¹.ΔD_free, state.solⁿ⁺¹.Ktan_free, state.solⁿ⁺¹.r_free)
+
+    # Store the computed displacement increments in the full displacement vector
+    # Only the free DOFs are updated, keeping fixed DOFs unchanged.
+    state.solⁿ⁺¹.ΔD[conf.bcs.free_dofs] .= state.solⁿ⁺¹.ΔD_free
 end
 
-# Replaces uimp with the boundary conditions @t
-function update_current_boundary_conditions!(uimp, t, conf)
+# ---------------------------------------------------------------
+# Computes the norms of the residual and displacement increment
+# during the corrector loop for convergence checking.
+# ---------------------------------------------------------------
+function compute_norms_corrector(conf::SimulationConfiguration, state::SimulationState)
     
-    @inbounds for i in conf.bc.dof_disps
-        uimp[i] = conf.bc.Fdisp(t)     
+    # Extract the sets of free and fixed DOFs
+    free_dofs = conf.bcs.free_dofs
+    fixed_dofs = conf.bcs.fixed_dofs
+    
+    # Compute the norm of the displacement increment (ΔD)
+    ΔD_norm = norm(state.solⁿ⁺¹.ΔD_free)
+    
+    # Compute the residual norm for free DOFs
+    res_norm = norm(state.solⁿ⁺¹.r_free)
+    
+    # Compute the total external force norm for free DOFs
+    f_norm = norm(state.forcesⁿ⁺¹.fᵉˣᵗ[free_dofs] .+ state.forcesⁿ⁺¹.Tᶜ[free_dofs] .+ state.forcesⁿ⁺¹.Tᵏ[free_dofs])
+    
+    # Compute the total reaction force norm for fixed DOFs
+    e_norm = norm(state.forcesⁿ⁺¹.fᵉˣᵗ[fixed_dofs] .+ state.forcesⁿ⁺¹.Tᶜ[fixed_dofs] .+ state.forcesⁿ⁺¹.Tᵏ[fixed_dofs])
+    
+    # Normalize the residual norm for better convergence checks
+    if f_norm + e_norm > 1e-12    
+        res_norm = res_norm / (f_norm + e_norm)
+    end
+    
+    # Return the computed norms for convergence assessment
+    return res_norm, ΔD_norm   
+end
+
+# -------------------------------------------------------------------
+# Updates the global displacement, velocity, and acceleration 
+# at the end of the predictor step based on the computed increments.
+# -------------------------------------------------------------------
+function compute_global_predictor!(state::SimulationState, Δt, β, γ)
+    
+    # Precompute frequently used coefficients
+    γ_over_β = γ / β
+    γ_over_βΔt = γ / (β * Δt)
+    inv_βΔt² = 1 / (β * Δt^2)
+    Δt_over_2β = Δt * (2 * β - γ) / (2 * β)
+    
+    # Update global predictor values using Newmark-beta formulas
+    @inbounds for i in eachindex(state.solⁿ⁺¹.ΔD)
+        Ḋⁿ = deepcopy(state.solⁿ⁺¹.Ḋ[i])  # Store previous velocity to avoid overwriting during updates
+        state.solⁿ⁺¹.D[i] += state.solⁿ⁺¹.ΔD[i] 
+        state.solⁿ⁺¹.Ḋ[i] += γ_over_βΔt * state.solⁿ⁺¹.ΔD[i] - γ_over_β * Ḋⁿ + Δt_over_2β * state.solⁿ⁺¹.D̈[i]  
+        state.solⁿ⁺¹.D̈[i] += inv_βΔt² * (state.solⁿ⁺¹.ΔD[i] - Δt * Ḋⁿ - (Δt^2 / 2) * state.solⁿ⁺¹.D̈[i])  
+    end
+end
+
+# -------------------------------------------------------------------
+# Updates the global displacement, velocity, and acceleration 
+# at the end of the corrector step based on the computed increments.
+# -------------------------------------------------------------------
+function compute_global_corrector!(state::SimulationState, Δt, β, γ)
+    
+    # Precompute frequently used coefficients 
+    inv_βΔt² = 1 / (β * Δt^2)
+    γ_over_βΔt = γ / (β * Δt)
+
+    # 🔹 Update global corrector values
+    @inbounds for i in eachindex(state.solⁿ⁺¹.ΔD)
+        state.solⁿ⁺¹.D[i] += state.solⁿ⁺¹.ΔD[i]
+        state.solⁿ⁺¹.Ḋ[i] += γ_over_βΔt * state.solⁿ⁺¹.ΔD[i]  
+        state.solⁿ⁺¹.D̈[i] += inv_βΔt² * state.solⁿ⁺¹.ΔD[i]  
+    end
+end 
+
+# -------------------------------------------------------------------
+# Updates local vectors for different configurations 
+# based on the global predictor solution.
+# -------------------------------------------------------------------
+
+function compute_local_predictor!(conf::BeamsConfiguration, state::SimulationState, γ=nothing, β=nothing, Δt=nothing)
+    
+    @inbounds for i in eachindex(conf.nodes)
+        # Update displacement, velocity, and acceleration
+        conf.nodes.u[i] = state.solⁿ⁺¹.D[conf.nodes.global_dofs_disp[i]]
+        conf.nodes.u̇[i] = state.solⁿ⁺¹.Ḋ[conf.nodes.global_dofs_disp[i]]
+        conf.nodes.ü[i] = state.solⁿ⁺¹.D̈[conf.nodes.global_dofs_disp[i]]
+        
+        # Update rotational degrees of freedom
+        θ̃ = state.solⁿ⁺¹.D[conf.nodes.global_dofs_rot[i]]
+        conf.nodes.w[i] = θ̃
+        conf.nodes.ΔR[i] = rotation_matrix(θ̃)  # Compute incremental rotation matrix
+        conf.nodes.R[i] = conf.nodes.ΔR[i] * conf.nodes.Rⁿ[i]  # Update total rotation
+
+        # Compute angular velocity and acceleration
+        ẇⁿ = conf.nodes.ẇⁿ[i]
+        ẅⁿ = conf.nodes.ẅⁿ[i]
+        conf.nodes.ẇ[i] = conf.nodes.ΔR[i] * (γ/(β*Δt)*θ̃ + (β-γ)/β*ẇⁿ + Δt*(β-γ/2)/β*ẅⁿ)     
+        conf.nodes.ẅ[i] = conf.nodes.ΔR[i] * (1/(β*Δt^2)*θ̃ - 1/(β*Δt)*ẇⁿ - (1/(2*β)-1)*ẅⁿ) 
     end  
+end
 
+# -------------------------------------------------------------------
+# Updates local vectors for different configurations 
+# based on the computed corrector solution.
+# -------------------------------------------------------------------
+
+function compute_local_corrector!(conf::BeamsConfiguration, state::SimulationState, γ=nothing, β=nothing, Δt=nothing)
+    
+    @inbounds for i in eachindex(conf.nodes)
+        # Update displacement, velocity, and acceleration
+        conf.nodes.u[i] = state.solⁿ⁺¹.D[conf.nodes.global_dofs_disp[i]]
+        conf.nodes.u̇[i] = state.solⁿ⁺¹.Ḋ[conf.nodes.global_dofs_disp[i]]
+        conf.nodes.ü[i] = state.solⁿ⁺¹.D̈[conf.nodes.global_dofs_disp[i]]
+        
+        # Compute the incremental rotation and apply it
+        conf.nodes.ΔR[i] = rotation_matrix(state.solⁿ⁺¹.ΔD[conf.nodes.global_dofs_rot[i]]) * conf.nodes.ΔR[i]
+
+        # Compute new angular velocity and acceleration
+        ẇⁿ = conf.nodes.ẇⁿ[i]
+        ẅⁿ = conf.nodes.ẅⁿ[i]
+        wⁿ⁺¹ = toangle(conf.nodes.ΔR[i])
+        conf.nodes.ẇ[i] = conf.nodes.ΔR[i] * (γ/(β*Δt)*wⁿ⁺¹ + (β-γ)/β*ẇⁿ + Δt*(β-γ/2)/β*ẅⁿ)     
+        conf.nodes.ẅ[i] = conf.nodes.ΔR[i] * (1/(β*Δt^2)*wⁿ⁺¹ - 1/(β*Δt)*ẇⁿ - (1/(2*β)-1)*ẅⁿ)
+        
+        # Update total rotation
+        conf.nodes.R[i] = conf.nodes.ΔR[i] * conf.nodes.Rⁿ[i] 
+    end  
 end 
 
-function update_current_boundary_conditions_vector!(uimp::AbstractVector{T}, t, conf) where T
-    
-    Tstar =  convert(Int, round(t, RoundDown))
-    Tstar1 = Tstar+1
-    unew3 = read_ICs("outputGeometricalMorphing/u$Tstar1.txt", T)
+# -------------------------------------------------------------------
+# Updates nodal values and forces for the next time step 
+# upon convergence for different configurations.
+# -------------------------------------------------------------------
 
-    nnodesStent = length(unew3)
-    for (j,i) in enumerate(1:3:nnodesStent*3) 
-        uimp[i+0] = unew3[j][1]
-        uimp[i+1] = unew3[j][2] 
-        uimp[i+2] = unew3[j][3]
-    end 
+function update_converged!(conf::BeamsConfiguration, state::SimulationState)
     
-end 
-
-# Imposes single freedom constrains at the current step
-function impose_BC_displacements!(nodes_sol, uimp, fixed_dofs)
-    
-    @inbounds for i in 1:length(fixed_dofs)
-        
-        idof = fixed_dofs[i]   
-        D_prev = nodes_sol.asol[idof]   
-        D_imposed = uimp[i]        
-        ΔD_imposed = D_imposed - D_prev            
-        nodes_sol.ΔD[idof] = ΔD_imposed
-
-        @inbounds for i in 1:length(nodes_sol.r)  
-            nodes_sol.r[i] = nodes_sol.r[i] .- ΔD_imposed .* nodes_sol.Ktan[i, idof] 
-        end 
-        
+    @inbounds for i in eachindex(conf.nodes)
+        # Update nodal displacements, velocities, and accelerations to the converged values
+        conf.nodes.uⁿ[i] = conf.nodes.u[i]
+        conf.nodes.u̇ⁿ[i] = conf.nodes.u̇[i]
+        conf.nodes.üⁿ[i] = conf.nodes.ü[i]
+        conf.nodes.wⁿ[i] = conf.nodes.w[i]
+        conf.nodes.ẇⁿ[i] = conf.nodes.ẇ[i]
+        conf.nodes.ẅⁿ[i] = conf.nodes.ẅ[i]
+        conf.nodes.Rⁿ[i] = conf.nodes.R[i]
+        conf.nodes.ΔRⁿ[i] = conf.nodes.ΔR[i]
     end
+    
+    # Update the force vectors for the current time step
+    state.forcesⁿ.Tⁱⁿᵗ .= state.forcesⁿ⁺¹.Tⁱⁿᵗ
+    state.forcesⁿ.Tᵏ .= state.forcesⁿ⁺¹.Tᵏ
+    state.forcesⁿ.Tᶜ .= state.forcesⁿ⁺¹.Tᶜ
+    state.forcesⁿ.fᵉˣᵗ .= state.forcesⁿ⁺¹.fᵉˣᵗ
     
 end
 
-#------------------------------------------------------
-# FUNCTIONS USE ALONG WITH ROTATION MATRIX IN CRIMPING
-#-------------------------------------------------------
+# -------------------------------------------------------------------
+# Reverts nodal values and forces for the next time step 
+# if convergence is not achieved.
+# -------------------------------------------------------------------
 
-# Update R_global_to_local for each node
-function update_local_to_global_matrix!(allnodes)
+function update_not_converged!(conf::BeamsConfiguration, state::SimulationState)
     
-    @inbounds for i in 1:length(allnodes)
-        
-        x = allnodes.pos[i]+ allnodes.u[i]
-        theta = atan(x[2], x[1])
-        allnodes.R_global_to_local[i] = Mat33(cos(theta), -sin(theta), 0,  sin(theta), cos(theta), 0, 0, 0, 1)
-        
-    end 
+    @inbounds for i in eachindex(conf.nodes)
+        # Revert nodal displacements, velocities, and accelerations
+        conf.nodes.u[i] = conf.nodes.uⁿ[i]
+        conf.nodes.u̇[i] = conf.nodes.u̇ⁿ[i]
+        conf.nodes.ü[i] = conf.nodes.üⁿ[i]
+        conf.nodes.w[i] = conf.nodes.wⁿ[i]
+        conf.nodes.ẇ[i] = conf.nodes.ẇⁿ[i]
+        conf.nodes.ẅ[i] = conf.nodes.ẅⁿ[i]
+        conf.nodes.R[i] = conf.nodes.Rⁿ[i]
+        conf.nodes.ΔR[i] = conf.nodes.ΔRⁿ[i]
+    end
+    
+    # Revert force vectors
+    state.forcesⁿ⁺¹.Tⁱⁿᵗ .= state.forcesⁿ.Tⁱⁿᵗ
+    state.forcesⁿ⁺¹.Tᵏ .= state.forcesⁿ.Tᵏ
+    state.forcesⁿ⁺¹.Tᶜ .= state.forcesⁿ.Tᶜ
+    state.forcesⁿ⁺¹.fᵉˣᵗ .= state.forcesⁿ.fᵉˣᵗ
     
 end
-
-#------------------------------------------------
-# FUNCTIONS USED IN THE CORRECTOR AND PREDICTOR
-#------------------------------------------------
-
-# At the beginning of the corrector, updates the NodalSolution global vectors with the current Configuration local vectors
-function update_global_corrector!(nodes_sol, allnodes, disp_dof)
-    
-    @inbounds for n in allnodes
-
-        nodes_sol.D[n.idof_disp] .= n.u
-        nodes_sol.Ddt[n.idof_disp] .= n.udt
-        nodes_sol.Ddtdt[n.idof_disp] .= n.udtdt
-        nodes_sol.D[n.idof_ang] .= n.w
-        nodes_sol.Ddt[n.idof_ang] .= n.wdt
-        nodes_sol.Ddtdt[n.idof_ang] .= n.wdtdt
-
-    end
-    
-end 
-
-# At the beginning of the predictor, updates the NodalSolution global vectors with the current Configuration local vectors(not updating angles)
-function update_global_predictor!(nodes_sol, allnodes)
-        
-    @inbounds for n in allnodes
-
-        nodes_sol.D[n.idof_disp] .= n.u
-        nodes_sol.Ddt[n.idof_disp] .= n.udt
-        nodes_sol.Ddtdt[n.idof_disp] .= n.udtdt
-        nodes_sol.D[n.idof_ang] .= 0
-        nodes_sol.Ddt[n.idof_ang] .= n.wdt
-        nodes_sol.Ddtdt[n.idof_ang] .= n.wdtdt
-
-    end
-    
-    
-    @inbounds for i in 1:length(nodes_sol.asol)
-
-        nodes_sol.asol[i] = nodes_sol.D[i] 
-        nodes_sol.ΔD[i] = 0  
-
-    end 
-    
-end 
-
-# At the end of the corrector, updates the Configuration local vectors with the NodalSolution global vectors computed during the current iteration
-function update_local_corrector!(allnodes, ΔD_k, dt, nodes_sol, comp)
-    
-    beta = comp.beta
-    gamma = comp.gamma
-    
-    @inbounds for i in 1:length(allnodes)
-
-        allnodes.u[i] = nodes_sol.D[allnodes.idof_disp[i]]
-        allnodes.udt[i] = nodes_sol.Ddt[allnodes.idof_disp[i]]
-        allnodes.udtdt[i] = nodes_sol.Ddtdt[allnodes.idof_disp[i]]
-
-        allnodes.Delt[i] = rotate_rod(allnodes.Delt[i], ΔD_k[allnodes.idof_ang[i]])
-
-        wdt_n = allnodes.wdt_n[i]
-        wdtdt_n = allnodes.wdtdt_n[i]
-        w_n1 = get_angle_from_rotation_matrix(allnodes.Delt[i])
-        allnodes.wdt[i] = allnodes.Delt[i] * (gamma/(beta*dt)*w_n1 + (beta-gamma)/beta*wdt_n + dt*(beta-gamma/2)/beta*wdtdt_n)     
-        allnodes.wdtdt[i] = allnodes.Delt[i] * (1/(beta*dt^2)*w_n1 - 1/(beta*dt)*wdt_n - (0.5-beta)/beta*wdtdt_n)
-
-        allnodes.R[i] = allnodes.Delt[i]*allnodes.R_n[i] 
-
-    end
-    
-end 
-
-function update_local_corrector_statics!(allnodes, ΔD_k, dt, nodes_sol, comp)
-    
-    @inbounds for i in 1:length(allnodes)
-
-        allnodes.u[i] = nodes_sol.D[allnodes.idof_disp[i]]
-        allnodes.Delt[i] = rotate_rod(allnodes.Delt[i], ΔD_k[allnodes.idof_ang[i]])
-        allnodes.R[i] = allnodes.Delt[i]*allnodes.R_n[i] 
-
-    end
-    
-end 
-
-# At the end of the predictor, updates the Configuration local vectors with the NodalSolution global vectors predicted for the current time step
-function update_local_predictor!(allnodes, nodes_sol)
-    
-    @inbounds for i in 1:length(allnodes)
-
-        allnodes.u[i] = nodes_sol.D[allnodes.idof_disp[i]]
-        allnodes.udt[i] = nodes_sol.Ddt[allnodes.idof_disp[i]]
-        allnodes.udtdt[i] = nodes_sol.Ddtdt[allnodes.idof_disp[i]]
-
-        allnodes.w[i] = nodes_sol.D[allnodes.idof_ang[i]]
-        allnodes.wdt[i] = nodes_sol.Ddt[allnodes.idof_ang[i]]
-        allnodes.wdtdt[i] = nodes_sol.Ddtdt[allnodes.idof_ang[i]]
-
-        Sw = get_skew_skymmetric_matrix_from_vector(nodes_sol.D[allnodes.idof_ang[i]])
-        allnodes.Delt[i] = exp(Sw)*allnodes.Delt[i]
-        allnodes.R[i] = allnodes.Delt[i]*allnodes.R_n[i] 
-        
-    end
-    
-end 
-
-# Update the displacement vectors with the solution of the linear system in the corrector
-function update_nodal_solutions_corrector!(nodes_sol, disp_dof, gamma, beta, dt)
-    
-    @inbounds for i in disp_dof
-        nodes_sol.D[i]  =  nodes_sol.D[i]  + nodes_sol.ΔD[i]
-        nodes_sol.Ddt[i] =  nodes_sol.Ddt[i] + (gamma/(beta*dt))*nodes_sol.ΔD[i]
-        nodes_sol.Ddtdt[i] = nodes_sol.Ddtdt[i] + (1/(beta*dt^2))*nodes_sol.ΔD[i]
-    end 
-    
-end 
-
-function update_nodal_solutions_corrector_statics!(nodes_sol, disp_dof)
-    
-    @inbounds for i in disp_dof
-        nodes_sol.D[i]  =  nodes_sol.D[i]  + nodes_sol.ΔD[i]
-    end 
-    
-end 
-
-# Update the displacement vectors with the solution of the linear system in the predictor
-function update_nodal_solutions_predictor!(nodes_sol, beta, gamma, dt)
-
-    @inbounds for i in 1:length(nodes_sol.D)
-
-        nodes_sol.Ddt_n[i] = nodes_sol.Ddt[i] # need to save the last velocity vector 
-        nodes_sol.D[i] = nodes_sol.D[i] + nodes_sol.ΔD[i]
-        nodes_sol.Ddt[i] = nodes_sol.Ddt[i] + (gamma/(beta*dt))*nodes_sol.ΔD[i] - (gamma/beta).*nodes_sol.Ddt[i] + (dt*(2*beta-gamma)/(2*beta))*nodes_sol.Ddtdt[i]
-        nodes_sol.Ddtdt[i] = nodes_sol.Ddtdt[i] + (1/(beta*dt^2))*(nodes_sol.ΔD[i] - dt*nodes_sol.Ddt_n[i] - (dt^2)/2*nodes_sol.Ddtdt[i])
-
-    end 
-        
-end 
-
-# Update current solutions in the correct loop
-function update_current_solution_corrector!(sol_n1, ndofs, matrices)
-    
-    @inbounds for i in 1:ndofs
-
-        sol_n1.Tint[i] = matrices.Tint[i]
-        sol_n1.Tk[i] =  matrices.Tk[i]
-        sol_n1.Tct[i] =  matrices.Tct[i]   
-        sol_n1.Tconstr[i] =  matrices.Tconstr[i]   
-
-    end 
-    
-end 
-
-# Compute residual and increment vector residual in the corrector loop
-function compute_norms_corrector(k, aux_tol, sol_n1, nodes_sol, matrices, SHOW_COMP_TIME::Bool = false)
-
-    aux_tol_old = aux_tol
-    nodes_sol.f_aux .= sol_n1.fext .+ sol_n1.Tct .+ matrices.Tconstr .- matrices.Tdamp
-    norm_f = norm(nodes_sol.f_aux)
-    norm_res = norm(nodes_sol.r_free)
-    
-    if norm_f > 1e-1
-        aux_tol = norm_res/norm_f
-    else
-        aux_tol = norm_res 
-    end
-    
-    if (k == 1)
-        norm_ddk = norm(nodes_sol.ΔD_free)
-        
-        if SHOW_COMP_TIME
-            println("iteration $k, ||res|| = $aux_tol   ||ΔD_k[free_dof]|| = $norm_ddk")
-        end
-        
-    else
-        norm_ddk = norm(nodes_sol.ΔD_free)
-        
-        if SHOW_COMP_TIME
-            frac_norm = log10(aux_tol_old/aux_tol)
-            println("iteration $k, ||res|| = $aux_tol ($frac_norm)  ||ΔD_k[free_dof]|| = $norm_ddk")
-        end
-        
-    end
-    
-    return aux_tol
-    
-end
-
-# Update the tangent matrix in the predictor and corrector
-function compute_Ktan_sparse!(nodes_sol, matrices, alpha, beta, gamma, dt)
-    
-    @inbounds for i in 1:length(nodes_sol.Ktan.nzval)
-        nodes_sol.Ktan.nzval[i] = (1+alpha) * (matrices.Kint.nzval[i] - matrices.Kct.nzval[i] - matrices.Kconstr.nzval[i]) + (1/(beta*dt^2)) *  matrices.M.nzval[i] + (gamma/(beta*dt)) * (matrices.Ck.nzval[i] - matrices.Cconstr.nzval[i])
-    end 
-
-end 
-
-function compute_Ktan_sparse_statics!(nodes_sol, matrices)
-    
-    @inbounds for i in 1:length(nodes_sol.Ktan.nzval)
-        nodes_sol.Ktan.nzval[i] = matrices.Kint.nzval[i] 
-    end 
-
-end 
-
-# Update residual in the corrector loop
-function compute_res_corrector!(nodes_sol, matrices, sol_n1, sol_n, alpha)
-    
-    @inbounds for i in 1:length(nodes_sol.r)
-        nodes_sol.r[i] = (1+alpha) * (sol_n1.fext[i] + matrices.Tconstr[i] + matrices.Tct[i] - matrices.Tint[i]) - alpha * (sol_n.fext[i]  + sol_n.Tconstr[i]  + sol_n.Tct[i] - sol_n.Tint[i]) - matrices.Tk[i]
-    end 
-    
-end
-
-function compute_res_corrector_statics!(nodes_sol, matrices, sol_n1)
-    
-    @inbounds for i in 1:length(nodes_sol.r)
-        nodes_sol.r[i] = sol_n1.fext[i] - matrices.Tint[i]
-    end 
-    
-end 
-
-
-# Update nodal solutions in the corrector loop
-function update_nodal_solution_corrector_loop!(nodes_sol, disp_dof)
-    
-    nodes_sol.ΔD .= 0    
-    nodes_sol.asol .= 0   
-    
-    @inbounds for i in disp_dof
-        nodes_sol.asol[i] = nodes_sol.D[i] 
-    end 
-    
-end
-
-# Fill the free dofs residual vector (preallocated) to be used to solve the linear system
-function fill_r_free!(nodes_sol, free_dof)
-    
-    @inbounds for (index, value) in enumerate(free_dof)
-        nodes_sol.r_free[index] = nodes_sol.r[value] 
-    end 
-    
-end 
-
-# Fill the free dofs tangent matrix (preallocated) to be used to solve the linear system
-function fill_Ktan_free!(nodes_sol)
-     
-    @inbounds for (index, value) in enumerate(nodes_sol.sparsity_map_free)
-        nodes_sol.Ktan_free.nzval[index] = nodes_sol.Ktan.nzval[value]
-    end
-
-end
-
-# Fill the free dofs of the whole displacements vector (preallocated) with the solution of the linear sysyem
-function fill_ΔD_free_dofs!(nodes_sol, free_dof)
-    
-    @inbounds for (index,value) in enumerate(free_dof)
-        nodes_sol.ΔD[value] = nodes_sol.ΔD_free[index]
-    end 
-    
-end 

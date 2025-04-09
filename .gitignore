@@ -1,13 +1,4 @@
-*.jl.*.cov
-*.jl.cov
-*.jl.mem
 *.vtk
 *.vtp
-*.txt
-
-examples/output3D/
-test/output3D/
-
-docs/build/
-Manifest.toml
-.vscode
+*.vtu
+output3D/

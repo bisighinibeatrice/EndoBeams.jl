@@ -1,0 +1,21 @@
+### **Boundary Conditions and Loads**
+
+Currently, the system supports two types of **boundary conditions**: 
+- **Encastre** (where the degrees of freedom are fixed)
+- **Time-dependent displacements** (where displacements change over time).
+
+For **loads**, the system currently supports only **time-dependent concentrated forces**.
+
+✔️ If no loads are applied to the structure, you can pass `nothing` for the loads argument in the `Configuration` structure. 
+
+✔️ However, even in the absence of boundary conditions, you must still pass a `BoundaryConditions` structure. This structure should include only the **total number of DOFs** in the system. This is necessary to generate the `free_dofs`, which are used later in the code.
+
+**Future Improvements:**
+- Implement automatic handling of empty boundary conditions: if `nothing` is passed for the boundary conditions in the `Configuration` structure, the system will automatically create only the free DOFs in the backend (without requiring input from the user).
+- Expand support for different types of loads beyond just concentrated forces.
+
+### **Extra**
+
+**To Be Fixed:**
+- Energy computation: Determine whether energy should be associated directly with the configuration.
+- When reading VTK files, **CELL-TYPES** need to be removed manually now.
