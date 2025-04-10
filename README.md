@@ -15,8 +15,10 @@ Run one of the examples present in the "examples" folder:
 ----------------------------
 ## Branches
 - `main`: The latest package version;
-- `original-version-article`: The package version from [1];
-- `FEM-stent-deployment`: Stick-slip friction + all the utils to perform patient-specific simualation of braided stent deployment (one case provided);
+- `original-version-article`: Old version - the package version from [1];
+- `FEM-stent-deployment`: Old version - stick-slip friction + all the utils to perform patient-specific simualation of braided stent deployment (one case provided);
+- `beam-to-beam`: Old version - first attempts with beam-to-beam contact formulation.
+
 ----------------------------
 
 ## References
