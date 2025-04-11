@@ -6,11 +6,7 @@
 
 ## Basic usage
 First, add the Endobeams.jl package with `using Pkg, Pkg.add(url="https://github.com/beatricebisighiniEMSE/EndoBeams.jl")`.
-Run one of the examples present in the "examples" folder:
-- `angle.jl`: Right-angle cantilever beam subject to out-of-plane loading;
-- `ring.jl`: Impact of a ring against a rigid surface;
-- `net.jl`: Dropping a net on a rigid sphere;
-- `stent.jl`: Deployment of braided stent.
+Run one of the examples present in the "test" folder.
 
 ----------------------------
 ## Branches
