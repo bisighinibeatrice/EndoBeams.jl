@@ -19,15 +19,28 @@ function corrector!(conf::SimulationConfiguration, state::SimulationState, param
         if isa(inter, Interaction) 
             @timeit_debug "Assemble Contact" assemble_contact!(conf, state, inter.master, inter.slave, inter.properties, inter, params)
         end  
+        if !isnothing(conf.constraints)
+            @timeit_debug "Assemble Constraints" assembly_constraints!(conf, state)
+        end 
 
         # Compute tangent matrix and residuals for corrector
         @timeit_debug "Compute Tangent and Residuals" compute_tangent_and_residuals_corrector!(state, Δt, α, β, γ)
 
+        # Apply cylindrical to carthesian coordinate system
+        if conf.bcs.flag_cylindrical 
+            @timeit_debug "Apply cylindrical to carthesian coordinate system" apply_cylindrical_coordinate_system!(conf, state) 
+        end
+        
         # Apply boundary conditions to restrict degrees of freedom
         @timeit_debug "Apply Boundary Conditions" apply_boundary_conditions!(conf, state)
         
         # Extract free dof tangent matrix and residual (for solving the free system)
         @timeit_debug "Extract Free DOFs" extract_free_dofs!(conf, state)
+
+        # Revert to carthesian to cylindrical coordinate system
+        if conf.bcs.flag_cylindrical 
+            @timeit_debug "Revert to carthesian to cylindrical coordinate system" revert_to_carthesian_coordinate_system!(conf, state) 
+        end
         
         # Solve for displacement increments at the free dofs
         @timeit_debug "Solve Free DOFs" solve_free_dofs!(conf, state, solver)

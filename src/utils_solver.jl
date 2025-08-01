@@ -56,10 +56,10 @@ function compute_tangent_and_residuals_predictor!(state::SimulationState, Δt, �
     # Compute tangent stiffness matrix (Ktan) at predictor step
     # Ktan = (1+α) * K + (γ/(βΔt)) * C + (1/(βΔt²)) * M
     @. state.solⁿ⁺¹.Ktan.nzval = (1 + α) * state.matricesⁿ⁺¹.K.nzval + (γ / (β * Δt)) * state.matricesⁿ⁺¹.C.nzval + (1 / (β * Δt^2)) * state.matricesⁿ⁺¹.M.nzval
-    
+
     # Compute residual vector (r) at predictor step
     # r = (1+α) * external forces - (internal forces + contact forces) - α * previous external forces
-    @. state.solⁿ⁺¹.r = (1 + α) * state.forcesⁿ⁺¹.fᵉˣᵗ - state.forcesⁿ.Tⁱⁿᵗ - state.forcesⁿ.Tᵏ - α * state.forcesⁿ.fᵉˣᵗ
+    @. state.solⁿ⁺¹.r = (1 + α) * state.forcesⁿ⁺¹.fᵉˣᵗ - state.forcesⁿ.Tⁱⁿᵗ - state.forcesⁿ.Tᵏ - state.forcesⁿ.Tᶜ - state.forcesⁿ.Tᶜᵒⁿ - α * state.forcesⁿ.fᵉˣᵗ
 
     # Add contribution from damping matrix (C)
     # temp = (γ/β) * Ḋ - (Δt/2 * (2β - γ) / β) * D̈
@@ -84,7 +84,7 @@ function compute_tangent_and_residuals_corrector!(state::SimulationState, Δt, �
 
     # Compute residual vector (r) at corrector step
     # r = (1+α) * (external + contact - internal forces) - α * (previous external + contact - internal forces) - previous contact force
-    @. state.solⁿ⁺¹.r = (1 + α) * (state.forcesⁿ⁺¹.fᵉˣᵗ + state.forcesⁿ⁺¹.Tᶜ - state.forcesⁿ⁺¹.Tⁱⁿᵗ) - α * (state.forcesⁿ.fᵉˣᵗ + state.forcesⁿ.Tᶜ - state.forcesⁿ.Tⁱⁿᵗ) - state.forcesⁿ⁺¹.Tᵏ
+    @. state.solⁿ⁺¹.r = (1 + α) * (state.forcesⁿ⁺¹.fᵉˣᵗ + state.forcesⁿ⁺¹.Tᶜ + state.forcesⁿ⁺¹.Tᶜᵒⁿ - state.forcesⁿ⁺¹.Tⁱⁿᵗ) - α * (state.forcesⁿ.fᵉˣᵗ + state.forcesⁿ.Tᶜ + state.forcesⁿ.Tᶜᵒⁿ - state.forcesⁿ.Tⁱⁿᵗ) - state.forcesⁿ⁺¹.Tᵏ
 
 end
 
@@ -136,10 +136,10 @@ function compute_norms_corrector(conf::SimulationConfiguration, state::Simulatio
     res_norm = norm(state.solⁿ⁺¹.r_free)
     
     # Compute the total external force norm for free DOFs
-    f_norm = norm(state.forcesⁿ⁺¹.fᵉˣᵗ[free_dofs] .+ state.forcesⁿ⁺¹.Tᶜ[free_dofs] .+ state.forcesⁿ⁺¹.Tᵏ[free_dofs])
+    f_norm = norm(state.forcesⁿ⁺¹.fᵉˣᵗ[free_dofs] .+ state.forcesⁿ⁺¹.Tᶜ[free_dofs] .+ state.forcesⁿ⁺¹.Tᵏ[free_dofs] .+ state.forcesⁿ⁺¹.Tᶜᵒⁿ[free_dofs])
     
     # Compute the total reaction force norm for fixed DOFs
-    e_norm = norm(state.forcesⁿ⁺¹.fᵉˣᵗ[fixed_dofs] .+ state.forcesⁿ⁺¹.Tᶜ[fixed_dofs] .+ state.forcesⁿ⁺¹.Tᵏ[fixed_dofs])
+    e_norm = norm(state.forcesⁿ⁺¹.fᵉˣᵗ[fixed_dofs] .+ state.forcesⁿ⁺¹.Tᶜ[fixed_dofs] .+ state.forcesⁿ⁺¹.Tᵏ[fixed_dofs] .+ state.forcesⁿ⁺¹.Tᶜᵒⁿ[fixed_dofs])
     
     # Normalize the residual norm for better convergence checks
     if f_norm + e_norm > 1e-12    
@@ -268,6 +268,7 @@ function update_converged!(conf::BeamsConfiguration, state::SimulationState)
     state.forcesⁿ.Tᵏ .= state.forcesⁿ⁺¹.Tᵏ
     state.forcesⁿ.Tᶜ .= state.forcesⁿ⁺¹.Tᶜ
     state.forcesⁿ.fᵉˣᵗ .= state.forcesⁿ⁺¹.fᵉˣᵗ
+    state.forcesⁿ.Tᶜᵒⁿ .= state.forcesⁿ⁺¹.Tᶜᵒⁿ
     
 end
 
@@ -295,5 +296,6 @@ function update_not_converged!(conf::BeamsConfiguration, state::SimulationState)
     state.forcesⁿ⁺¹.Tᵏ .= state.forcesⁿ.Tᵏ
     state.forcesⁿ⁺¹.Tᶜ .= state.forcesⁿ.Tᶜ
     state.forcesⁿ⁺¹.fᵉˣᵗ .= state.forcesⁿ.fᵉˣᵗ
+    state.forcesⁿ⁺¹.Tᶜᵒⁿ .= state.forcesⁿ.Tᶜᵒⁿ
     
 end

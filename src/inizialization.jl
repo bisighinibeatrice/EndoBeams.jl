@@ -14,7 +14,7 @@ function clean_folders(output_dir)
 end 
 
 # Initializes simulation state, pre-allocates memory, and generates initial VTK files.
-function setup_state_simulation(conf::BeamsConfiguration,inter::Union{Nothing, Interaction},   output_dir)
+function setup_state_simulation(conf::BeamsConfiguration, inter::Union{Nothing, Interaction}, output_dir)
  
     # Allocate state variables for beams
     forcesⁿ = Forces(conf)
@@ -37,5 +37,8 @@ function initialize_state_simulation!(conf::BeamsConfiguration, state::Simulatio
     
     # Assemble system matrices and initialize state variables
     assemble!(conf, state, params)
+    if !isnothing(conf.constraints)
+        assembly_constraints!(conf, state)
+    end 
 
 end

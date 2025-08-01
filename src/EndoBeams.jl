@@ -5,6 +5,8 @@ module EndoBeams
     include("linearsolvers.jl")
     include("def_params.jl") 
 
+    include("constraints/def_constraint.jl")
+
     include("def_bcs_and_loads.jl")
     include("def_configurations.jl")
     include("def_structures.jl")
@@ -16,6 +18,7 @@ module EndoBeams
     include("beams/compute_beams.jl")
     include("beams/assemble_beams.jl")
     include("beams/utils_beams.jl")
+    include("constraints/compute_and_assemble_constraints.jl")
 
     include("interactions/utils_interactions_beams.jl")
     include("interactions/interactions_beams.jl")
@@ -32,13 +35,14 @@ module EndoBeams
     include("IO/visualization.jl") 
     include("IO/read_input_files.jl")  
 
-    export NodesBeams, Beams, BeamsConfiguration
+    export NodesBeams, Beams, Constraints, BeamsConfiguration
     export ConcentratedForce, Loads
     export Encastre, ImposedDisplacement, BoundaryConditions
     export SimulationParams, run_simulation!
     export read_vtk_tetrahedral_mesh, read_vtk_triangle_mesh
     export RigidInteraction, SoftInteraction, PlaneSurface, SphereSurface, TriangulatedSurface, BeamElementSurface, BeamNodeSurface, InteractionProperties
     export Matrices
+    export Vec2, Vec3
     
     include("precompile/precompiles.jl")
     _precompile_()

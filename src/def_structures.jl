@@ -4,6 +4,7 @@ struct Forces
     Tⁱⁿᵗ::Vector{Float64}    # Internal forces vector
     Tᵏ::Vector{Float64}      # Kinetic forces vector (inertia effects)
     Tᶜ::Vector{Float64}      # Contact forces vector
+    Tᶜᵒⁿ::Vector{Float64}    # Constraints forces vector
 end  
 
 # Constructor for Solution structure, initializing force vectors based on beams configuration
@@ -25,8 +26,9 @@ function Forces(conf::BeamsConfiguration)
     Tⁱⁿᵗ = zeros(ndofs)  # Internal forces
     Tᵏ = zeros(ndofs)     # Kinetic forces
     Tᶜ = zeros(ndofs)     # Contact forces
+    Tᶜᵒⁿ = zeros(ndofs)     # Constraints forces
 
-    return Forces(fᵉˣᵗ, Tⁱⁿᵗ, Tᵏ, Tᶜ)
+    return Forces(fᵉˣᵗ, Tⁱⁿᵗ, Tᵏ, Tᶜ, Tᶜᵒⁿ)
 end
 
 # Structure to hold nodal solutions with preallocated vectors for solver computations

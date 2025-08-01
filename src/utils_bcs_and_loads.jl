@@ -28,7 +28,6 @@ function apply_boundary_conditions!(bcs::BoundaryConditions, state::SimulationSt
 
 end
 
-#Applies fixed (encastre) boundary conditions at the current step
 function apply_boundary_conditions!(conf::BeamsConfiguration, state::SimulationState)
     
     apply_boundary_conditions!(conf.bcs, state)
@@ -62,4 +61,63 @@ function update_loads!(conf::BeamsConfiguration, state::SimulationState, tⁿ⁺
         end
     end
     
+end
+
+#----------------------------------------------------
+# FUNCTIONS FOR CHANGING COORDINATE SYSTEM 
+#----------------------------------------------------
+
+# Transform Cartesian coordinates into cylindrical coordinates 
+function apply_cylindrical_coordinate_system!(conf, state)
+    
+    @inbounds for node_a in conf.nodes
+        Ra = node_a.R_carthesian_to_cylindrical      # Rotation matrix from global to local
+        RaT = Ra'                          # Transpose for reverse transformation
+        dofs_a = node_a.global_dofs_disp[1:3]          # Displacement DOFs for node_a
+
+        # Transform displacement vectors to local cylindrical coordinates
+        state.solⁿ⁺¹.r[dofs_a] .= Ra * state.solⁿ⁺¹.r[dofs_a]
+        state.solⁿ⁺¹.D[dofs_a] .= Ra * state.solⁿ⁺¹.D[dofs_a]
+
+        # Update stiffness matrix in cylindrical coordinates
+        @inbounds for node_b in conf.nodes
+            dofs_b = node_b.global_dofs_disp
+
+            # Extract local submatrix from global stiffness matrix
+            Kab_local = Mat33( 
+                state.solⁿ⁺¹. Ktan[dofs_a[1], dofs_b[1]], state.solⁿ⁺¹. Ktan[dofs_a[2], dofs_b[1]], state.solⁿ⁺¹. Ktan[dofs_a[3], dofs_b[1]],
+                state.solⁿ⁺¹. Ktan[dofs_a[1], dofs_b[2]], state.solⁿ⁺¹. Ktan[dofs_a[2], dofs_b[2]], state.solⁿ⁺¹. Ktan[dofs_a[3], dofs_b[2]],
+                state.solⁿ⁺¹. Ktan[dofs_a[1], dofs_b[3]], state.solⁿ⁺¹. Ktan[dofs_a[2], dofs_b[3]], state.solⁿ⁺¹. Ktan[dofs_a[3], dofs_b[3]]
+            )
+
+            Kba_local = Kab_local'               # Transpose for symmetric update
+
+            Kab = Ra * Kab_local                 # Rotate to cylindrical coords
+            Kba = Kba_local * RaT
+
+            # Store transformed submatrices back into global stiffness matrix
+            @inbounds for (i, dof_i) in enumerate(dofs_a)
+                @inbounds for (j, dof_j) in enumerate(dofs_b)
+                    state.solⁿ⁺¹. Ktan[dof_i, dof_j] = Kab[i, j]
+                    state.solⁿ⁺¹. Ktan[dof_j, dof_i] = Kba[i, j]  # Symmetric part
+                end
+            end
+        end 
+    end   
+
+end
+
+# Transform cylindrical coordinates back into Cartesian coordinates
+function revert_to_carthesian_coordinate_system!(conf, state)
+
+    @inbounds for node in conf.nodes
+        RaT = node.R_carthesian_to_cylindrical'  # Transpose of rotation matrix
+
+        dofs = node.global_dofs_disp
+
+        # Rotate displacement increments and vectors back to global Cartesian coords
+        state.solⁿ⁺¹.ΔD[dofs] = RaT * state.solⁿ⁺¹.ΔD[dofs]
+        state.solⁿ⁺¹.D[dofs]  = RaT * state.solⁿ⁺¹.D[dofs]
+    end
+
 end

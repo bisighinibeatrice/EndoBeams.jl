@@ -1,103 +1,151 @@
 #--------------------------------------------------------------------------------------------------
-# FUNCTIONS TO COMPUTE SPARSITY PATTERN FOR BEAM ELEMENTS
-#------------------------------------------------------------------------------------------------------
+# FUNCTIONS TO COMPUTE SPARSITY PATTERN FOR BEAM ELEMENTS (INCLUDING CONSTRAINTS)
+#--------------------------------------------------------------------------------------------------
 
-# Function to compute sparsity pattern for beam elements
-function sparsity_beams(nodes, beams, fixed_dofs)
+"""
+    sparsity_beams(nodes, beams, constraints, fixed_dofs)
 
-    beam_ndofs = 12  # Number of dofs per beam element
-    N = length(beams) * beam_ndofs^2  # Total non-zero entries in sparsity pattern for beams
+Computes the sparsity pattern (non-zero structure) of the global stiffness matrix for a beam system
+that may include constraints between nodes.
 
-    # # Add constraints to the sparsity pattern if any
-    # if !isnothing(constraints)
-    #     N += length(constraints) * beam_ndofs^2
-    # end
+Returns:
+- `I`, `J`: Row and column indices for the sparse matrix.
+- `sparsity_free`: Linear indices of free (non-fixed) degrees of freedom in the global matrix.
+"""
+function sparsity_beams(nodes, beams, constraints, fixed_dofs)
 
-    # Initialize sparsity pattern
-    I = Vector{Int}(undef, N)    # Row indices for the sparse matrix
-    J = Vector{Int}(undef, N)    # Column indices for the sparse matrix
-    infos = Vector{Vector{Vec4{Int}}}(undef, N)  # Store information about non-zero entries
+    beam_ndofs = 12                        # DOFs per beam element (6 per node × 2 nodes)
+    N = length(beams) * beam_ndofs^2       # Estimate initial non-zero count from beams
 
-    k = 1  # Index for sparsity pattern
-    # Loop through all beams to calculate the sparsity pattern
+    # Account for additional non-zero entries from constraints
+    if !isnothing(constraints)
+        N += length(constraints) * beam_ndofs^2
+    end
+
+    # Preallocate sparsity pattern arrays
+    I = Vector{Int}(undef, N)                              # Row indices
+    J = Vector{Int}(undef, N)                              # Column indices
+    infos = Vector{Vector{Vec4{Int}}}(undef, N)            # Metadata for each non-zero entry
+
+    k = 1  # Sparsity index counter
+
+    # ----------------------------
+    # Process beam elements
+    # ----------------------------
     for bi in eachindex(beams)
-        n1, n2 = beams.node1[bi], beams.node2[bi]  # Get node indices for the beam
-        dofs = vcat(nodes.local_dofs[n1], nodes.local_dofs[n2])  # Get dofs for both nodes
-        local_dofs = 1  # Local DOF index for the beam element
+        n1, n2 = beams.node1[bi], beams.node2[bi]                   # Nodes of beam
+        dofs = vcat(nodes.local_dofs[n1], nodes.local_dofs[n2])    # DOFs for both nodes
+        local_dofs = 1                                              # Local DOF index
 
-        # Loop through all combinations of dofs for the beam
         for j in dofs, i in dofs
             I[k] = i
             J[k] = j
-            infos[k] = [Vec4(1, bi, local_dofs, i in fixed_dofs || j in fixed_dofs)]  # Store info (type=1 for beam)
+            # Store beam info: (type = 1, beam index, local DOF, is_fixed flag)
+            infos[k] = [Vec4(1, bi, local_dofs, i in fixed_dofs || j in fixed_dofs)]
             k += 1
             local_dofs += 1
         end
     end
 
-    # Create the sparse matrix using the computed sparsity pattern
-    K = sparse(I, J, infos, maximum(I), maximum(J), vcat)
+    # ----------------------------
+    # Process constraints (if present)
+    # ----------------------------
+    if !isnothing(constraints)
+        for ci in eachindex(constraints)
+            n1 = constraints.node1[ci]
+            n2 = constraints.node2[ci]
+            dofs = vcat(nodes.local_dofs[n1], nodes.local_dofs[n2])  # 6 DOFs per node
+            local_dof = 1
 
-    # Initialize sparsity free vector to store free dofs
-    sparsity_free = Vector{Int}(undef, length(K.nzval))
-    ksf = 0  # Counter for free dofs
-
-    # Create maps for beams and constraints sparsity
-    beams_spmap = [MVector{144, Int}(undef) for _ in 1:length(beams)]
-    # constraints_spmap = isnothing(constraints) ? [] : [MVector{144, Int}(undef) for _ in 1:length(constraints)]
-
-    # Loop through non-zero entries in the sparse matrix
-    for (i, infos) in enumerate(K.nzval)
-        for (type, idx, local_dofs) in infos
-            if type == 1
-                beams_spmap[idx][local_dofs] = i  # For beams
+            for j in dofs, i in dofs
+                I[k] = i
+                J[k] = j
+                # Store constraint info: (type = 2, constraint index, local DOF, is_fixed flag)
+                infos[k] = [Vec4(2, ci, local_dof, i in fixed_dofs || j in fixed_dofs)]
+                k += 1
+                local_dof += 1
             end
         end
-        # Identify free dofs
+    end
+
+    # Create a sparse matrix holding metadata (Vec4 info for each entry)
+    K = sparse(I, J, infos, maximum(I), maximum(J), vcat)
+
+    # ----------------------------
+    # Identify and collect free DOF indices
+    # ----------------------------
+    sparsity_free = Vector{Int}(undef, length(K.nzval))
+    ksf = 0  # Counter for free DOFs
+
+    # Create sparsity maps for beams and constraints
+    beams_spmap = [MVector{144, Int}(undef) for _ in 1:length(beams)]
+    if !isnothing(constraints)
+        constraints_spmap = [MVector{144, Int}(undef) for _ in 1:length(constraints)]
+    end
+
+    for (i, infos) in enumerate(K.nzval)
+        for (type, idx, local_dof, _) in infos
+            if type == 1
+                beams_spmap[idx][local_dof] = i
+            elseif !isnothing(constraints) && type == 2
+                constraints_spmap[idx][local_dof] = i
+            end
+        end
+
+        # Mark as free if neither DOF is fixed
         if infos[1][4] == 0
             ksf += 1
             sparsity_free[ksf] = i
         end
     end
 
-    # Resize sparsity_free vector to remove unused entries
+    # Trim unused entries from sparsity_free
     resize!(sparsity_free, ksf)
 
-    # Assign the sparsity map to each beam and constraint (if present)
-    max_dofs = 0
+    # Assign sparsity maps to beam and constraint objects
     for i in eachindex(beams)
         beams.local_sparsity_map[i] = beams_spmap[i]
         beams.global_sparsity_map[i] = beams_spmap[i]
-        if maximum(beams.global_sparsity_map[i])>max_dofs
-            max_dofs = maximum(beams.global_sparsity_map[i])
+    end
+
+    if !isnothing(constraints)
+        for i in eachindex(constraints)
+            constraints.local_sparsity_map[i] = constraints_spmap[i]
+            constraints.global_sparsity_map[i] = constraints_spmap[i]
         end
     end
 
-    return I, J, sparsity_free, max_dofs
+    return I, J, sparsity_free
 end
 
-# Function to construct sparse matrices for beam configuration
+"""
+    sparse_matrices_beams!(conf::BeamsConfiguration)
+
+Constructs the sparse matrix structure used for stiffness and damping in the beam system.
+
+Returns:
+- `matrices`: A custom `Matrices` structure holding the global sparsity pattern.
+- `sol`: A `Solution` object initialized with the global and reduced stiffness matrices.
+"""
 function sparse_matrices_beams!(conf::BeamsConfiguration)
 
-    @unpack beams, nodes, bcs, ndofs = conf
+    @unpack beams, nodes, constraints, bcs, ndofs = conf
 
-    free_dofs = bcs.free_dofs  # Free dofs from boundary conditions
-    fixed_dofs = bcs.fixed_dofs  # Fixed dofs from boundary conditions
-    nfreedofs = length(free_dofs)  # Number of free dofs
+    free_dofs = bcs.free_dofs        # Indices of non-fixed DOFs
+    fixed_dofs = bcs.fixed_dofs      # Indices of fixed DOFs
+    nfreedofs = length(free_dofs)    # Total number of free DOFs
 
-    # Compute sparsity pattern for beams and constraints (if present)
-    I, J, sparsity_free = sparsity_beams(nodes, beams, fixed_dofs)
+    # Compute sparsity pattern (I, J) and free entry indices
+    I, J, sparsity_free = sparsity_beams(nodes, beams, constraints, fixed_dofs)
 
-    # Create the tangent stiffness matrix (initially empty)
+    # Initialize global stiffness matrix with structural sparsity
     Ktan = sparse(I, J, 0.0)
 
-    # Extract the sub-matrix for free dofs
+    # Extract reduced system matrix (free DOFs only)
     Ktan_free = Ktan[free_dofs, free_dofs]
 
-    # Create matrices structure for further use
+    # Wrap up matrices and solution structure for simulation
     matrices = Matrices(I, J, sparsity_free)
-
-    # Create nodal solution to hold the stiffness matrix and other info
     sol = Solution(Ktan, Ktan_free, ndofs, nfreedofs)
 
     return matrices, sol

@@ -1,6 +1,6 @@
 
 #----------------------------------
-# BEAM STRUCTURES DEFINITION
+# BEAM STRUCTURE DEFINITION
 #----------------------------------
 
 struct Beam{Tp}
@@ -60,18 +60,18 @@ function Beams(nodes, connectivity::AbstractVector, E, ν, ρ, radius, damping, 
 end 
     
 function Beam(ind, node1::NodeBeam, node2::NodeBeam, E, ν, ρ, radius, damping, Rₑ⁰)
-    
+
     i1 = node1.i   
     i2 = node2.i  
     l₀ = norm(node1.X₀ - node2.X₀)   
-    beamprops = BeamMaterialProperties(l₀, E, ν, ρ, radius, damping)
+    beamprops = compute_material_properties(l₀, E, ν, ρ, radius, damping)
     
     return Beam{typeof(beamprops)}(ind, i1, i2, l₀, Rₑ⁰, beamprops, zeros(Int, 144), zeros(Int, 144)) 
 end 
 
 Beam(ind, node1::NodeBeam, node2::NodeBeam, E, ν, ρ, radius, damping, Rₑ⁰::Nothing) = Beam(ind, node1, node2, E, ν, ρ, radius, damping, get_Rₑ⁰(node1.X₀, node2.X₀))
 
-function BeamMaterialProperties(l₀, E, ν, ρ, radius, damping)
+function compute_material_properties(l₀, E, ν, ρ, radius, damping)
     G = E / (2 * (1 + ν))                        # Shear modulus
     A = pi * radius^2                            # Cross-sectional area
     I₂₂ = pi * radius^4 / 4                      # Second moment of inertia (axis 2)
@@ -80,7 +80,7 @@ function BeamMaterialProperties(l₀, E, ν, ρ, radius, damping)
     Jᵨ = ρ * Diagonal(Vec3(Iₒ, I₂₂, I₃₃))        # Rotational inertia matrix
     Aᵨ = ρ * A                                   # Area mass density
     K̄ⁱⁿᵗ = K̄ⁱⁿᵗ_beam(E, G, Iₒ, A, I₂₂, I₃₃, l₀)  # Beam stiffness matrix
-
+    
     return BeamMaterialProperties{typeof(K̄ⁱⁿᵗ), typeof(Jᵨ)}(radius, E, K̄ⁱⁿᵗ, Jᵨ, Aᵨ, damping)
 end
 

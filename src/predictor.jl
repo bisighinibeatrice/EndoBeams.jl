@@ -9,12 +9,22 @@ function predictor!(conf::SimulationConfiguration, state::SimulationState, param
     # Compute tangent matrix and residuals (needed for prediction step)
     compute_tangent_and_residuals_predictor!(state, Δt, α, β, γ)
 
+    # Apply cylindrical to carthesian coordinate system
+    if conf.bcs.flag_cylindrical 
+        @timeit_debug "Apply cylindrical to carthesian coordinate system" apply_cylindrical_coordinate_system!(conf, state) 
+    end
+        
     # Apply boundary conditions (fixing displacement or forces)
     apply_boundary_conditions!(conf, state)
 
     # Compute free tangent matrix and residual for the unconstrained degrees of freedom
     extract_free_dofs!(conf, state)
 
+    # Revert to carthesian to cylindrical coordinate system
+    if conf.bcs.flag_cylindrical 
+        @timeit_debug "Revert to carthesian to cylindrical coordinate system" revert_to_carthesian_coordinate_system!(conf, state) 
+    end
+    
     # Solve the system for free degrees of freedom (computes displacement, velocity, and acceleration)
     solve_free_dofs!(conf, state, solver)
 

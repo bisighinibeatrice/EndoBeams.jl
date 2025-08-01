@@ -9,7 +9,7 @@ function compute_beams(u₁, u₂, R₁, R₂, ΔR₁, ΔR₂, u̇₁, u̇₂, w
     X₁, X₂, l₀, Rₑ⁰ = init
     nᴳ, ωᴳ, zᴳ = gauss_params
     @unpack K̄ⁱⁿᵗ, Jᵨ, Aᵨ, damping = beamproperties
-    
+
     x₁ =  X₁ + u₁
     x₂ =  X₂ + u₂
     
