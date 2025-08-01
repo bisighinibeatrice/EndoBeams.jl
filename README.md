@@ -49,9 +49,10 @@ EndoBeams.jl/
 
 ## 🔀 Branches
 
-- `main` — current maintained version
+- `master` — current maintained version
 - `original-version-article` — original version matching 2022 publication
-- `stent_deployment` — includes codes to performe stent-deployment simulation
+- `stent_deployment` — includes codes to performe stent-deployment simulation (branch of `master`)
+- `beam-to-beam` — includes codes to model beam-to-beam contact (branch of `original-version-article`)
 
 ## 👉 Current branch: `stent_deployment`
 
