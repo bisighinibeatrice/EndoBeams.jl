@@ -42,7 +42,7 @@ module EndoBeams
     export read_vtk_tetrahedral_mesh, read_vtk_triangle_mesh
     export RigidInteraction, SoftInteraction, PlaneSurface, SphereSurface, TriangulatedSurface, BeamElementSurface, BeamNodeSurface, InteractionProperties
     export Matrices
-    export Vec2, Vec3
+    export Vec2, Vec3, Mat33, get_Rₑ⁰
     
     include("precompile/precompiles.jl")
     _precompile_()
