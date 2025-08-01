@@ -53,9 +53,8 @@ EndoBeams.jl/
 - `original-version-article` — original version matching 2022 publication
 - `stent_deployment` — includes codes to performe stent-deployment simulation
 
-----------------------------
-## Current branch: `stent_deployment`
-----------------------------
+## 👉 Current branch: `stent_deployment`
+
 This branch contains the utilities to perfom stent deployment simulation starting from the latest version of the code (`main`).
 
 Compared to the main branch, penalty-based constraints were added to model the interaction between braided stent wires. Moreover, it includes the possibility to impose displacement boundary conditions in cylindrical coordinates (for crimping simulations). 
