@@ -49,19 +49,10 @@ EndoBeams.jl/
 
 ## 🔀 Branches
 
-- `main` — current maintained version
+- `master` — current maintained version
 - `original-version-article` — original version matching 2022 publication
-- `stent_deployment` — includes codes to performe stent-deployment simulation
-
-## 👉 Current branch: `stent_deployment`
-
-This branch contains the utilities to perfom stent deployment simulation starting from the latest version of the code (`main`).
-
-Compared to the main branch, penalty-based constraints were added to model the interaction between braided stent wires. Moreover, it includes the possibility to impose displacement boundary conditions in cylindrical coordinates (for crimping simulations). 
-
-BB : Possible improvements : 
-- Definition of the cylindrical boundary conditions
-- Cleaning the `utils_stent.jl` file
+- `stent_deployment` — includes codes to performe stent-deployment simulation (branch of `master`)
+- `beam-to-beam` — includes codes to model beam-to-beam contact (branch of `original-version-article`)
 
 ## 📚 References
 [1] Aguirre M, Avril S. 2020. An implicit 3D corotational formulation for frictional contact dynamics of beams against rigid surfaces using discrete signed distance fields. Comput Methods Appl Mech Eng. 371:113275. https://doi.org/10.1016/j.cma.2020.113275
