@@ -2,21 +2,62 @@
 
 `EndoBeams.jl` is a Julia finite element package for beam-to-surface contact problems. The package is based on a 3D FE corotational formulation for frictional contact dynamics of beams where the target surface, supposed rigid, is described implicitly using a Signed Distance Field (SDF), predefined in a volumetric grid.
 
-----------------------------
+## 🚀 Features
 
-## Basic usage
-First, add the Endobeams.jl package with `using Pkg, Pkg.add(url="https://github.com/beatricebisighiniEMSE/EndoBeams.jl")`.
-Run one of the examples present in the "test" folder.
+- Corotational beam elements for modeling quasi-inextensible wire structures with large displacements
+- Implicit surface description via signed distance fields (SDF) on a regular voxel grid
+- Frictional contact handling with penalty and regularized friction models
+- Highly optimized Julia implementation (faster than MATLAB, comparable or better than Abaqus for specific applications)
+- Built-in examples for cantilever bending, impact, net drop, and braided stent deployment
 
-----------------------------
-## Branches
-- `main`: The latest package version;
-- `original-version-article`: Old version - the package version from [1];
-- `FEM-stent-deployment`: Old version - stick-slip friction + all the utils to perform patient-specific simualation of braided stent deployment (one case provided);
-- `beam-to-beam`: Old version - first attempts with beam-to-beam contact formulation.
+## 📦 Installation
 
-----------------------------
+Install using Julia's package manager:
 
-## References
-[1] Aguirre M, Avril S. 2020. An implicit 3D corotational formulation for frictional contact dynamics of beams against rigid surfaces using discrete signed distance fields. Comput Methods Appl Mech Eng. 371:113275.
+```
+using Pkg
+Pkg.add(url="https://github.com/bisighinibeatrice/EndoBeams.jl")
+```
+
+## ▶️ Examples
+Example simulations are located in the `examples/` directory:
+
+- `angle.jl` — Cantilever beam under vertical loading
+- `ring.jl` — Ring dropping onto a rigid surface
+- `net.jl` — Net dropped onto a rigid sphere
+- `stent.jl` — Braided stent deployed into a rigid cylindrical vessel
+
+Each script includes:
+
+- Mesh reading or writing 
+- Node and element construction
+- Contact and solver setup
+- Simulation loop
+- Result export to `.vtk` files (for ParaView)
+
+## 📁 Repository Structure
+
+```
+EndoBeams.jl/
+├── src/             # Core finite element and contact modules
+├── examples/        # Ready-to-run simulations
+├── test/            # Unit tests
+├── Project.toml     # Julia environment declaration
+├── Manifest.toml    # Package dependency snapshot
+└── LICENSE          # MIT License
+```
+
+## 🔀 Branches
+
+- `main` — current maintained version
+- `original-version-article` — original version matching 2022 publication
+- `stent_deployment` — includes codes to performe stent-deployment simulation
+
+## 📚 References
+[1] Aguirre M, Avril S. 2020. An implicit 3D corotational formulation for frictional contact dynamics of beams against rigid surfaces using discrete signed distance fields. Comput Methods Appl Mech Eng. 371:113275. https://doi.org/10.1016/j.cma.2020.113275
+
 [2] Bisighini, B., Aguirre, M., Pierrat, B., & Perrin, D. (2022). Advances in Engineering Software EndoBeams . jl : A Julia finite element package for beam-to-surface contact problems in cardiovascular mechanics. 171(July). https://doi.org/10.1016/j.advengsoft.2022.103173
+
+## 🤝 Contact
+beatrice.bisighini@emse.fr
+beatricebisighini@gmail.com
