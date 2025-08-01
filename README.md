@@ -49,9 +49,10 @@ EndoBeams.jl/
 
 ## 🔀 Branches
 
-- `main` — current maintained version
+- `master` — current maintained version
 - `original-version-article` — original version matching 2022 publication
-- `stent_deployment` — includes codes to performe stent-deployment simulation
+- `stent_deployment` — includes codes to performe stent-deployment simulation (branch of `master`)
+- `beam-to-beam` — includes codes to model beam-to-beam contact (branch of `original-version-article`)
 
 ## 📚 References
 [1] Aguirre M, Avril S. 2020. An implicit 3D corotational formulation for frictional contact dynamics of beams against rigid surfaces using discrete signed distance fields. Comput Methods Appl Mech Eng. 371:113275. https://doi.org/10.1016/j.cma.2020.113275
