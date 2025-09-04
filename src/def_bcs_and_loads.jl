@@ -33,9 +33,9 @@ struct BoundaryConditions{TD}
 end
 
 # Constructor for BoundaryConditions with encastre conditions (fully fixed DOFs)
-function BoundaryConditions(bcs::Encastre, ndofs, use_cylindrical_coords::Union{Bool, Nothing} = false) 
+function BoundaryConditions(bcs::Encastre, num_dofs, use_cylindrical_coords::Union{Bool, Nothing} = false) 
     fixed_dofs = bcs.blocked_dofs  # Get blocked DOFs
-    free_dofs = setdiff(1:ndofs, fixed_dofs)  # Compute free DOFs
+    free_dofs = setdiff(1:num_dofs, fixed_dofs)  # Compute free DOFs
     ndofs_fixed = length(fixed_dofs)
     imposed_displacements = zeros(ndofs_fixed)  # No imposed displacements
     displaced_indices = Int[]  # No displaced indices for encastre conditions
@@ -46,9 +46,9 @@ function BoundaryConditions(bcs::Encastre, ndofs, use_cylindrical_coords::Union{
 end
 
 # Constructor for BoundaryConditions with imposed displacement conditions
-function BoundaryConditions(bcs::ImposedDisplacement, ndofs, use_cylindrical_coords::Union{Bool, Nothing} = false) 
+function BoundaryConditions(bcs::ImposedDisplacement, num_dofs, use_cylindrical_coords::Union{Bool, Nothing} = false) 
     fixed_dofs = bcs.displaced_dofs  # Get imposed displacement DOFs
-    free_dofs = setdiff(1:ndofs, fixed_dofs)  # Compute free DOFs
+    free_dofs = setdiff(1:num_dofs, fixed_dofs)  # Compute free DOFs
     ndofs_fixed = length(fixed_dofs)
     imposed_displacements = zeros(ndofs_fixed)  # Initialize imposed displacement values
     displaced_indices = 1:length(fixed_dofs)  # Store indices of imposed displacement DOFs
@@ -62,10 +62,10 @@ function BoundaryConditions(bcs::ImposedDisplacement, ndofs, use_cylindrical_coo
 end 
 
 # Constructor for BoundaryConditions with imposed displacement conditions read from file
-function BoundaryConditions(bcs::ImposedDisplacementFromFile, ndofs) 
+function BoundaryConditions(bcs::ImposedDisplacementFromFile, num_dofs) 
   
     fixed_dofs = bcs.displaced_dofs  # Get imposed displacement DOFs
-    free_dofs = setdiff(1:ndofs, fixed_dofs)  # Compute free DOFs
+    free_dofs = setdiff(1:num_dofs, fixed_dofs)  # Compute free DOFs
     ndofs_fixed = length(fixed_dofs)
     imposed_displacements = zeros(ndofs_fixed)  # Initialize imposed displacement values
     displaced_indices = 1:length(fixed_dofs)  # Store indices of imposed displacement DOFs
@@ -78,9 +78,9 @@ function BoundaryConditions(bcs::ImposedDisplacementFromFile, ndofs)
 end 
 
 # Constructor for BoundaryConditions combining encastre and imposed displacement conditions
-function BoundaryConditions(bcs1::Encastre, bcs2::ImposedDisplacement, ndofs, use_cylindrical_coords::Union{Bool, Nothing} = false) 
+function BoundaryConditions(bcs1::Encastre, bcs2::ImposedDisplacement, num_dofs, use_cylindrical_coords::Union{Bool, Nothing} = false) 
     fixed_dofs = sort(vcat(bcs2.displaced_dofs, bcs1.blocked_dofs))  # Combine and sort all fixed DOFs
-    free_dofs = setdiff(1:ndofs, fixed_dofs)  # Compute free DOFs
+    free_dofs = setdiff(1:num_dofs, fixed_dofs)  # Compute free DOFs
     ndofs_fixed = length(fixed_dofs)
     imposed_displacements = zeros(ndofs_fixed)  # Initialize imposed displacement values
     displaced_indices = findall(x -> x in bcs2.displaced_dofs, fixed_dofs)  # Find imposed displacement indices
@@ -94,10 +94,10 @@ function BoundaryConditions(bcs1::Encastre, bcs2::ImposedDisplacement, ndofs, us
 end
 
 # Constructor for BoundaryConditions when no explicit boundary conditions are provided (all DOFs free)
-function BoundaryConditions(ndofs) 
+function BoundaryConditions(num_dofs) 
    
     fixed_dofs = Int[]  # No fixed DOFs (all free)
-    free_dofs = 1:ndofs  # All DOFs are free
+    free_dofs = 1:num_dofs  # All DOFs are free
     imposed_displacements = Float64[]  # No imposed displacements
     displaced_indices = Int[]  # No imposed displacement indices
 

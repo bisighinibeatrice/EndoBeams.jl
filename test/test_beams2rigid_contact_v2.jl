@@ -13,11 +13,11 @@ using DelimitedFiles, ReadVTK, WriteVTK, LinearAlgebra, Test, Revise, EndoBeams,
 L = 10 / 100  # Total length of the beam
 dx = L / 20   # Step size for positions along the z-axis
 positions = hcat(zeros(Int(L / dx) + 1), zeros(Int(L / dx) + 1), collect(0:dx:L))     
-nnodes = size(positions, 1)    # Total number of nodes
+num_nodes = size(positions, 1)    # Total number of nodes
 
 # Connectivity for beam elements
-nbeams = nnodes - 1                  # Number of beam elements
-connectivity = [(i, i+1) for i in 1:nnodes-1] 
+num_beams = num_nodes - 1                  # Number of beam elements
+connectivity = [(i, i+1) for i in 1:num_nodes-1] 
 
 # Initial conditions for displacements, velocities, accelerations, and rotations
 initial_displacements = zeros(size(positions))       # Zero initial displacements
@@ -56,7 +56,7 @@ beams = Beams(nodes, connectivity, E, ν, ρ, radius, damping)
 loads = nothing
 
 # Encastre
-ndofs = nnodes * 6                     # Total number of DOFs (6 per node for displacement and rotation)
+num_dofs = num_nodes * 6                     # Total number of DOFs (6 per node for displacement and rotation)
 blocked_dofs = 2:6                       # First 6 DOFs are fixed (e.g., at the boundary)
 encastre = Encastre(blocked_dofs)
 
@@ -75,7 +75,7 @@ displacement_function(t) =
 imposed_displacement = ImposedDisplacement(displaced_dof, displacement_function)
 
 # Beam configuration struct initialization
-bcs =  BoundaryConditions(encastre, imposed_displacement, ndofs)
+bcs =  BoundaryConditions(encastre, imposed_displacement, num_dofs)
 conf = BeamsConfiguration(nodes, beams, loads, bcs)  # Store the configuration for beams
 
 #----------------------------------
@@ -96,7 +96,7 @@ inter_properties = InteractionProperties(kₙ, μ, εᵗ, ηₙ, kₜ, ηₜ, u�
 center_sphere = [.05,.005,.08]
 radius_sphere = 0.04
 surface_master = SphereSurface(center_sphere, radius_sphere)
-surface_slave = BeamElementSurface(1:nbeams) 
+surface_slave = BeamElementSurface(1:num_beams) 
 
 # Create the interaction instance
 inter = RigidInteraction(surface_master, surface_slave, inter_properties)

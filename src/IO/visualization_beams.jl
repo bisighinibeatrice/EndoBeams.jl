@@ -27,12 +27,12 @@ end
 # Constructor for VTKData structure, initializing interpolation and contact data
 function VTKDataBeams(conf, output_dir, sdf = Nothing, intermediate_points = 10)
 
-    nbeams = length(conf.beams)
-    nnodes = length(conf.nodes)
+    num_beams = length(conf.beams)
+    num_nodes = length(conf.nodes)
 
     # Initialize vectors for interpolation and contact data
-    interpolated_points = zeros(Vec3{Float64}, nbeams * intermediate_points)
-    interpolated_lines = [MeshCell(PolyData.Lines(), (i - 1) * intermediate_points + 1 : i * intermediate_points) for i in 1:nbeams]
+    interpolated_points = zeros(Vec3{Float64}, num_beams * intermediate_points)
+    interpolated_lines = [MeshCell(PolyData.Lines(), (i - 1) * intermediate_points + 1 : i * intermediate_points) for i in 1:num_beams]
     stress = zeros(length(interpolated_points))
     strain = zeros(length(interpolated_points))
     displacement = zeros(Vec3{Float64}, length(interpolated_points))
@@ -56,12 +56,12 @@ function VTKDataBeams(conf, output_dir, sdf = Nothing, intermediate_points = 10)
     end
 
     # Initialize vectors for interpolation and contact data
-    nodes = zeros(Vec3{Float64}, nnodes)
+    nodes = zeros(Vec3{Float64}, num_nodes)
     lines_nodes = [MeshCell(PolyData.Lines(), [beam.node1, beam.node2]) for beam in conf.beams]
-    displacement_nodes = zeros(Vec3{Float64}, nnodes)
-    incontact_nodes = zeros(Int, nnodes)              
-    contactforce_nodes = zeros(Vec3{Float64}, nnodes)
-    contactdistance_nodes = zeros(Float64, nnodes)
+    displacement_nodes = zeros(Vec3{Float64}, num_nodes)
+    incontact_nodes = zeros(Int, num_nodes)              
+    contactforce_nodes = zeros(Vec3{Float64}, num_nodes)
+    contactdistance_nodes = zeros(Float64, num_nodes)
     
     # Prepare output directory and initialize Paraview collection
     clean_folders(output_dir)

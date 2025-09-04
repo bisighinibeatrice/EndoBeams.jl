@@ -1,80 +1,87 @@
 """
-Run crimping simulation on a stent using beam-based structural mechanics.
+Run a crimping simulation on a stent.
+
+This function sets up the finite element model, boundary conditions, material 
+properties, and time-integration scheme for simulating the crimping process 
+of a stent represented as a network of beam elements.
 
 # Arguments
-- `r_stent::Float64`: Target radius of the crimped stent.
-- `initial_positions_stent::Matrix{Float64}`: Node initial_positions_stent.
-- `connectivity_stent::Matrix{Int}`: Beam connectivity_stent (pairs of node indices).
-- `constraints_connectivity_stent::Matrix{Int}`: connectivity_stent for penalty constraints.
+- `free_radius::Float64`: Radius of the stent.
+- `free_positions::Matrix{Float64}`: Initial nodal coordinates matrix.
+- `connectivity::Matrix{Int}`: Beam connectivity matrix.
+- `constraints_connectivity::Matrix{Int}`: Connectivity matrix for penalty-based constraints.
 - `output_dir_crimping::String`: Directory to store simulation results.
+
+# Returns
+The function exports the stent solution and  associated beam data to `output_dir_crimping`.
 """
-function crimping(r_stent, initial_positions_stent, connectivity_stent, constraints_connectivity_stent, output_dir_crimping)
+function crimping(free_radius, free_positions, connectivity, constraints_connectivity, output_dir_crimping)
     
     #-------------------------------
-    # NODE INITIALIZATION
+    # Nodes
     #-------------------------------
-    
-    nnodes = size(initial_positions_stent, 1)
-    zeros_6d = zeros(size(initial_positions_stent))
-    
+    num_nodes = size(free_positions, 1)
+
+    # Create nodes structure
+    zeros_6d = zeros(size(free_positions))  
     nodes = NodesBeams(
-        initial_positions_stent,
+        free_positions,
         zeros_6d, zeros_6d, zeros_6d,  # zero initial displacements, velocities, accelerations
-        zeros_6d, zeros_6d, zeros_6d,  # zero initial  rotations, angular velocities and accelerations
-        "xy"                           # working plane
+        zeros_6d, zeros_6d, zeros_6d,  # zero initial rotations, angular velocities, accelerations
+        "xy"                           # working plane for the model (for cylindrical bcs)
     )
     
     #-------------------------------
-    # BEAMS AND CONSTRAINTS
+    # Beams and constraints
     #-------------------------------
-
-    E = 225e3                      # Young's modulus (MPa)
-    ν = 0.33                       # Poisson's ratio
-    radius = 0.014                 # Radius of the beam (mm)
-    ρ = 9.13e-9 * 1e3              # Density (scaled)
-    damping = 1e4                  # Rayleigh damping
-    beams = Beams(nodes, connectivity_stent, E, ν, ρ, radius, damping)
-
-    constraints = Constraints(constraints_connectivity_stent, 1e3, 1.0)  # penalty: stiffness and damping
-
-    #-------------------------------
-    # BOUNDARY CONDITIONS
-    #-------------------------------
+    E = 225e3                      # Young’s modulus (MPa) 
+    ν = 0.33                       # Poisson’s ratio
+    radius = 0.014                 # Beam radius (mm)
+    ρ = 9.13e-9 * 1e3              # Density  (Tonne/mm3)
+    damping = 1e4                  # Rayleigh damping coefficient
     
-    # Encastre
-    ndofs = nnodes * 6                
-    blocked_dofs = 2:6:ndofs-4              
+    # Create beams structure
+    beams = Beams(nodes, connectivity, E, ν, ρ, radius, damping)
+    num_beams = length(beams)
+
+    # Create penalty constraints
+    k_penalty = 1e3
+    damping_penalty = 1
+    constraints = Constraints(constraints_connectivity, k_penalty, damping_penalty)
+    
+    #-------------------------------
+    # Loads and boundary conditions
+    #-------------------------------
+    num_dofs = num_nodes * 6
+
+    # Fixed boundary condition (encastre)
+    blocked_dofs = 2:6:num_dofs-4              
     encastre = Encastre(blocked_dofs)
 
-    # Imposed displacement setup (crimping)
-    max_disp = -0.5 * r_stent
-    t_thresh = 1.0
-    velocity = max_disp / t_thresh
-    displaced_dof = 1:6:ndofs-5
+    # Imposed displacement condition (radial crimping)
+    max_disp = -0.5 * free_radius           # Inward radial displacement
+    t_thresh = 1.0                          # Duration over which displacement is applied
+    velocity = max_disp / t_thresh          # Constant displacement rate
+    displaced_dof = 1:6:num_dofs-5
     displacement_fn(t) = velocity * min(t, t_thresh)
 
     imposed_disp = ImposedDisplacement(displaced_dof, displacement_fn)
 
-    # Beam configuration struct initialization
-    bcs = BoundaryConditions(encastre, imposed_disp, ndofs, true)
+    # Boundary conditions container
+    bcs = BoundaryConditions(encastre, imposed_disp, num_dofs, true)
 
-    # Mesh configuration initialization
-    conf = BeamsConfiguration(nodes, beams, constraints, nothing, bcs)
-    
     #-------------------------------
-    # CONFIGURATION 
+    # Assembled configuration
     #-------------------------------
-
     conf = BeamsConfiguration(nodes, beams, constraints, nothing, bcs)
 
     #-------------------------------
-    # PARAMETERS 
+    # Simulation parameters
     #-------------------------------
-
-    # HHT (Houbolt-Hughes-Taylor) time stepping parameters
-    α = -0.05 # Typically between 0 and -1, used for numerical stability
-    β = 0.25 * (1 - α)^2 # Damping parameter based on α
-    γ = 0.5 * (1 - 2 * α) # Time-stepping parameter
+    # HHT (Hilber–Hughes–Taylor) α-method parameters
+    α = -0.05                               
+    β = 0.25 * (1 - α)^2                    
+    γ = 0.5 * (1 - 2 * α)                   
     
     params = SimulationParams(
         α = α, β = β, γ = γ,
@@ -91,11 +98,13 @@ function crimping(r_stent, initial_positions_stent, connectivity_stent, constrai
     )
 
     #-------------------------------
-    # RUN SIMULATION
+    # Run simulation and export results
     #-------------------------------
-
     run_simulation!(conf, params)
-    export_stent_solution_to_txt(nodes, beams, nnodes, length(beams), output_dir_crimping, false)
-
-end 
-
+    
+    export_stent_solution_to_txt(
+        nodes, beams, num_nodes, num_beams,
+        output_dir_crimping,
+        true
+    )
+end

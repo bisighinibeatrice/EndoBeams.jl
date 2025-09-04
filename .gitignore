@@ -1,4 +1,4 @@
 *.vtk
 *.vtp
 *.vtu
-output3D/
+output/

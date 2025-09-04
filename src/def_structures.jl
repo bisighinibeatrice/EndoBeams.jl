@@ -10,10 +10,10 @@ end
 # Constructor for Solution structure, initializing force vectors based on beams configuration
 function Forces(conf::BeamsConfiguration)
 
-    ndofs = conf.ndofs  # Total dofs
+    num_dofs = conf.num_dofs  # Total dofs
 
     # Initialize external forces vector with zeros
-    fᵉˣᵗ = zeros(ndofs)
+    fᵉˣᵗ = zeros(num_dofs)
 
     # Populate external forces vector based on loaded dofs in configuration
     if conf.loads !== nothing && conf.loads.concentrated_force !== nothing
@@ -23,10 +23,10 @@ function Forces(conf::BeamsConfiguration)
     end 
     
     # Initialize remaining force vectors with zeros
-    Tⁱⁿᵗ = zeros(ndofs)  # Internal forces
-    Tᵏ = zeros(ndofs)     # Kinetic forces
-    Tᶜ = zeros(ndofs)     # Contact forces
-    Tᶜᵒⁿ = zeros(ndofs)     # Constraints forces
+    Tⁱⁿᵗ = zeros(num_dofs)  # Internal forces
+    Tᵏ = zeros(num_dofs)     # Kinetic forces
+    Tᶜ = zeros(num_dofs)     # Contact forces
+    Tᶜᵒⁿ = zeros(num_dofs)     # Constraints forces
 
     return Forces(fᵉˣᵗ, Tⁱⁿᵗ, Tᵏ, Tᶜ, Tᶜᵒⁿ)
 end
@@ -47,16 +47,16 @@ struct Solution
 end 
 
 # Constructor for Solution structure, setting up required vector and matrix allocations
-function Solution(Ktan, Ktan_free, ndofs, nfreedofs)
+function Solution(Ktan, Ktan_free, num_dofs, nfreedofs)
     return Solution(
-        zeros(ndofs),          # Displacement vector
-        zeros(ndofs),          # Velocity vector
-        zeros(ndofs),          # Acceleration vector
-        zeros(ndofs),          # Old velocity vector
-        zeros(ndofs),          # Residual forces vector
+        zeros(num_dofs),          # Displacement vector
+        zeros(num_dofs),          # Velocity vector
+        zeros(num_dofs),          # Acceleration vector
+        zeros(num_dofs),          # Old velocity vector
+        zeros(num_dofs),          # Residual forces vector
         Ktan,                  # Global stiffness matrix (sparse)
-        zeros(ndofs),          # Displacement increment
-        zeros(ndofs),          # Temporary vector
+        zeros(num_dofs),          # Displacement increment
+        zeros(num_dofs),          # Temporary vector
         zeros(nfreedofs),      # Free DOF residual forces vector
         Ktan_free,             # Free DOF stiffness matrix
         zeros(nfreedofs)       # Free DOF displacement increment

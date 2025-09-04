@@ -54,7 +54,7 @@ end
 # Function to construct a collection of beam nodes from given initial configurations.
 function NodesBeams(X::AbstractMatrix, u⁰::AbstractMatrix, u̇⁰::AbstractMatrix, ü⁰::AbstractMatrix, w⁰::AbstractMatrix, ẇ⁰::AbstractMatrix, ẅ⁰::AbstractMatrix, plane=nothing, R=nothing) 
 
-    nnodes = size(X,1)
+    num_nodes = size(X,1)
 
     nodes = StructArray(NodeBeam(
             i, 
@@ -85,43 +85,43 @@ function NodesBeams(X::AbstractMatrix, u⁰::AbstractMatrix, u̇⁰::AbstractMat
             0, 
             Vec3(0,0,0), 
             0.0,
-            ) for i in 1:nnodes)
+            ) for i in 1:num_nodes)
     return nodes
 end
 
 # Similar function for vector input (alternative format for initial configurations).
 function NodesBeams(X::AbstractVector, u⁰::AbstractVector, u̇⁰::AbstractVector, ü⁰::AbstractVector, w⁰::AbstractVector, ẇ⁰::AbstractVector, ẅ⁰::AbstractVector, plane=nothing, R=nothing) 
 
-    nnodes = length(X)
+    num_nodes = length(X)
     nodes = StructArray{NodeBeam}(( 
-            1:nnodes,                         
+            1:num_nodes,                         
             convert(Vector{Vec3{Float64}}, X), 
-            [Vec6(6*(i-1).+(1,2,3,4,5,6)) for i in 1:nnodes], 
-            [Vec3(6*(i-1).+(1,2,3)) for i in 1:nnodes], 
-            [Vec3(6*(i-1).+(4,5,6)) for i in 1:nnodes], 
-            [Vec6(6*(i-1).+(1,2,3,4,5,6)) for i in 1:nnodes], 
-            [Vec3(6*(i-1).+(1,2,3)) for i in 1:nnodes], 
-            [Vec3(6*(i-1).+(4,5,6)) for i in 1:nnodes], 
+            [Vec6(6*(i-1).+(1,2,3,4,5,6)) for i in 1:num_nodes], 
+            [Vec3(6*(i-1).+(1,2,3)) for i in 1:num_nodes], 
+            [Vec3(6*(i-1).+(4,5,6)) for i in 1:num_nodes], 
+            [Vec6(6*(i-1).+(1,2,3,4,5,6)) for i in 1:num_nodes], 
+            [Vec3(6*(i-1).+(1,2,3)) for i in 1:num_nodes], 
+            [Vec3(6*(i-1).+(4,5,6)) for i in 1:num_nodes], 
             convert(Vector{Vec3{Float64}}, u⁰),  
             convert(Vector{Vec3{Float64}}, u̇⁰),  
             convert(Vector{Vec3{Float64}}, ü⁰),  
             convert(Vector{Vec3{Float64}}, w⁰),  
             convert(Vector{Vec3{Float64}}, ẇ⁰),  
             convert(Vector{Vec3{Float64}}, ẅ⁰),  
-            R isa AbstractVector ? convert(Vector{Mat33{Float64}}, R) : [Mat33{Float64}(ID3) for i in 1:nnodes], 
-            [Mat33{Float64}(ID3) for i in 1:nnodes],
+            R isa AbstractVector ? convert(Vector{Mat33{Float64}}, R) : [Mat33{Float64}(ID3) for i in 1:num_nodes], 
+            [Mat33{Float64}(ID3) for i in 1:num_nodes],
             convert(Vector{Vec3{Float64}}, u⁰), 
             convert(Vector{Vec3{Float64}}, u̇⁰), 
             convert(Vector{Vec3{Float64}}, ü⁰), 
             convert(Vector{Vec3{Float64}}, w⁰), 
             convert(Vector{Vec3{Float64}}, ẇ⁰), 
             convert(Vector{Vec3{Float64}}, ẅ⁰), 
-            R isa AbstractVector ? convert(Vector{Mat33{Float64}}, R) : [Mat33{Float64}(ID3) for i in 1:nnodes], 
-            [Mat33{Float64}(ID3) for i in 1:nnodes], 
-            plane isa String ? [Mat33(compute_cartesian_to_cylindrical_matrix(X[i][:], plane)) for i in 1:nnodes] : [Mat33{Float64}(ID3) for i in 1:nnodes],
-            [0 for i in 1:nnodes], 
-            [Vec3(0,0,0) for i in 1:nnodes],
-            [0.0 for i in 1:nnodes],
+            R isa AbstractVector ? convert(Vector{Mat33{Float64}}, R) : [Mat33{Float64}(ID3) for i in 1:num_nodes], 
+            [Mat33{Float64}(ID3) for i in 1:num_nodes], 
+            plane isa String ? [Mat33(compute_cartesian_to_cylindrical_matrix(X[i][:], plane)) for i in 1:num_nodes] : [Mat33{Float64}(ID3) for i in 1:num_nodes],
+            [0 for i in 1:num_nodes], 
+            [Vec3(0,0,0) for i in 1:num_nodes],
+            [0.0 for i in 1:num_nodes],
             )) 
 
     return nodes

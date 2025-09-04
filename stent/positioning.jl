@@ -1,144 +1,156 @@
-function positioning(initial_positions_stent, connectivity_stent, constraints_connectivity_stent, nb_iterations, origin, output_dir_crimping, output_dir_positioning_cl, output_dir_positioning)
-    
-    # --------
-    # Stent 
-    # --------
-    crimped_positions = matrix_to_vec3_array(initial_positions_stent) +
+"""
+Run a positioning simulation for a stent along its deployed centerline.
+
+This function reconstructs the crimped stent from previous simulation results, 
+aligns it with the deployment origin, adds guide structures, sets up the finite 
+element model including boundary conditions and constraints, and runs the 
+time-integration to simulate the positioning of the stent along the target 
+centerline.
+
+# Arguments
+- `free_positions::Matrix{Float64}`: Initial nodal coordinates of the stent.
+- `connectivity::Matrix{Int}`: Connectivity matrix for the stent beams.
+- `constraints_connectivity::Matrix{Int}`: Connectivity matrix for penalty-based constraints.
+- `num_morphing_iterations::Int`: Number of morphing/positioning iterations.
+- `deployment_origin_point::Vec3`: Reference 3D point for stent deployment (first node origin).
+- `output_dir_crimping::String`: Directory containing crimping simulation results.
+- `output_dir_centerline_morphing::String`: Directory containing morphing results (used for imposed displacement on guides).
+- `output_dir_positioning::String`: Directory to store the positioning simulation results.
+
+# Returns
+The function exports the stent solution and  associated beam data to `output_dir_positioning`.
+"""
+function positioning(free_positions, connectivity, constraints_connectivity, num_morphing_iterations, deployment_origin_point, output_dir_crimping, output_dir_centerline_morphing, output_dir_positioning)
+
+    #-------------------------------
+    # Crimped stent
+    #-------------------------------
+    crimped_positions = matrix_to_vec3_array(free_positions) +
                         matrix_to_vec3_array(readdlm(output_dir_crimping * "u.txt"))
 
-    positions_cl =  compute_stent_centerline(crimped_positions)
-    shift_positions!(crimped_positions, positions_cl[1]-origin)
-    positions_cl =  compute_stent_centerline(crimped_positions, origin)
+    # Compute initial stent centerline
+    stent_centerline = compute_stent_centerline(crimped_positions)
 
-    # --------
-    # Guides 
-    # --------
-    
-    positions_guides, connectivity_guides = build_guides_stent_origin(crimped_positions, positions_cl[1])
+    # Align stent first node with deployment origin
+    shift_positions!(crimped_positions, stent_centerline[1] - deployment_origin_point)
 
-    # ----------
-    # Guides = stent
-    # ------------
+    # Recompute centerline after alignment
+    stent_centerline = compute_stent_centerline(crimped_positions, deployment_origin_point)
 
-    initial_positions_stent = [crimped_positions; positions_guides]
-    connectivity = [matrix_to_vec2_array(connectivity_stent); connectivity_guides]
+    #-------------------------------
+    # Guides
+    #-------------------------------
+    guide_positions, guide_connectivity = build_guides_stent_origin(crimped_positions, stent_centerline[1])
 
-    nnodes_stent = length(crimped_positions)
-    nbeams_stent = length(matrix_to_vec2_array(connectivity_stent))
-    nnodes = length(initial_positions_stent)  
-    nbeams = length(connectivity)  
-    iguides = nnodes_stent+1:nnodes
+    #-------------------------------
+    # Combining stent and guides 
+    #-------------------------------
+    all_positions = [crimped_positions; guide_positions]
+    all_connectivity = [matrix_to_vec2_array(connectivity); guide_connectivity]
 
-    # ----------
-    # Building the nodes 
-    # ----------
-    
-    # total number of nodes
-    nnodes = size(initial_positions_stent, 1)
-    
-    # initial conditions
-    initial_displacements = zeros(Vec3, nnodes)
-    initial_velocities = zeros(Vec3, nnodes)
-    initial_accelerations = zeros(Vec3, nnodes)
-    initial_rotations = zeros(Vec3, nnodes)
-    initial_angular_velocities = zeros(Vec3, nnodes)
-    initial_angular_accelerations = zeros(Vec3, nnodes)
-    plane = "xy"
+    num_stent_nodes = length(crimped_positions)
+    num_stent_beams = length(matrix_to_vec2_array(connectivity))
+    num_total_nodes = length(all_positions)
+    num_total_beams = length(all_connectivity)
+    guide_node_indices = num_stent_nodes+1:num_total_nodes
 
-    # Read nodes initial rotations
-    R⁰ =  zeros(Mat33, nnodes)
-    R⁰[1:nnodes_stent] .= matrix_to_mat33_array(readdlm(output_dir_crimping * "R.txt"))
-    R⁰[nnodes_stent+1:nnodes] .= (Diagonal(Vec3(1,1,1)),)
-    
-    # Build nodes
-    nodes = NodesBeams(initial_positions_stent, initial_displacements, initial_velocities, initial_accelerations, initial_rotations, initial_angular_velocities, initial_angular_accelerations, plane, R⁰)
-    
-    # -------
-    # Building the beams
-    # --------
-    
-    # Geometric and material properties
-    E = 225*1e3
-    ν = 0.33
+    #-------------------------------
+    #  Nodes
+    #-------------------------------
+    initial_displacements = zeros(Vec3, num_total_nodes)
+    initial_velocities = zeros(Vec3, num_total_nodes)
+    initial_accelerations = zeros(Vec3, num_total_nodes)
+    initial_rotations = zeros(Vec3, num_total_nodes)
+    initial_angular_velocities = zeros(Vec3, num_total_nodes)
+    initial_angular_accelerations = zeros(Vec3, num_total_nodes)
+    working_plane = "xy"
+
+    # Set initial rotation matrices for stent and guide nodes
+    initial_R⁰ = zeros(Mat33, num_total_nodes)
+    initial_R⁰[1:num_stent_nodes] .= matrix_to_mat33_array(readdlm(output_dir_crimping * "R.txt"))
+    initial_R⁰[num_stent_nodes+1:num_total_nodes] .= (Diagonal(Vec3(1,1,1)),)
+
+    # Create nodes structure
+    nodes = NodesBeams(
+        all_positions,
+        initial_displacements,
+        initial_velocities,
+        initial_accelerations,
+        initial_rotations,
+        initial_angular_velocities,
+        initial_angular_accelerations,
+        working_plane,
+        initial_R⁰
+    )
+
+    #-------------------------------
+    # Beams and constraints
+    #-------------------------------
+    E_modulus = 225e3
+    poisson_ratio = 0.33
     mass_scaling = 1e3
-    ρ = 9.13*1e-9 * mass_scaling
-    radius = 0.014
-    damping = 1e4
+    density = 9.13e-9 * mass_scaling
+    beam_radius = 0.014
+    damping_coefficient = 1e4
 
-    # Read beams initial rotations
-    Re₀ =  zeros(Mat33, nbeams)
-    Re₀[1:nbeams_stent] .= matrix_to_mat33_array(readdlm(output_dir_crimping * "Re0.txt"))
-    for (i,c) in enumerate(connectivity_guides)
-        node1 = nodes[c[1]]
-        node2 = nodes[c[2]]
-        Re₀[nbeams_stent+i] = get_Rₑ⁰(node1.X₀, node2.X₀)
-    end 
+    # Set initial rotation matrices for beams
+    initial_Re⁰ = zeros(Mat33, num_total_beams)
+    initial_Re⁰[1:num_stent_beams] .= matrix_to_mat33_array(readdlm(output_dir_crimping * "Re0.txt"))
+    for (i, conn) in enumerate(guide_connectivity)
+        node1 = nodes[conn[1]]
+        node2 = nodes[conn[2]]
+        initial_Re⁰[num_stent_beams + i] = get_Rₑ⁰(node1.X₀, node2.X₀)
+    end
 
-    # beams vector
-    beams = Beams(nodes, connectivity, E, ν, ρ, radius, damping, Re₀)
-    nbeams = length(beams)
+    # Create beams structure
+    beams = Beams(nodes, all_connectivity, E_modulus, poisson_ratio, density, beam_radius, damping_coefficient, initial_Re⁰)
 
-    #----------------------------------
-    # BEAMS CONFIGURATION DEFINITIONS
-    #----------------------------------
-    
-    # Initialize the loads as nothing
-    loads = nothing
+    # Create penalty constraints
+    k_penalty = 1e3
+    damping_penalty = 1
+    constraints = Constraints(constraints_connectivity, k_penalty, damping_penalty)
 
-    # number of dof (6 per node)
-    ndofs = nnodes * 6
-    
-    # penalty constraints
-    kᶜᵒⁿ = 1e3
-    ηᶜᵒⁿ = 1
-    constraints = Constraints(constraints_connectivity_stent, kᶜᵒⁿ, ηᶜᵒⁿ)
-    
-    # Imposed displacement setup (to be read from presaved file)
-    displaced_dof = vcat([6*(i-1) .+ (1:3) for i in iguides]...)
-    displacement_folder = output_dir_positioning_cl
+    #-------------------------------
+    # Loads and boundary conditions
+    #-------------------------------
+    num_dofs = num_total_nodes * 6
 
-    imposed_disp = ImposedDisplacementFromFile(displaced_dof, displacement_folder)
+    # Imposed displacement condition (read from file)
+    displaced_dofs = vcat([6*(i-1) .+ (1:3) for i in guide_node_indices]...)
+    imposed_displacement = ImposedDisplacementFromFile(displaced_dofs, output_dir_centerline_morphing)
+    bcs = BoundaryConditions(imposed_displacement, num_dofs)
+    
+    #-------------------------------
+    # Assembled configuration
+    #-------------------------------
+    conf = BeamsConfiguration(nodes, beams, constraints, nothing, bcs)
 
-    # boundary conditions strucutre
-    bcs = BoundaryConditions(imposed_disp, ndofs)
+    #-------------------------------
+    # Simulation parameters
+    #-------------------------------
+    # HHT (Hilber–Hughes–Taylor) α-method parameters
+    α = -0.05
+    β = 0.25 * (1 - α)^2
+    γ = 0.5 * (1 - 2 * α)
 
-    # --------
-    # Final configuration
-    # ----------
-    
-    # configuration: mesh, external forces and boundary conditions
-    conf = BeamsConfiguration(nodes, beams, constraints, loads, bcs)
-    
-    # ---------
-    # Time stepping parameters
-    # ---------
-    
-    # HHT (Houbolt-Hughes-Taylor) time stepping parameters
-    α = -0.05 # Typically between 0 and -1, used for numerical stability
-    β = 0.25 * (1 - α)^2 # Damping parameter based on α
-    γ = 0.5 * (1 - 2 * α) # Time-stepping parameter
-    
-    # General time stepping parameters
-    initial_timestep = 1 # Initial time step size
-    min_timestep = 0.00001 # Minimum allowed time step
-    max_timestep = 1 # Maximum allowed time step (could be adjusted based on system behavior)
-    output_timestep = 1 # Time step for output plotting or visualization
-    simulation_end_time = nb_iterations-1 # End time for the simulation (duration of the analysis)
-    
-    # Convergence criteria for the solver
-    tolerance_residual = 1e-5 # Residual tolerance for convergence checks
-    tolerance_displacement = 1e-5 # Tolerance for changes in displacement (ΔD)
-    max_iterations = 10 # Maximum number of iterations for the solver
-    
-    # Store solver parameters in a structured Params object
-    params = SimulationParams(;
-    α, β, γ, initial_timestep, min_timestep, max_timestep, output_timestep, simulation_end_time, tolerance_residual, tolerance_displacement, max_iterations, output_dir = output_dir_positioning, verbose = true)
+    params = SimulationParams(
+        α = α, β = β, γ = γ,
+        initial_timestep = 1.0,
+        min_timestep = 1e-5,
+        max_timestep = 1.0,
+        output_timestep = 1.0,
+        simulation_end_time = num_morphing_iterations - 1,
+        tolerance_residual = 1e-5,
+        tolerance_displacement = 1e-5,
+        max_iterations = 10,
+        output_dir = output_dir_positioning,
+        verbose = true
+    )
 
-    # -------------------
-    # Start simulation
-    # -------------------
-    
+    #-------------------------------
+    # Run simulation and export results
+    #-------------------------------
     run_simulation!(conf, params)
-    export_stent_solution_to_txt(nodes, beams, nnodes, nbeams, output_dir_crimping, false)
 
-end 
+    export_stent_solution_to_txt(nodes, beams, num_stent_nodes, num_stent_beams, output_dir_positioning, false)
+end

@@ -20,9 +20,9 @@ positions = [0.0  0.0  0.0;
 -5.0 10.0  0.0;
 -7.5 10.0  0.0;
 -10.0 10.0  0.0]             
-nnodes = size(positions, 1)    # Total number of nodes
+num_nodes = size(positions, 1)    # Total number of nodes
 
-nbeams = nnodes - 1                    # Number of beam elements
+num_beams = num_nodes - 1                    # Number of beam elements
 connectivity = [1 2;
 2 3;
 3 4;
@@ -71,12 +71,12 @@ force_function(t,i) = 100 * t # Time-dependent external force function
 concentrated_force = ConcentratedForce(force_function, loaded_dofs)  
 
 # Degrees of freedom (DOFs) definition
-ndofs = nnodes * 6                     # Total number of DOFs (6 per node for displacement and rotation)
+num_dofs = num_nodes * 6                     # Total number of DOFs (6 per node for displacement and rotation)
 blocked_dofs = 1:6                      # First 6 DOFs are fixed (e.g., at the boundary)
 encastre = Encastre(blocked_dofs)
 
 # Beam configuration struct initialization
-conf = BeamsConfiguration(nodes, beams, Loads(concentrated_force), BoundaryConditions(encastre, ndofs))  # Store the configuration for beams
+conf = BeamsConfiguration(nodes, beams, Loads(concentrated_force), BoundaryConditions(encastre, num_dofs))  # Store the configuration for beams
 
 #----------------------------------------------------
 # SOLVER DEFINITIONS

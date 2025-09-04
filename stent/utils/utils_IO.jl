@@ -1,7 +1,28 @@
 # -------------------------------------------------------------------------------------------
-# Read
+# Convert variables
 # -------------------------------------------------------------------------------------------
 
+"""
+Convert a vector of `Vec3{Float64}` to a matrix of shape `n × 3`.
+
+# Arguments
+- `arr::Vector{Vec3{Float64}}`: Vector of 3D points.
+
+# Returns
+- `Matrix{Float64}`: Matrix with 3 columns (x, y, z coordinates), where each row 
+  corresponds to a `Vec3` in the input vector.
+"""
+function vec3_array_to_matrix(arr)
+    n = length(arr)
+    mat = Matrix{Float64}(undef, n, 3)
+    for i in 1:n
+        v = arr[i]
+        mat[i, 1] = v.x
+        mat[i, 2] = v.y
+        mat[i, 3] = v.z
+    end
+    return mat
+end
 
 """
 Convert a matrix of shape `n × 3` to a vector of `Vec3{Float64}`.
@@ -113,12 +134,12 @@ Write node and beam solution data (`u`, `R`, `Re0`) to text files.
 Arguments:
 - `nodes`: Object containing displacement `u` and rotation matrices `R` (per node).
 - `beams`: Object containing reference element rotations `Rₑ⁰` (per beam).
-- `nnodes`: Number of nodes.
-- `nbeams`: Number of beams.
+- `num_nodes`: Number of nodes.
+- `num_beams`: Number of beams.
 - `output_dir`: Directory where files will be written.
 - `CLEAN_FOLDER`: If true, clears existing `.vtk`, `.vtu`, `.txt` files in the folder.
 """
-function export_stent_solution_to_txt(nodes, beams, nnodes, nbeams, output_dir::String, flag_clean_folder::Bool=true)
+function export_stent_solution_to_txt(nodes, beams, num_nodes, num_beams, output_dir::String, flag_clean_folder::Bool=true)
     
     # Clean existing output files if requested
     if flag_clean_folder && output_dir != ""
@@ -138,7 +159,7 @@ function export_stent_solution_to_txt(nodes, beams, nnodes, nbeams, output_dir::
     end
 
     # Write node displacements and rotations
-    for i in 1:nnodes
+    for i in 1:num_nodes
         # Write displacement vector u (3 values)
         open(output_dir * "u.txt", "a") do io
             writedlm(io, [nodes.u[i]'])  # Transpose to row
@@ -152,7 +173,7 @@ function export_stent_solution_to_txt(nodes, beams, nnodes, nbeams, output_dir::
     end
 
     # Write beam reference rotations
-    for i in 1:nbeams
+    for i in 1:num_beams
         Re0 = beams.Rₑ⁰[i]
         open(output_dir * "Re0.txt", "a") do io
             writedlm(io, [vec(Re0)'])  # Flatten 3x3 matrix to row

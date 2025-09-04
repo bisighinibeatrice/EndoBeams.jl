@@ -12,9 +12,9 @@ using DelimitedFiles, ReadVTK, WriteVTK, LinearAlgebra, Test, Revise, EndoBeams,
 
 # Define node positions and connectivity for beams
 positions =  readdlm("test/input/pos_net.txt")        
-nnodes = size(positions, 1)    # Total number of nodes
+num_nodes = size(positions, 1)    # Total number of nodes
 
-nbeams = nnodes - 1                    # Number of beam elements
+num_beams = num_nodes - 1                    # Number of beam elements
 connectivity = readdlm("test/input/conn_net.txt", Int)   # Connectivity for beam elements
 
 # Initial conditions for displacements, velocities, accelerations, and rotations

@@ -129,7 +129,7 @@ Returns:
 """
 function sparse_matrices_beams!(conf::BeamsConfiguration)
 
-    @unpack beams, nodes, constraints, bcs, ndofs = conf
+    @unpack beams, nodes, constraints, bcs, num_dofs = conf
 
     free_dofs = bcs.free_dofs        # Indices of non-fixed DOFs
     fixed_dofs = bcs.fixed_dofs      # Indices of fixed DOFs
@@ -146,7 +146,7 @@ function sparse_matrices_beams!(conf::BeamsConfiguration)
 
     # Wrap up matrices and solution structure for simulation
     matrices = Matrices(I, J, sparsity_free)
-    sol = Solution(Ktan, Ktan_free, ndofs, nfreedofs)
+    sol = Solution(Ktan, Ktan_free, num_dofs, nfreedofs)
 
     return matrices, sol
 end
