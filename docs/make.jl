@@ -5,8 +5,7 @@ makedocs(
     sitename = "EndoBeams Documentation",
     modules = [EndoBeams],
     pages = [
-        "Home" => "index.md",
-        "API Reference" => "api.md",
+        "Home" => "index.md"
     ]
 )
 
