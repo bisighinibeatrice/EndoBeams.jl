@@ -1,15 +1,20 @@
+using EndoBeams
 using Documenter
-using EndoBeams   # replace with your module name
 
-makedocs(
-    sitename = "EndoBeams Documentation",
-    modules = [EndoBeams],
-    pages = [
-        "Home" => "index.md"
-    ]
-)
+DocMeta.setdocmeta!(EndoBeams, :DocTestSetup, :(using EndoBeams); recursive=true)
 
-deploydocs(
-    repo = "https://github.com/bisighinibeatrice/EndoBeams.jl.git",
-    branch = "gh-pages",
+makedocs(;
+    modules=[EndoBeams],
+    authors="Beatrice Bisighini",
+    # repo="https://github.com/bisighinibeatrice/EndoBeams.jl.git",
+    sitename="EndoBeams.jl",
+    format=Documenter.HTML(;
+        prettyurls=get(ENV, "CI", "false") == "true",
+        canonical="https://bisighinibeatrice.github.io/EndoBeams.jl",
+        assets=String[],
+        disable_git=true
+    ),
+    pages=[
+        "Home" => "index.md",
+    ],
 )
