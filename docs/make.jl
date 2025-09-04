@@ -11,5 +11,5 @@ makedocs(
 
 deploydocs(
     repo = "https://github.com/bisighinibeatrice/EndoBeams.jl.git",
-    branch = "stent_deployment",
+    branch = "gh-pages",
 )
