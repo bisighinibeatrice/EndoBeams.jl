@@ -60,10 +60,9 @@ This branch contains the utilities to perfom stent deployment simulation startin
 
 Compared to the main branch, penalty-based constraints were added to model the interaction between braided stent wires. Moreover, it includes the possibility to impose displacement boundary conditions in cylindrical coordinates (for crimping simulations). 
 
-BB : Possible improvements : 
+BB : Improvements : 
 - Definition of the cylindrical boundary conditions (in the structure Boundary Conditions or in the Impsoed Displacement?)
-- Missing : Adding the reading of the boundary conditions from file to perform positioning
-- Finish cleaning the functions in `utils_stent.jl`
+- Documentation not working
 
 ## 📚 References
 [1] Aguirre M, Avril S. 2020. An implicit 3D corotational formulation for frictional contact dynamics of beams against rigid surfaces using discrete signed distance fields. Comput Methods Appl Mech Eng. 371:113275. https://doi.org/10.1016/j.cma.2020.113275
