@@ -1,92 +1,48 @@
-
-function get_internal_nodes(positions, rStent, rWireSection, wireGap)
-    
-    toll = (rWireSection + wireGap/2)/2
-    
-    Rint = rStent - rWireSection - wireGap/2
-    Rext = rStent + rWireSection + wireGap/2
-    
-    intnodes = []
-    extnodes = []
-    
-    for i in 1:length(positions)
-        
-        r = sqrt(positions[i][1]^2 + positions[i][2]^2)
-        
-        if isapprox(r, Rint; atol = toll) 
-            push!(intnodes, i)
-        elseif isapprox(r, Rext; atol = toll) 
-            push!(extnodes, i)
-        end 
-        
-    end 
-    
-    return intnodes, extnodes
-    
-end
-
-function get_guide_connectivity_int(rings, nodes_centerline)
-    
-    if length(rings) != length(nodes_centerline)
-        error("length(rings) != length(nodes_centerline).jl")
+# Function to create connectivity between stent ring nodes and the guide centerline
+function get_guides_connectivity(rings, stent_centerline_indices)
+    # Ensure each ring has a corresponding centerline node
+    if length(rings) != length(stent_centerline_indices)
+        error("length(rings) != length(stent_centerline).jl")
     end 
 
-    nrings = length(rings)
-    constraints = Vector{Vec2{Int}}()
+    nrings = length(rings)  # Total number of rings
+    guides = Vector{Vec2{Int}}()  # Stores connections between ring nodes and centerline nodes
     
+    # Loop over each ring
     for i in 1:nrings
-        thisRing = rings[i]
-        nnodesRing = length(thisRing)
-        for j in 1:nnodesRing
-            push!(constraints, Vec2(thisRing[j], nodes_centerline[i]))
+        ring = rings[i]
+        
+        # Connect each node in the ring to the corresponding centerline node
+        for node in ring
+            push!(guides, Vec2(node, stent_centerline_indices[i]))
         end 
     end     
     
-    return constraints
-    
+    return guides
 end
 
-function build_int_guides_stent_origin(positions, origin, type="Surpass")
 
-    thisWireGap = 0.1
-
-    # total number of stent nodes
-    nnodes_stent = length(positions)
+# Function to build stent guides starting from an origin
+function build_guides_stent_origin(positions_stent, origin)
+    nnodes_stent = length(positions_stent)  # Total number of stent nodes
     
-    # get rings
-    rings = group_nodes_by_z_level(positions)
+    # Group stent nodes by their z-coordinate to form rings
+    rings = group_nodes_by_z_level(positions_stent)
 
-    #create centerline 
-    positions_guides = Vector{Vec3{Float64}}()
-    nguides = length(rings)
-
-    for ring in 1:nguides
-        push!(positions_guides, [origin[1], origin[2], positions[rings[ring][1]][3]])
+    # Create the guide centerline nodes
+    stent_centerline = Vector{Vec3{Float64}}()
+    for ring in rings
+        # Each centerline node inherits z from the first node of the ring
+        push!(stent_centerline, [origin[1], origin[2], positions_stent[ring[1]][3]])
     end
-    nnodes_centerline = length(positions_guides)
-    nodes_centerline = nnodes_stent+1:nnodes_stent + nnodes_centerline
 
-    # # get internal node
-    # if type == "Surpass"    
-    #     @unpack nbWires, rStent, rWireSection, wireGap, lengthStent, nbTotalCells, braidingPattern = BraidedStent()
-    #     positions, connectivity_stent = compute_bs_geom_given_nbTotalCells(nbWires, rStent, rWireSection, thisWireGap, lengthStent, nbTotalCells, braidingPattern)
-    #     intnodes, extnodes = get_internal_nodes(positions, rStent, rWireSection, thisWireGap*1.1)
-    # else type == "Wallstent" 
-    #     @unpack nbWires, rStent, rCrimpedStent, rWireSection, lStent, phi, braidingPattern = Wallstent()
-    #     positions, connectivity_stent = compute_bs_geom(nbWires, rStent, rCrimpedStent, rWireSection, thisWireGap, lStent, phi, braidingPattern)
-    #     intnodes, extnodes = get_internal_nodes(positions, rStent, rWireSection, thisWireGap*1.1)
-    # end
+    nnodes_stent_centerline = length(stent_centerline)
 
-    # if length(intnodes) != length(extnodes)
-    #     println("length(intnodes) : ")
-    #     println(length(intnodes))
-    #     println("length(extnodes) : ")
-    #     println(length(extnodes))
-    #     error("Error in the computation of the internal nodes. ")
-    # end 
+    # Assign indices to centerline nodes starting after the stent nodes
+    stent_centerline_indices = nnodes_stent+1 : nnodes_stent + nnodes_stent_centerline
 
-    connectivity_guides = get_guide_connectivity_int(rings, nodes_centerline)
+    # Build connectivity (these connections are called guides)
+    connectivity_guides = get_guides_connectivity(rings, stent_centerline_indices)
 
-    return positions_guides, connectivity_guides
-
+    return stent_centerline, connectivity_guides
 end

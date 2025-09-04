@@ -10,9 +10,9 @@ Run crimping simulation on a stent using beam-based structural mechanics.
 """
 function crimping(r_stent, initial_positions_stent, connectivity_stent, constraints_connectivity_stent, output_dir_crimping)
     
-    ##-------------------------------
-    ## NODE INITIALIZATION
-    ##-------------------------------
+    #-------------------------------
+    # NODE INITIALIZATION
+    #-------------------------------
     
     nnodes = size(initial_positions_stent, 1)
     zeros_6d = zeros(size(initial_positions_stent))
@@ -24,9 +24,9 @@ function crimping(r_stent, initial_positions_stent, connectivity_stent, constrai
         "xy"                           # working plane
     )
     
-    ##-------------------------------
-    ## BEAMS AND CONSTRAINTS
-    ##-------------------------------
+    #-------------------------------
+    # BEAMS AND CONSTRAINTS
+    #-------------------------------
 
     E = 225e3                      # Young's modulus (MPa)
     ν = 0.33                       # Poisson's ratio
@@ -37,9 +37,9 @@ function crimping(r_stent, initial_positions_stent, connectivity_stent, constrai
 
     constraints = Constraints(constraints_connectivity_stent, 1e3, 1.0)  # penalty: stiffness and damping
 
-    ##-------------------------------
-    ## BOUNDARY CONDITIONS
-    ##-------------------------------
+    #-------------------------------
+    # BOUNDARY CONDITIONS
+    #-------------------------------
     
     # Encastre
     ndofs = nnodes * 6                
@@ -61,15 +61,15 @@ function crimping(r_stent, initial_positions_stent, connectivity_stent, constrai
     # Mesh configuration initialization
     conf = BeamsConfiguration(nodes, beams, constraints, nothing, bcs)
     
-    ##-------------------------------
-    ## CONFIGURATION 
-    ##-------------------------------
+    #-------------------------------
+    # CONFIGURATION 
+    #-------------------------------
 
     conf = BeamsConfiguration(nodes, beams, constraints, nothing, bcs)
 
-    ##-------------------------------
-    ## PARAMETERS 
-    ##-------------------------------
+    #-------------------------------
+    # PARAMETERS 
+    #-------------------------------
 
     # HHT (Houbolt-Hughes-Taylor) time stepping parameters
     α = -0.05 # Typically between 0 and -1, used for numerical stability
@@ -90,9 +90,9 @@ function crimping(r_stent, initial_positions_stent, connectivity_stent, constrai
         verbose = true
     )
 
-    ##-------------------------------
-    ## RUN SIMULATION
-    ##-------------------------------
+    #-------------------------------
+    # RUN SIMULATION
+    #-------------------------------
 
     run_simulation!(conf, params)
     export_stent_solution_to_txt(nodes, beams, nnodes, length(beams), output_dir_crimping, false)

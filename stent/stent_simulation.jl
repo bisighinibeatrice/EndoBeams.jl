@@ -38,7 +38,7 @@ output_dir_positioning_cl = "stent/output3D/outputClMorphing3D/"
 if !isdir(output_dir_positioning_cl) mkpath(output_dir_positioning_cl) end
 
 filename_cl = "stent/input/cl_model.vtk"
-nb_iterations = 20
+nb_iterations = 100
 deploy_pos =  1
 
 initial_cl_stent = morph_stent_centerline_to_deployment!(positions_stent, connectivity_stent, nb_iterations, deploy_pos, filename_cl, output_dir_crimping, output_dir_positioning_cl)
@@ -51,4 +51,3 @@ output_dir_positioning = "stent/output3D/outputPositioning3D/"
 if !isdir(output_dir_positioning) mkpath(output_dir_positioning) end
 
 positioning(positions_stent, connectivity_stent, constraints_connectivity_stent, nb_iterations, initial_cl_stent[1], output_dir_crimping, output_dir_positioning_cl, output_dir_positioning)
-

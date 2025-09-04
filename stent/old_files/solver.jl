@@ -250,7 +250,7 @@ function predictor!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹,
 
     @timeit_debug "Trasform carthesian to cylindrical" begin 
                  
-        if conf.bcs.flag_cylindrical
+        if conf.bcs.use_cylindrical_coords
            dirichlet_to_cylindrical!(nodes_sol, nodes)
         end
 
@@ -278,7 +278,7 @@ function predictor!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹,
 
         @timeit_debug "Trasform cylindrical to carthesian" begin 
 
-            if conf.bcs.flag_cylindrical 
+            if conf.bcs.use_cylindrical_coords 
                 dirichlet_to_carthesian!(nodes_sol, nodes)
             end
 
@@ -353,7 +353,7 @@ function corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹,
 
             @timeit_debug "Trasform carthesian to cylindrical" begin 
                  
-                if conf.bcs.flag_cylindrical
+                if conf.bcs.use_cylindrical_coords
                    dirichlet_to_cylindrical!(nodes_sol, nodes)
                 end
 
@@ -378,7 +378,7 @@ function corrector!(conf, matrices, energy, solⁿ⁺¹, solⁿ, Δt, tⁿ⁺¹,
                 
                 @timeit_debug "Trasform cylindrical to carthesian" begin 
 
-                    if conf.bcs.flag_cylindrical 
+                    if conf.bcs.use_cylindrical_coords 
                         dirichlet_to_carthesian!(nodes_sol, nodes)
                     end
 

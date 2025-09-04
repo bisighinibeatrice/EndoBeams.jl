@@ -39,10 +39,10 @@ function crimping(rStent, rCrimpedStent, initial_positions_stent, connectivity_s
     # geometric and material properties
     E = 225*1e3
     ν = 0.33
-    mass_scaling = 1E3
+    mass_scaling = 1e3
     ρ = 9.13*1e-9 * mass_scaling
     radius = 0.014
-    damping = 1E4
+    damping = 1e4
 
     # beams vector
     beams = build_beams(nodes, connectivity_stent, E, ν, ρ, radius, damping, nothing)
@@ -88,7 +88,7 @@ function crimping(rStent, rCrimpedStent, initial_positions_stent, connectivity_s
     free_dofs = setdiff(1:ndofs, fixed_dofs)
 
     # Dirichlet dof (x6)
-    flag_cylindrical = true
+    use_cylindrical_coords = true
     disp_dofs = 1:6:ndofs-5
     disp_vals = zeros(ndofs)
     dispA = -(rStent-rCrimpedStent)
@@ -97,7 +97,7 @@ function crimping(rStent, rCrimpedStent, initial_positions_stent, connectivity_s
     disp(t, node_idx) =  (k.*t).*(t.<tA) .+ (k.*tA).*(t.>=tA)
 
     # boundary conditions strucutre
-    bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, flag_cylindrical)
+    bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, use_cylindrical_coords)
 
     # -------------------------------------------------------------------------------------------
     # SDF

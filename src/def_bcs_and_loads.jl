@@ -13,6 +13,12 @@ struct ImposedDisplacement{TD}
     imposed_displacements_function::TD  # Function defining imposed displacement values over time
 end
 
+# Structure representing imposed displacement boundary conditions
+struct ImposedDisplacementFromFile
+    displaced_dofs::Union{Int, StepRange{Int, Int}, UnitRange{Int}, Vector{Int}}  # DOFs where displacements are imposed
+    bcs_file_folder::String  # Path to folder containing BC files (optional if read_bcs_from_file is false)
+end
+
 # Structure representing general boundary conditions in the system
 struct BoundaryConditions{TD} 
     fixed_dofs::Union{Int, StepRange{Int, Int}, UnitRange{Int}, Vector{Int}}  # DOFs that are fixed
@@ -20,46 +26,71 @@ struct BoundaryConditions{TD}
     displaced_indices::Union{Int, StepRange{Int, Int}, UnitRange{Int}, Vector{Int}}  # Indices of imposed displacement DOFs among the fixed DOFs
     imposed_displacements::Vector{Float64}  # Vector storing imposed displacement values
     imposed_displacements_function::TD  # Function defining imposed displacements
-    flag_cylindrical::Bool # Flag to check if BCs are applied in carthesian or cylindrical coordinate system
+    use_cylindrical_coords::Bool # Flag to check if BCs are applied in carthesian or cylindrical coordinate system
+    read_bcs_from_file::Bool # Flag: true → read BCs from a file instead of using the function
+    bcs_file_folder::String # Path to folder containing BC files (optional if read_bcs_from_file is false)
+
 end
 
 # Constructor for BoundaryConditions with encastre conditions (fully fixed DOFs)
-function BoundaryConditions(bcs::Encastre, ndofs, flag_cylindrical::Union{Bool, Nothing} = false) 
+function BoundaryConditions(bcs::Encastre, ndofs, use_cylindrical_coords::Union{Bool, Nothing} = false) 
     fixed_dofs = bcs.blocked_dofs  # Get blocked DOFs
     free_dofs = setdiff(1:ndofs, fixed_dofs)  # Compute free DOFs
     ndofs_fixed = length(fixed_dofs)
     imposed_displacements = zeros(ndofs_fixed)  # No imposed displacements
     displaced_indices = Int[]  # No displaced indices for encastre conditions
 
-    if isnothing(flag_cylindrical) flag_cylindrical = false end 
+    if isnothing(use_cylindrical_coords) use_cylindrical_coords = false end 
 
-    return BoundaryConditions{Nothing}(fixed_dofs, free_dofs, displaced_indices, imposed_displacements, nothing, flag_cylindrical)
+    return BoundaryConditions{Nothing}(fixed_dofs, free_dofs, displaced_indices, imposed_displacements, nothing, use_cylindrical_coords)
 end
 
 # Constructor for BoundaryConditions with imposed displacement conditions
-function BoundaryConditions(bcs::ImposedDisplacement, ndofs, flag_cylindrical::Union{Bool, Nothing} = false) 
+function BoundaryConditions(bcs::ImposedDisplacement, ndofs, use_cylindrical_coords::Union{Bool, Nothing} = false) 
     fixed_dofs = bcs.displaced_dofs  # Get imposed displacement DOFs
     free_dofs = setdiff(1:ndofs, fixed_dofs)  # Compute free DOFs
     ndofs_fixed = length(fixed_dofs)
     imposed_displacements = zeros(ndofs_fixed)  # Initialize imposed displacement values
     displaced_indices = 1:length(fixed_dofs)  # Store indices of imposed displacement DOFs
 
-    if isnothing(flag_cylindrical) flag_cylindrical = false end 
+    if isnothing(use_cylindrical_coords) use_cylindrical_coords = false end 
 
-    return BoundaryConditions{typeof(bcs.imposed_displacements_function)}(fixed_dofs, free_dofs, displaced_indices, imposed_displacements, bcs.imposed_displacements_function, flag_cylindrical)
+    read_bcs_from_file = false
+    bcs_file_folder = ""
+
+    return BoundaryConditions{typeof(bcs.imposed_displacements_function)}(fixed_dofs, free_dofs, displaced_indices, imposed_displacements, bcs.imposed_displacements_function, use_cylindrical_coords, read_bcs_from_file, bcs_file_folder)
+end 
+
+# Constructor for BoundaryConditions with imposed displacement conditions read from file
+function BoundaryConditions(bcs::ImposedDisplacementFromFile, ndofs) 
+  
+    fixed_dofs = bcs.displaced_dofs  # Get imposed displacement DOFs
+    free_dofs = setdiff(1:ndofs, fixed_dofs)  # Compute free DOFs
+    ndofs_fixed = length(fixed_dofs)
+    imposed_displacements = zeros(ndofs_fixed)  # Initialize imposed displacement values
+    displaced_indices = 1:length(fixed_dofs)  # Store indices of imposed displacement DOFs
+
+    imposed_displacements_function = nothing
+    read_bcs_from_file = true
+    bcs_file_folder = bcs.bcs_file_folder
+
+    return BoundaryConditions{typeof(imposed_displacements_function)}(fixed_dofs, free_dofs, displaced_indices, imposed_displacements, imposed_displacements_function, false, read_bcs_from_file, bcs_file_folder)
 end 
 
 # Constructor for BoundaryConditions combining encastre and imposed displacement conditions
-function BoundaryConditions(bcs1::Encastre, bcs2::ImposedDisplacement, ndofs, flag_cylindrical::Union{Bool, Nothing} = false) 
+function BoundaryConditions(bcs1::Encastre, bcs2::ImposedDisplacement, ndofs, use_cylindrical_coords::Union{Bool, Nothing} = false) 
     fixed_dofs = sort(vcat(bcs2.displaced_dofs, bcs1.blocked_dofs))  # Combine and sort all fixed DOFs
     free_dofs = setdiff(1:ndofs, fixed_dofs)  # Compute free DOFs
     ndofs_fixed = length(fixed_dofs)
     imposed_displacements = zeros(ndofs_fixed)  # Initialize imposed displacement values
     displaced_indices = findall(x -> x in bcs2.displaced_dofs, fixed_dofs)  # Find imposed displacement indices
 
-    if isnothing(flag_cylindrical) flag_cylindrical = false end 
+    if isnothing(use_cylindrical_coords) use_cylindrical_coords = false end 
 
-    return BoundaryConditions{typeof(bcs2.imposed_displacements_function)}(fixed_dofs, free_dofs, displaced_indices, imposed_displacements, bcs2.imposed_displacements_function, flag_cylindrical)
+    read_bcs_from_file = false
+    bcs_file_folder = ""
+
+    return BoundaryConditions{typeof(bcs2.imposed_displacements_function)}(fixed_dofs, free_dofs, displaced_indices, imposed_displacements, bcs2.imposed_displacements_function, use_cylindrical_coords, read_bcs_from_file, bcs_file_folder)
 end
 
 # Constructor for BoundaryConditions when no explicit boundary conditions are provided (all DOFs free)
@@ -70,7 +101,7 @@ function BoundaryConditions(ndofs)
     imposed_displacements = Float64[]  # No imposed displacements
     displaced_indices = Int[]  # No imposed displacement indices
 
-    return BoundaryConditions{Nothing}(fixed_dofs, free_dofs, displaced_indices, imposed_displacements, nothing, false)
+    return BoundaryConditions{Nothing}(fixed_dofs, free_dofs, displaced_indices, imposed_displacements, nothing, false, false, "")
 end
 
 #----------------------------------

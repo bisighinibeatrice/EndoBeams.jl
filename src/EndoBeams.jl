@@ -37,7 +37,7 @@ module EndoBeams
 
     export NodesBeams, Beams, Constraints, BeamsConfiguration
     export ConcentratedForce, Loads
-    export Encastre, ImposedDisplacement, BoundaryConditions
+    export Encastre, ImposedDisplacement,ImposedDisplacementFromFile, BoundaryConditions
     export SimulationParams, run_simulation!
     export read_vtk_tetrahedral_mesh, read_vtk_triangle_mesh
     export RigidInteraction, SoftInteraction, PlaneSurface, SphereSurface, TriangulatedSurface, BeamElementSurface, BeamNodeSurface, InteractionProperties

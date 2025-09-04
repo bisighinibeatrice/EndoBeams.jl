@@ -73,14 +73,14 @@ function positioning(initial_positions_stent, connectivity_stent, nb_iterations,
     ν = 0.33
     ρ = 9.13*1e-3
     radius = 0.065
-    damping = 1E2
+    damping = 1e2
 
     # E = 225*1e3
     # ν = 0.33
-    # mass_scaling = 1E6
+    # mass_scaling = 1e6
     # ρ = 9.13*1e-9 * mass_scaling
     # radius = 0.014
-    # damping = 1E3*7.5
+    # damping = 1e3*7.5
 
     Re₀ =  zeros(Mat33, nbeams)
     Re₀[1:nbeams_stent] .= read_ics_mat(readdlm(output_dir_crimping * "Re0.txt"))
@@ -137,7 +137,7 @@ function positioning(initial_positions_stent, connectivity_stent, nb_iterations,
     free_dofs = setdiff(1:ndofs, fixed_dofs)
     
     # Dirichlet dof (x6)
-    flag_cylindrical = false
+    use_cylindrical_coords = false
     flag_load_from_file = true
     dir_folder_load = output_dir_positioning_cl
     disp_dofs = fixed_dofs
@@ -145,7 +145,7 @@ function positioning(initial_positions_stent, connectivity_stent, nb_iterations,
     disp(t, node_idx) =  0
 
     # boundary conditions strucutre
-    bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, flag_cylindrical, flag_load_from_file, dir_folder_load)
+    bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, use_cylindrical_coords, flag_load_from_file, dir_folder_load)
     
     # -------------------------------------------------------------------------------------------
     # SDF

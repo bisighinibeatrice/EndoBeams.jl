@@ -33,10 +33,10 @@ function deployment(initial_positions_stent_mat, initial_positions_stent, connec
     # geometric and material properties
     E = 225*1e3
     ν = 0.33
-    mass_scaling = 1E4
+    mass_scaling = 1e4
     ρ = 9.13*1e-9 * mass_scaling
     radius = 0.014
-    damping = 1E3*7.5
+    damping = 1e3*7.5
 
     Re₀ = read_ics_mat(readdlm(output_dir_crimping * "Re0.txt"))
 

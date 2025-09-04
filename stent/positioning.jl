@@ -14,7 +14,7 @@ function positioning(initial_positions_stent, connectivity_stent, constraints_co
     # Guides 
     # --------
     
-    positions_guides, connectivity_guides = build_int_guides_stent_origin(crimped_positions, positions_cl[1])
+    positions_guides, connectivity_guides = build_guides_stent_origin(crimped_positions, positions_cl[1])
 
     # ----------
     # Guides = stent
@@ -60,9 +60,10 @@ function positioning(initial_positions_stent, connectivity_stent, constraints_co
     # Geometric and material properties
     E = 225*1e3
     ν = 0.33
-    ρ = 9.13*1e-3
-    radius = 0.065
-    damping = 1E2
+    mass_scaling = 1e3
+    ρ = 9.13*1e-9 * mass_scaling
+    radius = 0.014
+    damping = 1e4
 
     # Read beams initial rotations
     Re₀ =  zeros(Mat33, nbeams)
@@ -92,25 +93,14 @@ function positioning(initial_positions_stent, connectivity_stent, constraints_co
     ηᶜᵒⁿ = 1
     constraints = Constraints(constraints_connectivity_stent, kᶜᵒⁿ, ηᶜᵒⁿ)
     
-    # # Dirichlet boundary conditions: blocked positions
-    # fixed_dofs = Vector{Int}() 
-    # for i in iguides
-    #     push!(fixed_dofs, 6*(i-1)+1)
-    #     push!(fixed_dofs, 6*(i-1)+2)
-    #     push!(fixed_dofs, 6*(i-1)+3)
-    # end
-    # free_dofs = setdiff(1:ndofs, fixed_dofs)
-    
-    # # Dirichlet dof (x6)
-    # flag_load_from_file = true
-    # dir_folder_load = output_dir_positioning_cl
-    # disp_dofs = fixed_dofs
-    # disp_vals = zeros(ndofs)
-    # disp(t, node_idx) =  0
+    # Imposed displacement setup (to be read from presaved file)
+    displaced_dof = vcat([6*(i-1) .+ (1:3) for i in iguides]...)
+    displacement_folder = output_dir_positioning_cl
 
-    # # boundary conditions strucutre
-    # bcs = BoundaryConditions(fixed_dofs, free_dofs, disp, disp_vals, disp_dofs, flag_cylindrical, flag_load_from_file, dir_folder_load)
-    bcs = nothing 
+    imposed_disp = ImposedDisplacementFromFile(displaced_dof, displacement_folder)
+
+    # boundary conditions strucutre
+    bcs = BoundaryConditions(imposed_disp, ndofs)
 
     # --------
     # Final configuration
@@ -130,7 +120,7 @@ function positioning(initial_positions_stent, connectivity_stent, constraints_co
     
     # General time stepping parameters
     initial_timestep = 1 # Initial time step size
-    min_timestep = 1 # Minimum allowed time step
+    min_timestep = 0.00001 # Minimum allowed time step
     max_timestep = 1 # Maximum allowed time step (could be adjusted based on system behavior)
     output_timestep = 1 # Time step for output plotting or visualization
     simulation_end_time = nb_iterations-1 # End time for the simulation (duration of the analysis)

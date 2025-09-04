@@ -40,10 +40,18 @@ end
 
 function update_boundary_conditions!(conf::BeamsConfiguration, tⁿ⁺¹)
       
-    # Update external forces at the current and intermediate time steps
-    for i in conf.bcs.displaced_indices
-        conf.bcs.imposed_displacements[i + conf.offset_dofs[]] = conf.bcs.imposed_displacements_function(tⁿ⁺¹)  # Apply force to the corresponding DOF
-    end
+    if conf.bcs.read_bcs_from_file 
+
+          t⁺ = convert(Int, round(tⁿ⁺¹, RoundDown)) 
+
+          conf.bcs.imposed_displacements .= reshape(readdlm(conf.bcs.bcs_file_folder * "u_step_$t⁺.txt")', (length(conf.bcs.fixed_dofs),))
+
+    else 
+        # Update external forces at the current and intermediate time steps
+        for i in conf.bcs.displaced_indices
+            conf.bcs.imposed_displacements[i + conf.offset_dofs[]] = conf.bcs.imposed_displacements_function(tⁿ⁺¹)  # Apply force to the corresponding DOF
+        end
+    end 
 
 end
 

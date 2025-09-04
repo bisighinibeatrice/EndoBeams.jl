@@ -10,7 +10,7 @@ function predictor!(conf::SimulationConfiguration, state::SimulationState, param
     compute_tangent_and_residuals_predictor!(state, Δt, α, β, γ)
 
     # Apply cylindrical to carthesian coordinate system
-    if conf.bcs.flag_cylindrical 
+    if conf.bcs.use_cylindrical_coords 
         @timeit_debug "Apply cylindrical to carthesian coordinate system" apply_cylindrical_coordinate_system!(conf, state) 
     end
         
@@ -21,7 +21,7 @@ function predictor!(conf::SimulationConfiguration, state::SimulationState, param
     extract_free_dofs!(conf, state)
 
     # Revert to carthesian to cylindrical coordinate system
-    if conf.bcs.flag_cylindrical 
+    if conf.bcs.use_cylindrical_coords 
         @timeit_debug "Revert to carthesian to cylindrical coordinate system" revert_to_carthesian_coordinate_system!(conf, state) 
     end
     

@@ -31,6 +31,8 @@ function BeamsConfiguration(nodes::StructVector, beams::StructVector, loads::Uni
     
     if bcs === nothing bcs = BoundaryConditions(ndofs) end 
 
+    constraints = nothing 
+    
     return BeamsConfiguration{typeof(nodes), typeof(beams), typeof(constraints)}(
     nodes, beams, ndofs, 0, nothing, loads, bcs)
 
