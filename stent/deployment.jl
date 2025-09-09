@@ -82,6 +82,25 @@ function deployment(free_positions, connectivity, constraints_connectivity, depl
     #-------------------------------
     conf = BeamsConfiguration(nodes, beams, constraints, nothing, nothing)
     
+    #----------------------------------
+    # INTERACTIONS
+    #----------------------------------
+    kₙ = 1 # Penalty parameter
+    μ = 0.01 # Friction coefficient
+    εᵗ = 0.5 # Regularized parameter for friction contact
+    ηₙ = 1e-3
+    kₜ = kₙ
+    ηₜ = ηₙ
+    u̇ₛ = 0  
+    inter_properties = InteractionProperties(kₙ, μ, εᵗ, ηₙ, kₜ, ηₜ, u̇ₛ)
+
+    # # Create master and slave surfaces
+    # surface_master = SphereSurface(center_sphere, radius_sphere)
+    # surface_slave = BeamElementSurface(connectivity) 
+
+    # # Create the interaction instance
+    # inter = RigidInteraction(surface_master, surface_slave, inter_properties)
+
     #-------------------------------
     # Simulation parameters
     #-------------------------------

@@ -63,6 +63,7 @@ Compared to the main branch, penalty-based constraints were added to model the i
 BB : Improvements : 
 - Definition of the cylindrical boundary conditions (in the structure Boundary Conditions or in the Impsoed Displacement?)
 - Documentation not working
+- Working on the creation of SDF (still not able to create the structure itself)
 
 ## 📚 References
 [1] Aguirre M, Avril S. 2020. An implicit 3D corotational formulation for frictional contact dynamics of beams against rigid surfaces using discrete signed distance fields. Comput Methods Appl Mech Eng. 371:113275. https://doi.org/10.1016/j.cma.2020.113275

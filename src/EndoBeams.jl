@@ -40,7 +40,7 @@ module EndoBeams
     export Encastre, ImposedDisplacement,ImposedDisplacementFromFile, BoundaryConditions
     export SimulationParams, run_simulation!
     export read_vtk_tetrahedral_mesh, read_vtk_triangle_mesh
-    export RigidInteraction, SoftInteraction, PlaneSurface, SphereSurface, TriangulatedSurface, BeamElementSurface, BeamNodeSurface, InteractionProperties
+    export RigidInteraction, SoftInteraction, PlaneSurface, SphereSurface, TriangulatedSurface, BeamElementSurface, BeamNodeSurface, InteractionProperties, SDFSurface
     export Matrices
     export Vec2, Vec3, Mat33, get_Rₑ⁰
     

@@ -150,3 +150,68 @@ function read_vtk_triangle_mesh(file_path::String)
         return  [(nodes[i, :]) for i in 1:size(nodes, 1)],  [(triangle_connectivity[i, :]) for i in 1:size(triangle_connectivity, 1)]
     end
 end
+
+function read_vtk_sdf(filename::String)
+    fid = open(filename, "r")
+    
+    # Skip header lines
+    for _ in 1:4
+        readline(fid)
+    end
+
+    # Read grid dimensions
+    grid_line = split(readline(fid))
+    n_nodes_x = parse(Int, grid_line[2])
+    n_nodes_y = parse(Int, grid_line[3])
+    n_nodes_z = parse(Int, grid_line[4])
+    
+    # Read spacing
+    spacing_line = split(readline(fid))
+    dx = parse(Float64, spacing_line[2])
+    dy = parse(Float64, spacing_line[3])
+    dz = parse(Float64, spacing_line[4])
+    
+    # Read origin
+    origin_line = split(readline(fid))
+    x_start = parse(Float64, origin_line[2])
+    y_start = parse(Float64, origin_line[3])
+    z_start = parse(Float64, origin_line[4])
+    
+    # Compute domain
+    x_end = x_start + (n_nodes_x - 1) * dx
+    y_end = y_start + (n_nodes_y - 1) * dy
+    z_end = z_start + (n_nodes_z - 1) * dz
+    domain = (x_start, x_end, y_start, y_end, z_start, z_end)
+    
+    # Read number of points
+    node_count_line = split(readline(fid))
+    n_nodes_total = parse(Int, node_count_line[2])
+    
+    # Skip next two lines (VTK format headers)
+    readline(fid)
+    readline(fid)
+    
+    # Preallocate array for SDF values
+    sdf_values = zeros(Float64, n_nodes_total)
+    idx = 1
+    
+    # Regular expression to match numeric tokens (integers, floats, scientific)
+    num_regex = r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?"
+    
+    # Read remaining lines
+    for line in eachline(fid)
+        for match in eachmatch(num_regex, line)
+            sdf_values[idx] = parse(Float64, match.match)
+            idx += 1
+            if idx > n_nodes_total
+                break
+            end
+        end
+        if idx > n_nodes_total
+            break
+        end
+    end
+    
+    close(fid)
+    return n_nodes_x, n_nodes_y, n_nodes_z, dx, dy, dz, domain, sdf_values
+end

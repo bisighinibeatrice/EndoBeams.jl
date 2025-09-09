@@ -28,25 +28,50 @@ end
 
 # Defines an analytical sphere used as a master surface in contact problems
 struct SphereSurface <: RigidBodySurface
-    center::Vec3{Float64}  # Sphere center (x, y, z)
-    radius::Float64  # Sphere radius
+    center::Vec3{Float64} # Sphere center (x, y, z)
+    radius::Float64 # Sphere radius
+end
+
+# Defines a Signed Distance Function (SDF) surface
+struct SDFSurface{T} <: RigidBodySurface
+    interpolant::T
+    domain::Vector{Float64}
+    dx::Float64
+    dy::Float64
+    dz::Float64
 end
 
 # Defines a triangulated surface used as a master surface in contact problems
 struct TriangulatedSurface <: RigidBodySurface
-    positions::Vector{Vec3{Float64}}  
-    triangles::Vector{Vec3{Int}} 
+    positions::Vector{Vec3{Float64}}
+    triangles::Vector{Vec3{Int}}
 end
 
 # Defines a beam surface composed of beam segments (for contact with rigid bodies)
 struct BeamElementSurface <: DeformableSurface
-    contact_beams::Vector{Int}  
+    contact_beams::Vector{Int}
 end
 
 #----------------------------------
 # SURFACE CREATION FUNCTIONS
 #----------------------------------
 
+# Create SDFSurface from a VTK SDF file
+function SDFSurface(filename_sdf::String)
+
+    npx, npy, npz, dx, dy, dz, domain, sdf_values = read_vtk_sdf(filename_sdf)
+    field = reshape(sdf_values, (npx, npy, npz))
+
+    x = range(domain[1]; step=dx, stop=domain[2])
+    y = range(domain[3]; step=dy, stop=domain[4])
+    z = range(domain[5]; step=dz, stop=domain[6])
+
+    # Quadratic B-spline interpolation for smooth gradient
+    itp = interpolate(field, BSpline(Quadratic(Reflect(OnCell()))))
+    interpolant = scale(itp, x, y, z)
+
+    return SDFSurface{typeof(interpolant)}(interpolant, domain, dx, dy, dz)
+end
 # Creates a BeamElementSurface from a connectivity matrix.
 function BeamElementSurface(beams_connectivity::Array{Int, 2})
     contact_beams = collect(1:size(beams_connectivity, 1)) # Creates a StructArray of beam indices
