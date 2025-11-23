@@ -1,4 +1,6 @@
 *.vtk
 *.vtp
 *.vtu
+*.txt
 output3D/
+Manifest.toml
