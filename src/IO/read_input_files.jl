@@ -150,3 +150,46 @@ function read_vtk_triangle_mesh(file_path::String)
         return  [(nodes[i, :]) for i in 1:size(nodes, 1)],  [(triangle_connectivity[i, :]) for i in 1:size(triangle_connectivity, 1)]
     end
 end
+
+function read_vtk_sdf(filename)
+    fid = open(filename, "r")
+    
+    # Skip the first four lines of the VTK header
+    readline(fid)
+    readline(fid)
+    readline(fid)
+    readline(fid)
+    
+    # Read grid dimensions
+    curr_line = split(readline(fid))
+    nnodex, nnodey, nnodez = parse.(Int, curr_line[2:4])
+    
+    # Read grid spacing
+    curr_line = split(readline(fid))
+    dx, dy, dz = parse.(Float64, curr_line[2:4])
+    
+    # Read the starting coordinates
+    curr_line = split(readline(fid))
+    x0, y0, z0 = parse.(Float64, curr_line[2:4])
+    xend, yend, zend = x0 + (nnodex-1)*dx, y0 + (nnodey-1)*dy, z0 + (nnodez-1)*dz
+    dom = (x0, xend, y0, yend, z0, zend)
+    
+    # Read the number of nodes
+    curr_line = split(readline(fid))
+    nnode = parse(Int, curr_line[2])
+    
+    # Skip the next two lines
+    readline(fid)
+    readline(fid)
+    
+    # Initialize and read the SDF data
+    sdf = zeros(nnode)
+    i = 0
+    while i < nnode
+        curr_line = split(readline(fid))
+        sdf[i + 1:i + length(curr_line)] .= parse.(Float64, curr_line)
+        i += length(curr_line)
+    end
+    return nnodex, nnodey, nnodez, dx, dy, dz, dom, sdf
+
+end 

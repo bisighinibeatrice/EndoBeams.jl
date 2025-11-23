@@ -17,8 +17,10 @@ module EndoBeams
     include("beams/assemble_beams.jl")
     include("beams/utils_beams.jl")
 
-    include("interactions/utils_interactions_beams.jl")
-    include("interactions/interactions_beams.jl")
+    include("interactions/def_interactions.jl")
+    include("interactions/compute&assemble_interactions_beams.jl")
+    include("interactions/interactions_beams_regularization.jl")
+    include("interactions/utils_compute_interactions_beams.jl")
 
     include("inizialization.jl")
     include("run_simulation.jl")
@@ -37,7 +39,7 @@ module EndoBeams
     export Encastre, ImposedDisplacement, BoundaryConditions
     export SimulationParams, run_simulation!
     export read_vtk_tetrahedral_mesh, read_vtk_triangle_mesh
-    export RigidInteraction, SoftInteraction, PlaneSurface, SphereSurface, TriangulatedSurface, BeamElementSurface, BeamNodeSurface, InteractionProperties
+    export RigidInteraction, SoftInteraction, PlaneSurface, SphereSurface, TriangulatedSurface, BeamElementSurface, BeamNodeSurface, DiscreteSignedDistanceField, InteractionProperties
     export Matrices
     
     include("precompile/precompiles.jl")
