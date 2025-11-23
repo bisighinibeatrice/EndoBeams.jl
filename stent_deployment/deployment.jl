@@ -94,12 +94,12 @@ function deployment(free_positions, connectivity, constraints_connectivity, depl
     u̇ₛ = 0  
     inter_properties = InteractionProperties(kₙ, μ, εᵗ, ηₙ, kₜ, ηₜ, u̇ₛ)
 
-    # # Create master and slave surfaces
-    # surface_master = SphereSurface(center_sphere, radius_sphere)
-    # surface_slave = BeamElementSurface(connectivity) 
+    # Create master and slave surfaces
+    surface_master = SphereSurface(center_sphere, radius_sphere)
+    surface_slave = BeamElementSurface(connectivity) 
 
-    # # Create the interaction instance
-    # inter = RigidInteraction(surface_master, surface_slave, inter_properties)
+    # Create the interaction instance
+    inter = RigidInteraction(surface_master, surface_slave, inter_properties)
 
     #-------------------------------
     # Simulation parameters

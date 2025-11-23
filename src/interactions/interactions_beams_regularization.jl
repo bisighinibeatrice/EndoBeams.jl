@@ -1,45 +1,8 @@
-# Compute contact gap, gradient, and Hessian for a spherical SDF.
-@inline function contact_gap_beams(point, master_surface::SphereSurface, radius_beam)
-    # Vector from the point to the center of the sphere
-    aux = point - master_surface.center
-    
-    # Compute the norm (distance) from the point to the surface center
-    norm_aux = norm(aux)
-    
-    # Gap is the distance to the surface minus the radius of the beam
-    gₙ = norm_aux - master_surface.radius - radius_beam
-    
-    # Gradient of the gap with respect to the point's coordinates
-    invnorm = 1 / norm_aux  # Inverse of the distance
-    ∂gₙ∂x = invnorm * aux  # Gradient (direction of normal)
-    
-    # Hessian of the gap (second derivative)
-    ∂²gₙ∂x² = invnorm * ID3 - (invnorm^3) * (aux * aux')
-    
-    return gₙ, ∂gₙ∂x, ∂²gₙ∂x²
-end
-
-# Determine if a point is in contact with a spherical SDF based on a threshold distance.
-@inline function incontact_beams(point, master_surface::SphereSurface, radius_beam::Float64)
-
-    # Define the threshold distance
-    threshold_gap = radius_beam/4
-
-    # Vector from the point to the center of the sphere
-    aux = point - master_surface.center
-    
-    # Compute the distance to the surface and compare to the threshold
-    gap = norm(aux) - master_surface.radius - radius_beam
-    
-    # If gₙ is less than or equal to the threshold gap, then the point is in contact
-    return gap ≤ threshold_gap
-end
-
 # Quadratically regularize the penalty for contact calculations.
 @inline function regularize_gap_penalty_beams(gap::Float64, radius_beam::Float64)
   
     # Define the threshold gap
-    threshold_gap = radius_beam/4 
+    threshold_gap = radius_beam/2
 
     # Define the regularization parameter as half of the threshold gap
     half_threshold_gap = threshold_gap / 2
@@ -65,7 +28,7 @@ end
 # Smoothstep function for transition smoothing in contact calculations.
 @inline function smoothstep_transition_beams(transition_value::Float64, position::Float64, radius_beam::Float64)
 
-    upper_limit = radius_beam/4 
+    upper_limit = radius_beam/2 
 
     # If the position is less than or equal to zero, return the transition value unchanged
     if position ≤ 0

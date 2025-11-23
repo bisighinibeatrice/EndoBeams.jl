@@ -26,6 +26,7 @@ function run_simulation!(conf::SimulationConfiguration, params::SimulationParams
     Δt = initial_timestep                 # Initial time step size
     successive_success_it = 0   # Consecutive successful iterations counter
     step = 1                    # Simulation step counter
+    t⁺_old = 0 # parameters to change SDF
 
     # Initialize visualization variables and save initial configuration
     write_VTK(write_counter, step, tⁿ, conf, vtkdata)
@@ -50,6 +51,17 @@ function run_simulation!(conf::SimulationConfiguration, params::SimulationParams
         
         # Solve the system for the current time step
         n_it = solve_step_dynamics!(conf, state, params, inter, tⁿ⁺¹, Δt, solver)
+
+
+        t⁺ = convert(Int, round(tⁿ⁺¹, RoundDown))
+        if !isnothing(inter) && isa(inter.master, DiscreteSignedDistanceField)
+            if inter.master.flag_load_from_file_iterative && t⁺ != t⁺_old && t⁺ <= 500
+                println("Updating SDF $t⁺")
+                surface_master = DiscreteSignedDistanceField("stent_3PB/inputSDF/sdf_$t⁺.vtk", false, true)
+                                println("Updated SDF")
+                inter = RigidInteraction(surface_master, inter.slave, inter.properties)
+            end 
+        end 
 
         # Check convergence status
         if n_it > max_iterations
@@ -102,7 +114,8 @@ function run_simulation!(conf::SimulationConfiguration, params::SimulationParams
         # Advance to the next time step
         tⁿ = tⁿ⁺¹
         step += 1
-        
+        t⁺_old = t⁺
+
         # Terminate simulation early if the energy threshold is met
         if stop_on_energy_threshold && energyⁿ⁺¹.kinetic_energy < energy_threshold
             printstyled((@sprintf "Energy threshold reached! Ending simulation at tcomp = %1.2e.\n" tcomp); color = :green) 

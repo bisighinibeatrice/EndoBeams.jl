@@ -28,55 +28,58 @@ end
 
 # Defines an analytical sphere used as a master surface in contact problems
 struct SphereSurface <: RigidBodySurface
-    center::Vec3{Float64} # Sphere center (x, y, z)
-    radius::Float64 # Sphere radius
+    center::Vec3{Float64}  # Sphere center (x, y, z)
+    radius::Float64  # Sphere radius
 end
 
-# Defines a Signed Distance Function (SDF) surface
-struct SDFSurface{T} <: RigidBodySurface
-    interpolant::T
-    domain::Vector{Float64}
-    dx::Float64
-    dy::Float64
-    dz::Float64
+# Defines a discrete signed distance field used as a master surface in contact problems
+struct DiscreteSignedDistanceField{Tsitp} <: RigidBodySurface
+    flag_load_from_file_iterative::Bool
+    sitp::Tsitp                  # Scaled interpolation of the SDF field
+    dom::NTuple{6, Float64}  # Domain boundary coordinates
+    dx::Float64              # Grid spacing in x direction
+    dy::Float64              # Grid spacing in y direction
+    dz::Float64              # Grid spacing in z direction
 end
 
 # Defines a triangulated surface used as a master surface in contact problems
 struct TriangulatedSurface <: RigidBodySurface
-    positions::Vector{Vec3{Float64}}
-    triangles::Vector{Vec3{Int}}
+    positions::Vector{Vec3{Float64}}  
+    triangles::Vector{Vec3{Int}} 
 end
 
 # Defines a beam surface composed of beam segments (for contact with rigid bodies)
 struct BeamElementSurface <: DeformableSurface
-    contact_beams::Vector{Int}
+    contact_beams::Vector{Int}  
 end
 
 #----------------------------------
 # SURFACE CREATION FUNCTIONS
 #----------------------------------
 
-# Create SDFSurface from a VTK SDF file
-function SDFSurface(filename_sdf::String)
-
-    npx, npy, npz, dx, dy, dz, domain, sdf_values = read_vtk_sdf(filename_sdf)
-    field = reshape(sdf_values, (npx, npy, npz))
-
-    x = range(domain[1]; step=dx, stop=domain[2])
-    y = range(domain[3]; step=dy, stop=domain[4])
-    z = range(domain[5]; step=dz, stop=domain[6])
-
-    # Quadratic B-spline interpolation for smooth gradient
-    itp = interpolate(field, BSpline(Quadratic(Reflect(OnCell()))))
-    interpolant = scale(itp, x, y, z)
-
-    return SDFSurface{typeof(interpolant)}(interpolant, domain, dx, dy, dz)
-end
 # Creates a BeamElementSurface from a connectivity matrix.
 function BeamElementSurface(beams_connectivity::Array{Int, 2})
     contact_beams = collect(1:size(beams_connectivity, 1)) # Creates a StructArray of beam indices
     return BeamElementSurface(contact_beams)
 end
+
+# Creates a DiscreteSignedDistanceField reading the SDF data from a VTK file and setting up interpolation.
+function DiscreteSignedDistanceField(filename::String, inside::Bool, flag_load_from_file_iterative=false)
+
+    # Read SDF data from VTK file
+    npx, npy, npz, dx, dy, dz, dom, sdf = read_vtk_sdf(filename)
+    field = inside ? reshape(sdf, (npx, npy, npz)) : reshape(-sdf, (npx, npy, npz))
+
+    # Define coordinate ranges for interpolation
+    x, y, z = range(dom[1]; step=dx, stop=dom[2]), range(dom[3]; step=dy, stop=dom[4]), range(dom[5]; step=dz, stop=dom[6])
+
+    # Create a quadratic interpolation for smooth gradients
+    itp = interpolate(field, BSpline(Quadratic(Reflect(OnCell()))))
+    sitp = scale(itp, x, y, z)  # Scaled interpolation over the coordinate grid
+
+    return DiscreteSignedDistanceField{typeof(sitp)}(flag_load_from_file_iterative, sitp, dom, dx, dy, dz)  
+    
+end 
 
 #------------------------------------------------
 # BEAM-TRIANGLE CONNECTION DEFINITION 
