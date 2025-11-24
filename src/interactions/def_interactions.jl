@@ -22,8 +22,8 @@ abstract type DeformableSurface end
 
 # Defines an analytical plane used as a master surface in contact problems
 struct PlaneSurface <: RigidBodySurface
-    position::Float64  # Position along a specified axis
-    axis::Char         # Axis identifier (:x, :y, :z)
+    point::Vec3{Float64}        # any point on the plane
+    normal::Vec3{Float64}      # unit normal vector
 end
 
 # Defines an analytical sphere used as a master surface in contact problems
@@ -58,7 +58,7 @@ end
 #----------------------------------
 
 # Creates a BeamElementSurface from a connectivity matrix.
-function BeamElementSurface(beams_connectivity::Array{Int, 2})
+function BeamElementSurface(beams_connectivity)
     contact_beams = collect(1:size(beams_connectivity, 1)) # Creates a StructArray of beam indices
     return BeamElementSurface(contact_beams)
 end

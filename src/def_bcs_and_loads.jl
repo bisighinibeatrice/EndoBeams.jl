@@ -41,8 +41,10 @@ function BoundaryConditions(bcs::Encastre, num_dofs, use_cylindrical_coords::Uni
     displaced_indices = Int[]  # No displaced indices for encastre conditions
 
     if isnothing(use_cylindrical_coords) use_cylindrical_coords = false end 
+    read_bcs_from_file = false
+    bcs_file_folder = ""
 
-    return BoundaryConditions{Nothing}(fixed_dofs, free_dofs, displaced_indices, imposed_displacements, nothing, use_cylindrical_coords)
+    return BoundaryConditions{Nothing}(fixed_dofs, free_dofs, displaced_indices, imposed_displacements, nothing, use_cylindrical_coords, read_bcs_from_file, bcs_file_folder)   
 end
 
 # Constructor for BoundaryConditions with imposed displacement conditions

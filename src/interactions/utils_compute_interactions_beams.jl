@@ -1,5 +1,5 @@
 # Compute contact gap, gradient, and Hessian for a spherical SDF.
-@inline function contact_gap_beams(point, master_surface::SphereSurface, radius_beam)
+@inline function contact_gap_beams(point, master_surface::SphereSurface, radius_beam::Float64)
     # Vector from the point to the center of the sphere
     aux = point - master_surface.center
     
@@ -32,6 +32,39 @@ end
     gₙ = norm(aux) - master_surface.radius - radius_beam
     
     # If gₙ is less than or equal to the threshold gap, then the point is in contact
+    return gₙ ≤ ḡₙ
+end
+
+# Compute contact gap, gradient, and Hessian for a planar SDF.
+@inline function contact_gap_beams(point, master_surface::PlaneSurface, radius_beam::Float64)
+    # Extract plane data
+    x₀ = master_surface.point
+    n  = master_surface.normal   # must be unit
+    
+    # Gap: signed distance to plane minus beam radius
+    gₙ = dot(n, point - x₀) - radius_beam
+
+    # Gradient is constant for a plane
+    ∂gₙ∂x = n
+
+    # Hessian is identically zero
+    ∂²gₙ∂x² = zeros(3,3)
+
+    return gₙ, ∂gₙ∂x, ∂²gₙ∂x²
+end
+
+# Determine if point is in contact with planar SDF
+@inline function incontact_beams(point, master_surface::PlaneSurface, radius_beam::Float64)
+    # Threshold (same style as sphere version)
+    ḡₙ = radius_beam/4
+
+    x₀ = master_surface.point
+    n  = master_surface.normal
+
+    # Gap
+    gₙ = dot(n, point - x₀) - radius_beam
+
+    # Contact when gap <= threshold
     return gₙ ≤ ḡₙ
 end
 

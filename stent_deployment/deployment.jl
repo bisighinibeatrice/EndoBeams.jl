@@ -63,7 +63,7 @@ function deployment(free_positions, connectivity, constraints_connectivity, depl
     mass_scaling = 1e3
     ρ = 9.13*1e-9 * mass_scaling
     radius = 0.014
-    damping = 1e4
+    damping = 1e5
 
     # Set initial rotation matrices for beams
     initial_Re⁰ = readdlm(output_dir_positioning * "Re0.txt")
@@ -95,8 +95,8 @@ function deployment(free_positions, connectivity, constraints_connectivity, depl
     inter_properties = InteractionProperties(kₙ, μ, εᵗ, ηₙ, kₜ, ηₜ, u̇ₛ)
 
     # Create master and slave surfaces
-    surface_master = SphereSurface(center_sphere, radius_sphere)
     surface_slave = BeamElementSurface(connectivity) 
+    surface_master = DiscreteSignedDistanceField("stent_deployment/input/vessel_surface.vtk", true, false) 
 
     # Create the interaction instance
     inter = RigidInteraction(surface_master, surface_slave, inter_properties)
@@ -111,22 +111,21 @@ function deployment(free_positions, connectivity, constraints_connectivity, depl
     
     params = SimulationParams(
         α = α, β = β, γ = γ,
-        initial_timestep = 1e-6,
+        initial_timestep = 1e-9,
         min_timestep = 1e-9,
         max_timestep = 1e-3,
         output_timestep = 1e-3,
-        simulation_end_time = 1,
+        simulation_end_time = 10,
         tolerance_residual = 1e-5,
         tolerance_displacement = 1e-5,
         max_iterations = 10,
         output_dir = output_dir_deployment,
-        verbose = true
-    )
+        verbose = true)
 
     #-------------------------------
     # Run simulation and export results
     #-------------------------------
-    run_simulation!(conf, params)
+    run_simulation!(conf, params, inter)
     export_stent_solution_to_txt(nodes, beams, num_nodes, num_beams, output_dir_deployment, false)
 
 end 

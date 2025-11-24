@@ -1,7 +1,10 @@
-*.vtk
-*.vtp
-*.vtu
-*.txt
-*.stl
-output3D/
+# *.vtk
+# *.vtp
+# *.vtu
+# *.txt
+# *.stl
+test/output3D/
+stent_deployment/output3D/
+stent_3PB/output3D/
 Manifest.toml
+stent_3PB/

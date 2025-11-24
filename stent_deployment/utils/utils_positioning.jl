@@ -49,7 +49,7 @@ the stent rings to these centerline nodes.
 - `connectivity_guides::Vector{Vec2{Int}}`: Connectivity linking stent ring 
  nodes to their corresponding centerline nodes.
 """
-function build_guides_stent_deployment_origin_point(positions, deployment_origin_point)
+function build_guides_stent_origin(positions, deployment_origin_point)
     num_nodes = length(positions)
     
     # Group stent nodes by z-level into rings

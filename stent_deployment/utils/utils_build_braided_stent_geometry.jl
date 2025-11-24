@@ -1,12 +1,12 @@
 # Struct to define the parameters of a braided stent
 @with_kw struct BraidedStent
-    nbWires::Int = 24                      # Total number of wires used in the stent
-    rStent::Float64 = 2.3                  # Radius of the deployed stent
-    rCrimpedStent::Float64 = 1.1           # Radius when the stent is crimped
-    rWireSection::Float64 = 0.014          # Radius of the individual wire cross-section
+    nbWires::Int = 12                      # Total number of wires used in the stent
+    rStent::Float64 = 2.6                  # Radius of the deployed stent
+    rCrimpedStent::Float64 = 1.3           # Radius when the stent is crimped
+    rWireSection::Float64 = 0.051          # Radius of the individual wire cross-section
     wireGap::Float64 = 0                   # Optional gap between wires (zero = touching)
-    lengthStent::Float64 = 7.5             # Length of the stent
-    nbTotalCells::Float64 = 35             # Number of braid cells along the stent length
+    lengthStent::Float64 = 5            # Length of the stent
+    nbTotalCells::Float64 = 20             # Number of braid cells along the stent length
     braidingPattern::Int = 2               # Controls alternation pattern in braiding
 end
 
@@ -87,14 +87,14 @@ function generate_braided_stent_geometry(
 
     # Create clockwise wires
     for wire in 1:nbWires
-        helix!(positions, connectivity, nodeID, length, radius * 2,
+        generate_helix_wire!(positions, connectivity, nodeID, length, radius * 2,
                nbTotalCells, nbWires, rWireSection, braidingPattern,
                wireGap, wire, true)
     end
 
     # Create counter-clockwise wires
     for wire in 1:nbWires
-        helix!(positions, connectivity, nodeID, length, radius * 2,
+        generate_helix_wire!(positions, connectivity, nodeID, length, radius * 2,
                nbTotalCells, nbWires, rWireSection, braidingPattern,
                wireGap, wire, false)
     end

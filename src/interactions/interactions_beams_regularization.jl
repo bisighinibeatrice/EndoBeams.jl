@@ -2,7 +2,7 @@
 @inline function regularize_gap_penalty_beams(gap::Float64, radius_beam::Float64)
   
     # Define the threshold gap
-    threshold_gap = radius_beam/2
+    threshold_gap = radius_beam/4
 
     # Define the regularization parameter as half of the threshold gap
     half_threshold_gap = threshold_gap / 2
@@ -28,7 +28,7 @@ end
 # Smoothstep function for transition smoothing in contact calculations.
 @inline function smoothstep_transition_beams(transition_value::Float64, position::Float64, radius_beam::Float64)
 
-    upper_limit = radius_beam/2 
+    upper_limit = radius_beam/4
 
     # If the position is less than or equal to zero, return the transition value unchanged
     if position ≤ 0

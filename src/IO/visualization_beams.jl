@@ -25,7 +25,7 @@ struct VTKDataBeams
 end
 
 # Constructor for VTKData structure, initializing interpolation and contact data
-function VTKDataBeams(conf, output_dir, sdf = Nothing, intermediate_points = 10)
+function VTKDataBeams(conf, output_dir, sdf = Nothing, intermediate_points = 30)
 
     num_beams = length(conf.beams)
     num_nodes = length(conf.nodes)

@@ -33,7 +33,7 @@ Convert a matrix of shape `n × 3` to a vector of `Vec3{Float64}`.
 # Returns
 - `Vector{Vec3{Float64}}`: Each row of the matrix is converted to a `Vec3`.
 """
-function matrix_to_vec3_array(mat::Matrix{Float64})
+function matrix_to_vec3_array(mat)
     @assert size(mat, 2) == 3 "Input matrix must have exactly 3 columns."
 
     return [Vec3(mat[i, 1], mat[i, 2], mat[i, 3]) for i in 1:size(mat, 1)]
@@ -48,7 +48,7 @@ Convert a matrix of shape `n × 2` to a vector of `Vec2{Int}`.
 # Returns
 - `Vector{Vec2{Int}}`: Each row of the matrix is converted to a `Vec2`.
 """
-function matrix_to_vec2_array(mat::Matrix{Int})
+function matrix_to_vec2_array(mat)
     @assert size(mat, 2) == 2 "Input matrix must have exactly 2 columns."
 
     return [Vec2(mat[i, 1], mat[i, 2]) for i in 1:size(mat, 1)]

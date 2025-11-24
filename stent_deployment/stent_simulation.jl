@@ -16,10 +16,12 @@ include("deployment.jl")
 # Create stent
 # --------------------------------------------
 
-free_radius = 2.3
-free_positions = readdlm("stent_deployment/input/positions_stent.txt")
-connectivity = readdlm("stent_deployment/input/connectivity_stent.txt", Int)
-constraints_connectivity = readdlm("stent_deployment/input/constraints_stent.txt", Int)
+@unpack nbWires, rStent, rCrimpedStent, rWireSection, wireGap, lengthStent, nbTotalCells, braidingPattern = BraidedStent()
+free_positions, connectivity = generate_braided_stent_geometry(nbWires, rStent, rWireSection, wireGap, lengthStent, nbTotalCells, braidingPattern)
+constraints_connectivity = find_close_node_pairs_in_rings(free_positions)
+free_positions = reduce(hcat, free_positions)'
+connectivity = reduce(hcat, connectivity)'
+constraints_connectivity = reduce(hcat, constraints_connectivity)'
 
 # --------------------------------------------
 # Crimping
@@ -28,7 +30,7 @@ constraints_connectivity = readdlm("stent_deployment/input/constraints_stent.txt
 output_dir_crimping = "stent_deployment/output3D/outputCrimping/"
 if !isdir(output_dir_crimping) mkpath(output_dir_crimping) end
 
-crimping(free_radius, free_positions, connectivity, constraints_connectivity, output_dir_crimping)
+# crimping(rStent, free_positions, connectivity, constraints_connectivity, output_dir_crimping)
 
 # --------------------------------------------
 # Geometrical morphing of the centerline
@@ -37,7 +39,7 @@ crimping(free_radius, free_positions, connectivity, constraints_connectivity, ou
 output_dir_morphing_cl = "stent_deployment/output3D/outputClMorphing/"
 if !isdir(output_dir_morphing_cl) mkpath(output_dir_morphing_cl) end
 
-filename_target_centerline = "stent_deployment/input/cl_rot_model.vtk"
+filename_target_centerline = "stent_deployment/input/vessel_centerline.vtk"
 
 # Morphing parameters
 num_morphing_iterations = 100 # number of iterations for incremental morphing

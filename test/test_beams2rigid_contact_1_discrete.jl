@@ -32,7 +32,7 @@ E = 10                              # Young's modulus (Pa)
 ν = 0                             # Poisson's ratio
 ρ = 1500                                # Density (kg/m³)
 radius = 1e-4*2                       # Beam radius (m)
-damping = 1e-3                          # Damping coefficient
+damping = 0                          # Damping coefficient
 
 # Build nodes and beams
 nodes = NodesBeams(
@@ -63,17 +63,17 @@ conf = BeamsConfiguration(nodes, beams, loads, bcs)
 #----------------------------------
 
 # Create interaction properties (using defaults for some values)
-kₙ = 1e-6 # Penalty parameter
+kₙ = 0.01 # Penalty parameter
 μ = 0.01 # Friction coefficient
 εᵗ = 0.5 # Regularized parameter for friction contact
-ηₙ = 1e-3 
-kₜ = kₙ
-ηₜ = ηₙ
+ηₙ = 0
+kₜ = 0
+ηₜ = 0
 u̇ₛ = 0  
 inter_properties = InteractionProperties(kₙ, μ, εᵗ, ηₙ, kₜ, ηₜ, u̇ₛ)
 
 # Create master and slave surfaces
-surface_master = DiscreteSignedDistanceField("test/input/sdf_sphere_20.vtk", true)
+surface_master = DiscreteSignedDistanceField("test/input/sdf_sphere_80.vtk", true, false)
 surface_slave = BeamElementSurface(connectivity) 
 
 # Create the interaction instance
@@ -84,21 +84,21 @@ inter = RigidInteraction(surface_master, surface_slave, inter_properties)
 #----------------------------------------------------
 
 # HHT (Houbolt-Hughes-Taylor) time stepping parameters
-α = -0.2   # Typically between 0 and -1, used for numerical stability
+α = -0.05   # Typically between 0 and -1, used for numerical stability
 β = 0.25 * (1 - α)^2  # Damping parameter based on α
 γ = 0.5 * (1 - 2 * α)  # Time-stepping parameter
 
 # General time stepping parameters
-initial_timestep = 0.01    # Initial time step size
-min_timestep = 1e-6     # Minimum allowed time step
-max_timestep = 0.1    # Maximum allowed time step (could be adjusted based on system behavior)
-output_timestep = 1    # Time step for output plotting or visualization
+initial_timestep = 0.5    # Initial time step size
+min_timestep = 0.5     # Minimum allowed time step
+max_timestep = 0.5    # Maximum allowed time step (could be adjusted based on system behavior)
+output_timestep = 0.5    # Time step for output plotting or visualization
 simulation_end_time = 100 # End time for the simulation (duration of the analysis)
 
 # Convergence criteria for the solver
-tolerance_residual = 1e-3   # Residual tolerance for convergence checks
-tolerance_displacement = 1e-3    # Tolerance for changes in displacement (ΔD)
-max_iterations = 20      # Maximum number of iterations for the solver
+tolerance_residual = 1e-5  # Residual tolerance for convergence checks
+tolerance_displacement = 1e-5    # Tolerance for changes in displacement (ΔD)
+max_iterations = 10      # Maximum number of iterations for the solver
 
 # Store solver parameters in a structured Params object
 params = SimulationParams(;
