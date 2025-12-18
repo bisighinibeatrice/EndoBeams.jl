@@ -34,5 +34,6 @@ function predictor!(conf::SimulationConfiguration, state::SimulationState, param
     # Update local variables with the global predicted values
     compute_local_predictor!(conf, state, γ, β, Δt)
 
+
 end
 

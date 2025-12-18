@@ -88,9 +88,9 @@ function positioning(free_positions, connectivity, constraints_connectivity, num
     #-------------------------------
     E_modulus = 225e3
     poisson_ratio = 0.33
-    mass_scaling = 1e3
+    mass_scaling = 1e6
     density = 9.13e-9 * mass_scaling
-    beam_radius = 0.014
+    beam_radius = 0.065
     damping_coefficient = 1e4
 
     # Set initial rotation matrices for beams

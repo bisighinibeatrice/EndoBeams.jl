@@ -6,7 +6,7 @@
     rWireSection::Float64 = 0.051          # Radius of the individual wire cross-section
     wireGap::Float64 = 0                   # Optional gap between wires (zero = touching)
     lengthStent::Float64 = 5            # Length of the stent
-    nbTotalCells::Float64 = 20             # Number of braid cells along the stent length
+    nbTotalCells::Float64 = 10             # Number of braid cells along the stent length
     braidingPattern::Int = 2               # Controls alternation pattern in braiding
 end
 

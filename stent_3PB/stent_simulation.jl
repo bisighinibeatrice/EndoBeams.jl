@@ -71,11 +71,11 @@ conf = BeamsConfiguration(nodes, beams, constraints, loads, bcs)
 #----------------------------------
 
 kₙ = 100
-μ = 0.1
-εᵗ = 0.01 #regularized parameter for friction contact
-ηₙ = kₙ
-kₜ = kₙ
-ηₜ = kₙ
+μ = 0.0
+εᵗ = 1 #regularized parameter for friction contact
+ηₙ = 0.0
+kₜ = 0
+ηₜ = 0
 u̇ₛ = 0
 
 inter_properties = InteractionProperties(kₙ, μ, εᵗ, ηₙ, kₜ, ηₜ, u̇ₛ)

@@ -30,7 +30,7 @@ constraints_connectivity = reduce(hcat, constraints_connectivity)'
 output_dir_crimping = "stent_deployment/output3D/outputCrimping/"
 if !isdir(output_dir_crimping) mkpath(output_dir_crimping) end
 
-# crimping(rStent, free_positions, connectivity, constraints_connectivity, output_dir_crimping)
+crimping(rStent, free_positions, connectivity, constraints_connectivity, output_dir_crimping)
 
 # --------------------------------------------
 # Geometrical morphing of the centerline

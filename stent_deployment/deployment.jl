@@ -60,7 +60,7 @@ function deployment(free_positions, connectivity, constraints_connectivity, depl
     #-------------------------------
     E = 225*1e3
     ν = 0.33
-    mass_scaling = 1e3
+    mass_scaling = 1e6
     ρ = 9.13*1e-9 * mass_scaling
     radius = 0.014
     damping = 1e5

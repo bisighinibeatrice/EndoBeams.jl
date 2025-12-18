@@ -59,7 +59,7 @@ function crimping(free_radius, free_positions, connectivity, constraints_connect
     encastre = Encastre(blocked_dofs)
 
     # Imposed displacement condition (radial crimping)
-    max_disp = -0.7 * free_radius           # Inward radial displacement
+    max_disp = -0.55 * free_radius           # Inward radial displacement
     t_thresh = 1.0                          # Duration over which displacement is applied
     velocity = max_disp / t_thresh          # Constant displacement rate
     displaced_dof = 1:6:num_dofs-5

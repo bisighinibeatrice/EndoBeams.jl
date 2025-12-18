@@ -96,9 +96,10 @@ end
 
 # Structure to store the state of the system at different time steps
 struct SimulationState 
-    forcesⁿ::Forces          # Forces at the current time step  for the system
+    forcesⁿ::Forces          # Forces at the current time step for the system
     forcesⁿ⁺¹::Forces        # Forces at the next time step  for the system
-    matricesⁿ⁺¹::Matrices    # Matrices for the system (only need current one)
+    matricesⁿ::Matrices      # Matrices at the current time step for the system
+    matricesⁿ⁺¹::Matrices    # Matrices at the next time step for the system
     solⁿ⁺¹::Solution         # Solution for the system
     energyⁿ⁺¹::Energy        # Energy state for the system
 end 

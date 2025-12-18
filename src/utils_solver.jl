@@ -55,7 +55,7 @@ function compute_tangent_and_residuals_predictor!(state::SimulationState, Δt, �
 
     # Compute tangent stiffness matrix (Ktan) at predictor step
     # Ktan = (1+α) * K + (γ/(βΔt)) * C + (1/(βΔt²)) * M
-    @. state.solⁿ⁺¹.Ktan.nzval = (1 + α) * state.matricesⁿ⁺¹.K.nzval + (γ / (β * Δt)) * state.matricesⁿ⁺¹.C.nzval + (1 / (β * Δt^2)) * state.matricesⁿ⁺¹.M.nzval
+    @. state.solⁿ⁺¹.Ktan.nzval = (1 + α) * state.matricesⁿ.K.nzval + (γ / (β * Δt)) * state.matricesⁿ.C.nzval + (1 / (β * Δt^2)) * state.matricesⁿ.M.nzval
 
     # Compute residual vector (r) at predictor step
     # r = (1+α) * external forces - (internal forces + contact forces) - α * previous external forces
@@ -64,12 +64,12 @@ function compute_tangent_and_residuals_predictor!(state::SimulationState, Δt, �
     # Add contribution from damping matrix (C)
     # temp = (γ/β) * Ḋ - (Δt/2 * (2β - γ) / β) * D̈
     @. state.solⁿ⁺¹.temp = (γ / β) * state.solⁿ⁺¹.Ḋ - (Δt / 2 * (2β - γ) / β) * state.solⁿ⁺¹.D̈
-    mul!(state.solⁿ⁺¹.r, state.matricesⁿ⁺¹.C, state.solⁿ⁺¹.temp, 1, 1)  # r += C * temp
+    mul!(state.solⁿ⁺¹.r, state.matricesⁿ.C, state.solⁿ⁺¹.temp, 1, 1)  # r += C * temp
 
     # Add contribution from mass matrix (M)
     # temp = Δt * Ḋ + (Δt² / 2) * D̈
     @. state.solⁿ⁺¹.temp = Δt * state.solⁿ⁺¹.Ḋ + (Δt^2 / 2) * state.solⁿ⁺¹.D̈
-    mul!(state.solⁿ⁺¹.r, state.matricesⁿ⁺¹.M, state.solⁿ⁺¹.temp, 1 / (β * Δt^2), 1)  # r += (1 / (βΔt²)) * M * temp
+    mul!(state.solⁿ⁺¹.r, state.matricesⁿ.M, state.solⁿ⁺¹.temp, 1 / (β * Δt^2), 1)  # r += (1 / (βΔt²)) * M * temp
 
 end
 
@@ -270,6 +270,10 @@ function update_converged!(conf::BeamsConfiguration, state::SimulationState)
     state.forcesⁿ.fᵉˣᵗ .= state.forcesⁿ⁺¹.fᵉˣᵗ
     state.forcesⁿ.Tᶜᵒⁿ .= state.forcesⁿ⁺¹.Tᶜᵒⁿ
     
+    # Update the system matrices for the current time step
+    state.matricesⁿ.K .= state.matricesⁿ⁺¹.K
+    state.matricesⁿ.C .= state.matricesⁿ⁺¹.C
+    state.matricesⁿ.M .= state.matricesⁿ⁺¹.M
 end
 
 # -------------------------------------------------------------------
@@ -297,5 +301,10 @@ function update_not_converged!(conf::BeamsConfiguration, state::SimulationState)
     state.forcesⁿ⁺¹.Tᶜ .= state.forcesⁿ.Tᶜ
     state.forcesⁿ⁺¹.fᵉˣᵗ .= state.forcesⁿ.fᵉˣᵗ
     state.forcesⁿ⁺¹.Tᶜᵒⁿ .= state.forcesⁿ.Tᶜᵒⁿ
+
+    # Revert system matrices
+    state.matricesⁿ⁺¹.K .= state.matricesⁿ.K
+    state.matricesⁿ⁺¹.C .= state.matricesⁿ.C
+    state.matricesⁿ⁺¹.M .= state.matricesⁿ.M
     
 end
