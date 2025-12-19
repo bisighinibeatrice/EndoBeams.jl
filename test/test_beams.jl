@@ -91,7 +91,7 @@ initial_timestep = 1e-4    # Initial time step size
 min_timestep = 1e-4    # Minimum allowed time step
 max_timestep = 1e-4    # Maximum allowed time step (could be adjusted based on system behavior)
 output_timestep = 1e-2    # Time step for output plotting or visualization
-simulation_end_time = 1e-4  # End time for the simulation (duration of the analysis)
+simulation_end_time = 0.15  # End time for the simulation (duration of the analysis)
 
 # Convergence criteria for the solver
 tolerance_residual = 1e-3   # Residual tolerance for convergence checks

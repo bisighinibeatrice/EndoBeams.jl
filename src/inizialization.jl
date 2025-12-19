@@ -19,11 +19,12 @@ function setup_state_simulation(conf::BeamsConfiguration,inter::Union{Nothing, I
     # Allocate state variables for beams
     forcesⁿ = Forces(conf)
     forcesⁿ⁺¹ = deepcopy(forcesⁿ)
-    matricesⁿ⁺¹, solutionⁿ⁺¹ = sparse_matrices_beams!(conf)
+    matricesⁿ, solutionⁿ⁺¹ = sparse_matrices_beams!(conf)
+    matricesⁿ⁺¹ = deepcopy(matricesⁿ)
     energyⁿ⁺¹ = Energy()
 
     # Group beam state variables into a single structure
-    state = SimulationState(forcesⁿ, forcesⁿ⁺¹, matricesⁿ⁺¹, solutionⁿ⁺¹, energyⁿ⁺¹)
+    state = SimulationState(forcesⁿ, forcesⁿ⁺¹,matricesⁿ, matricesⁿ⁺¹, solutionⁿ⁺¹, energyⁿ⁺¹)
 
     # Prepare VTK data for visualization
     vtkdata = VTKDataBeams(conf, output_dir)
@@ -37,5 +38,8 @@ function initialize_state_simulation!(conf::BeamsConfiguration, state::Simulatio
     
     # Assemble system matrices and initialize state variables
     assemble!(conf, state, params)
+    state.matricesⁿ.K .= state.matricesⁿ⁺¹.K
+    state.matricesⁿ.C .= state.matricesⁿ⁺¹.C 
+    state.matricesⁿ.M .= state.matricesⁿ⁺¹.M
 
 end
