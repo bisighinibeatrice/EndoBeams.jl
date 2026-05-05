@@ -129,3 +129,96 @@ function deployment(free_positions, connectivity, constraints_connectivity, depl
     export_stent_solution_to_txt(nodes, beams, num_nodes, num_beams, output_dir_deployment, false)
 
 end 
+
+function deployment_ring(free_positions, connectivity, output_dir_crimping, output_dir_deployment)
+    
+    #-------------------------------
+    # Crimped stent
+    #-------------------------------
+    initial_displacements = readdlm(output_dir_crimping * "u.txt")
+
+    #-------------------------------
+    #  Nodes
+    #-------------------------------
+    num_nodes = size(free_positions, 1)
+
+    # Set initial rotation matrices for nodes
+    initial_R⁰ = readdlm(output_dir_crimping * "R.txt")    
+
+    # Create nodes structure    
+    zeros_6d = zeros(size(free_positions))
+    nodes = NodesBeams(
+        free_positions,
+        initial_displacements, zeros_6d, zeros_6d,  # zero initial displacements, velocities, accelerations
+        zeros_6d, zeros_6d, zeros_6d,  # zero initial  rotations, angular velocities and accelerations
+        nothing, initial_R⁰)
+
+    #-------------------------------
+    # Beams and constraints
+    #-------------------------------
+    E = 225*1e3
+    ν = 0.33
+    mass_scaling = 1
+    ρ = 9.13*1e-9 * mass_scaling
+    radius = 0.014
+    damping = 1e5
+
+    # Set initial rotation matrices for beams
+    initial_Re⁰ = readdlm(output_dir_crimping * "Re0.txt")
+
+    # Create beams structure
+    beams = Beams(nodes, connectivity, E, ν, ρ, radius, damping, initial_Re⁰)
+    num_beams = length(beams)
+
+    #-------------------------------
+    # Assembled configuration
+    #-------------------------------
+    conf = BeamsConfiguration(nodes, beams, nothing, nothing, nothing)
+    
+    #----------------------------------
+    # INTERACTIONS
+    #----------------------------------
+    kₙ = 1 # Penalty parameter
+    μ = 0.01 # Friction coefficient
+    εᵗ = 0.5 # Regularized parameter for friction contact
+    ηₙ = 1e-3
+    kₜ = kₙ
+    ηₜ = ηₙ
+    u̇ₛ = 0  
+    inter_properties = InteractionProperties(kₙ, μ, εᵗ, ηₙ, kₜ, ηₜ, u̇ₛ)
+
+    # Create master and slave surfaces
+    surface_slave = BeamElementSurface(connectivity) 
+    surface_master = DiscreteSignedDistanceField("stent_deployment/input/vessel_surface.vtk", true, false) 
+
+    # Create the interaction instance
+    inter = nothing #RigidInteraction(surface_master, surface_slave, inter_properties)
+
+    #-------------------------------
+    # Simulation parameters
+    #-------------------------------
+    # HHT (Hilber–Hughes–Taylor) α-method parameters
+    α = -0.05
+    β = 0.25 * (1 - α)^2
+    γ = 0.5 * (1 - 2 * α)
+    
+    params = SimulationParams(
+        α = α, β = β, γ = γ,
+        initial_timestep = 1e-9,
+        min_timestep = 1e-9,
+        max_timestep = 1e-3,
+        output_timestep = 1e-3,
+        simulation_end_time = 10,
+        tolerance_residual = 1e-5,
+        tolerance_displacement = 1e-5,
+        max_iterations = 10,
+        output_dir = output_dir_deployment,
+        verbose = true)
+
+    #-------------------------------
+    # Run simulation and export results
+    #-------------------------------
+    run_simulation!(conf, params, inter)
+    export_stent_solution_to_txt(nodes, beams, num_nodes, num_beams, output_dir_deployment, false)
+
+end 
