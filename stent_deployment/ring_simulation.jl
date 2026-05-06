@@ -18,7 +18,6 @@ free_positions = readdlm("stent_deployment/input/stent_positions.txt", ',')
 connectivity = Int.(readdlm("stent_deployment/input/stent_connectivity.txt", ','))
 # free_positions = reduce(hcat, free_positions)'
 # connectivity = reduce(hcat, connectivity)'
-rStent = 2
 
 # --------------------------------------------
 # Crimping and free expansion
@@ -30,5 +29,6 @@ output_dir_deployment = "stent_deployment/output3D/outputDeployment/"
 if !isdir(output_dir_crimping) mkpath(output_dir_crimping) end
 if !isdir(output_dir_deployment) mkpath(output_dir_deployment) end
 
-crimping_ring(rStent, free_positions, connectivity, output_dir_crimping)
+rStent = 2
+# crimping_ring(rStent, free_positions, connectivity, output_dir_crimping)
 deployment_ring(free_positions, connectivity, output_dir_crimping, output_dir_deployment)

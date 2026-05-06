@@ -208,7 +208,7 @@ function deployment_ring(free_positions, connectivity, output_dir_crimping, outp
         min_timestep = 1e-9,
         max_timestep = 1e-3,
         output_timestep = 1e-3,
-        simulation_end_time = 10,
+        simulation_end_time = 1e-3*5,
         tolerance_residual = 1e-5,
         tolerance_displacement = 1e-5,
         max_iterations = 10,
