@@ -1,6 +1,38 @@
 
+# function init(solvertype)
+#     if solvertype == :MKL
+#         ps = MKLPardisoSolver()
+#         set_nprocs!(ps, Threads.nthreads())
+#         set_matrixtype!(ps, Pardiso.REAL_NONSYM)
+#         pardisoinit(ps)
+
+#         set_iparm!(ps, 1, 1) # set to allow non-default iparams
+#         set_iparm!(ps, 12, 2) # CSC matrix format
+#         return ps
+#     end
+# end
+
+# function analyze!(ps::Pardiso.MKLPardisoSolver, K, r)
+#     set_phase!(ps, Pardiso.ANALYSIS)
+#     pardiso(ps, K, r)
+# end
+
+# function solve!(ps::Pardiso.MKLPardisoSolver, x, K, r)
+#     set_phase!(ps, Pardiso.NUM_FACT_SOLVE_REFINE)
+#     pardiso(ps, x, K, r)
+#     println("norm(K)=$(norm(K)) | norm(r)=$(norm(r)) | norm(x)=$(norm(x))")
+# end
+
+# function release!(ps::Pardiso.MKLPardisoSolver)
+#     set_phase!(ps, Pardiso.RELEASE_ALL)
+#     pardiso(ps)
+# end
+
+
+struct JuliaSparseSolver end
+
 function init(solvertype)
-    if solvertype == :MKL
+    if solvertype == :MKL && !occursin("AMD", Sys.cpu_info()[1].model)
         ps = MKLPardisoSolver()
         set_nprocs!(ps, Threads.nthreads())
         set_matrixtype!(ps, Pardiso.REAL_NONSYM)
@@ -9,6 +41,8 @@ function init(solvertype)
         set_iparm!(ps, 1, 1) # set to allow non-default iparams
         set_iparm!(ps, 12, 2) # CSC matrix format
         return ps
+    else
+        return JuliaSparseSolver()
     end
 end
 
@@ -26,6 +60,3 @@ function release!(ps::Pardiso.MKLPardisoSolver)
     set_phase!(ps, Pardiso.RELEASE_ALL)
     pardiso(ps)
 end
-
-
-
